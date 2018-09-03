@@ -125,7 +125,7 @@ class HFS5BatchGenerator(BatchGenerator):
             print(f'clipping dataset to first {num_minutes} of audio data')
             durations = dataset['durations']
             clip_ix = 0
-            while sum(durations[:clip_ix]) < num_minutes * 60:
+            while sum(durations[:clip_ix]) < num_minutes * 60 and clip_ix < len(durations):
                 clip_ix += 1
             print(f"clipped to first {clip_ix} records")
         else:
@@ -159,7 +159,8 @@ class OnTheFlyFeaturesIterator(BatchGenerator):
         if num_minutes:
             print(f'clipping dataset to first {num_minutes} of audio data')
             clip_ix = 0
-            while (sum(audio_length for audio_length in speech_segments[:clip_ix])) < num_minutes * 60:
+            while (sum(audio_length for audio_length in speech_segments[:clip_ix])) < num_minutes * 60 \
+                    and clip_ix < len(speech_segments):
                 clip_ix += 1
             print(
                 f"clipped to first {clip_ix} records")

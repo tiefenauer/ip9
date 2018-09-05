@@ -6,9 +6,9 @@ SRC_DIR = dirname(abspath(__file__))  # absolute path to project ./src/ director
 ROOT_DIR = abspath(join(SRC_DIR, os.pardir))  # absolute path to project root directoryy
 
 # where the corpora are
-CORPUS_ROOT = os.environ.get('CORPUS_ROOT') or r'E:\\' if os.name == 'nt' else '/media/all/D1'
+CORPUS_ROOT = os.environ.get('CORPUS_ROOT') or (r'E:\\' if os.name == 'nt' else '/media/all/D1')
 # where to write results
-TARGET_ROOT = os.environ.get('TARGET_ROOT') or r'E:\\' if os.name == 'nt' else '/media/all/D1'
+TARGET_ROOT = os.environ.get('TARGET_ROOT') or (r'E:\\' if os.name == 'nt' else '/media/all/D1')
 
 # paths to corpora
 RL_CORPUS_ROOT = join(CORPUS_ROOT, 'readylingua-corpus')

@@ -130,20 +130,6 @@ class Segment(Audible):
         return self._mfcc
 
 
-class Speech(Segment):
+class SpeechSegment(Segment):
     def __init__(self, start_frame, end_frame, transcript=''):
         super().__init__(start_frame, end_frame, transcript, 'speech')
-
-
-class Pause(Segment):
-    def __init__(self, start_frame, end_frame):
-        super().__init__(start_frame, end_frame, '', 'pause')
-
-
-class UnalignedSpeech(Segment):
-    """special class for speech segments where the text is derived from the original book text but the exact start
-    and end position of the speech in the audio signal is not known (segment may contain pauses at start, end or
-    anywhere inside the audio signal that were not aligned)"""
-
-    def __init__(self, start_frame, end_frame, transcript=''):
-        super().__init__(start_frame, end_frame, transcript, 'speech*')

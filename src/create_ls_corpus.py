@@ -16,8 +16,8 @@ from tqdm import tqdm
 from constants import LS_SOURCE, LS_TARGET
 from corpus.corpus import LibriSpeechCorpus
 from corpus.corpus_entry import CorpusEntry
-from corpus.corpus_segment import Speech, Pause, UnalignedSpeech
-from util.audio_util import crop_to_segments, seconds_to_frame, read_audio
+from corpus.corpus_segment import SpeechSegment
+from util.audio_util import seconds_to_frame, read_audio
 from util.corpus_util import save_corpus, find_file_by_suffix
 from util.log_util import log_setup, create_args_str
 
@@ -102,25 +102,19 @@ def create_corpus(source_path, target_path, max_entries=None):
 
 def create_librispeech_corpus(source_path, target_path, max_entries):
     audio_root = join(source_path, 'audio')
-    book_info, chapter_info, speaker_info = collect_corpus_info(audio_root)
-
-    # print('loading book texts')
-    # books_root = join(source_path, 'books')
-    # books = collect_book_texts(books_root)
-
-    print('creating corpus entries')
-    corpus_entries = []
+    book_meta, chapter_meta, speaker_meta = collect_corpus_meta(audio_root)
 
     directories = [root for root, subdirs, files in walk(audio_root) if not subdirs]
     progress = tqdm(directories, total=min(len(directories), max_entries or math.inf), file=sys.stderr, unit='entries')
 
+    corpus_entries = []
     for raw_path in progress:
         if max_entries and len(corpus_entries) >= max_entries:
             break
 
         progress.set_description(f'{raw_path:{100}}')
 
-        parms = collect_corpus_entry_parms(raw_path, book_info, chapter_info, speaker_info)
+        parms = collect_corpus_entry_parms(raw_path, book_meta, chapter_meta, speaker_meta)
 
         segments_file, transcript_file, mp3_file = collect_corpus_entry_files(raw_path, parms)
         segments_file = join(raw_path, segments_file)
@@ -132,13 +126,13 @@ def create_librispeech_corpus(source_path, target_path, max_entries):
 
         segments = create_segments(segments_file, transcript_file)
 
-        # Convert, resample and crop audio
+        # Convert and resample audio
         wav_name = splitext(mp3_file)[0] + ".wav"
         wav_path = join(target_path, wav_name)
         if not exists(wav_path) or args.overwrite:
             mp3_path = join(raw_path, mp3_file)
             audio, rate = read_audio(mp3_path, resample_rate=16000, to_mono=True)
-            # audio, rate, segments = crop_to_segments(audio, rate, segments)
+            # audio, rate, segments = crop_to_segments(audio, rate, segments)  # uncomment to crop audio
             write_wav(wav_path, audio, rate)
         parms['media_info'] = mediainfo(wav_path)
 
@@ -151,46 +145,46 @@ def create_librispeech_corpus(source_path, target_path, max_entries):
     return corpus, corpus_file
 
 
-def collect_corpus_info(directory):
+def collect_corpus_meta(directory):
     # books
     books_file = find_file_by_suffix(directory, 'BOOKS.TXT')
     books_file = join(directory, books_file)
-    books = collect_books(books_file)
+    book_meta = collect_book_meta(books_file)
 
     # chapters
     chapters_file = find_file_by_suffix(directory, 'CHAPTERS.TXT')
     chapters_file = join(directory, chapters_file)
-    chapters = collect_chapters(chapters_file)
+    chapter_meta = collect_chapter_meta(chapters_file)
 
     # speakers
     speakers_file = find_file_by_suffix(directory, 'SPEAKERS.TXT')
     speakers_file = join(directory, speakers_file)
-    speakers = collect_speakers(speakers_file)
+    speaker_meta = collect_speaker_meta(speakers_file)
 
-    return books, chapters, speakers
+    return book_meta, chapter_meta, speaker_meta
 
 
-def collect_info(file, pattern):
-    with open(file) as f:
+def collect_meta(file_path, pattern):
+    with open(file_path) as f:
         for line in (line for line in f.readlines() if not line.startswith(';')):
             results = re.search(pattern, line)
             if results:
                 yield results
 
 
-def collect_books(books_file):
-    books = {}
-    for result in collect_info(books_file, books_pattern):
+def collect_book_meta(books_file):
+    book_meta = {}
+    for result in collect_meta(books_file, books_pattern):
         book_id = result.group('book_id') if result.group('book_id') else 'unknown'
         book_title = result.group('book_title') if result.group('book_title') else 'unknown'
-        books[book_id] = book_title
-    books['unknown'] = 'unknown'
-    return books
+        book_meta[book_id] = book_title
+    book_meta['unknown'] = 'unknown book title'
+    return book_meta
 
 
-def collect_chapters(chapters_file):
-    chapters = {}
-    for result in collect_info(chapters_file, chapters_pattern):
+def collect_chapter_meta(chapters_file):
+    chapter_meta = {}
+    for result in collect_meta(chapters_file, chapters_pattern):
         chapter_id = result.group('chapter_id')
         chapter = {
             'reader_id': result.group('reader_id'),
@@ -201,14 +195,14 @@ def collect_chapters(chapters_file):
             'chapter_title': result.group('chapter_title'),
             'project_title': result.group('project_title')
         }
-        chapters[chapter_id] = chapter
-    chapters['unknown'] = 'unknown'
-    return chapters
+        chapter_meta[chapter_id] = chapter
+    chapter_meta['unknown'] = 'unknown chapter'
+    return chapter_meta
 
 
-def collect_speakers(speakers_file):
-    speakers = {}
-    for result in collect_info(speakers_file, speakers_pattern):
+def collect_speaker_meta(speakers_file):
+    speaker_meta = {}
+    for result in collect_meta(speakers_file, speakers_pattern):
         speaker_id = result.group('speaker_id')
         speaker = {
             'sex': result.group('sex'),
@@ -216,9 +210,9 @@ def collect_speakers(speakers_file):
             'length': float(result.group('minutes')),
             'name': result.group('speaker_name'),
         }
-        speakers[speaker_id] = speaker
-    speakers['unknown'] = 'unknown'
-    return speakers
+        speaker_meta[speaker_id] = speaker
+    speaker_meta['unknown'] = 'unknown speaker'
+    return speaker_meta
 
 
 def collect_book_texts(books_root):
@@ -234,21 +228,21 @@ def collect_book_texts(books_root):
     return book_texts
 
 
-def collect_corpus_entry_parms(directory, book_info, chapter_info, speaker_info):
+def collect_corpus_entry_parms(directory, book_meta, chapter_meta, speaker_meta):
     files_pattern = re.compile("[\\\/]mp3[\\\/](?P<speaker_id>\d*)[\\\/](?P<chapter_id>\d*)")
     result = re.search(files_pattern, directory)
     if result:
         speaker_id = result.group('speaker_id')
         chapter_id = result.group('chapter_id')
 
-        chapter = chapter_info[chapter_id] if chapter_id in chapter_info else {'chapter_title': 'unknown',
+        chapter = chapter_meta[chapter_id] if chapter_id in chapter_meta else {'chapter_title': 'unknown',
                                                                                'book_id': 'unknown',
                                                                                'subset': 'unknown'}
-        speaker = speaker_info[speaker_id] if speaker_id in speaker_info else 'unknown'
+        speaker = speaker_meta[speaker_id] if speaker_id in speaker_meta else 'unknown'
 
         book_id = chapter['book_id']
 
-        book_title = book_info[book_id] if book_id in book_info else chapter['project_title']
+        book_title = book_meta[book_id] if book_id in book_meta else chapter['project_title']
         chapter_title = chapter['chapter_title']
         subset = chapter['subset']
         speaker_name = speaker['name']
@@ -319,7 +313,7 @@ def create_segments(segments_file, transcript_file):
             id, start_frame, end_frame = parse_segment_line(line)
             segment_text = segment_texts[id] if id in segment_texts else ''
 
-            speech = Speech(start_frame=start_frame, end_frame=end_frame, transcript=segment_text)
+            speech = SpeechSegment(start_frame=start_frame, end_frame=end_frame, transcript=segment_text)
             segments.append(speech)
 
     return segments

@@ -108,21 +108,6 @@ class CorpusEntry(Audible):
         return '\n'.join(segment.text for segment in self.speech_segments)
 
     @property
-    def x_path(self):
-        return join(self.corpus.root_path, self.id + '.X.npy')
-
-    @property
-    def y_path(self):
-        return join(self.corpus.root_path, self.id + '.Y.npy')
-
-    @property
-    def labels(self):
-        if exists(self.y_path):
-            labels = np.load(self.y_path)
-            return labels
-        return None
-
-    @property
     def audio_length(self):
         return float(self.media_info['duration'])
 

@@ -13,7 +13,7 @@ from librosa.output import write_wav
 from pydub.utils import mediainfo
 from tqdm import tqdm
 
-from constants import CORPUS_ROOT, CORPUS_RAW_ROOT, LS_SOURCE, LS_TARGET
+from constants import LS_SOURCE, LS_TARGET
 from corpus.corpus import LibriSpeechCorpus
 from corpus.corpus_entry import CorpusEntry
 from corpus.corpus_segment import Speech, Pause, UnalignedSpeech
@@ -137,17 +137,17 @@ def create_librispeech_corpus(source_path, target_path, max_entries):
         segments, full_transcript = create_segments(segments_file, transcript_file, book_text)
 
         # Convert, resample and crop audio
-        audio_file = join(raw_path, mp3_file)
-        target_audio_path = join(target_path, splitext(mp3_file)[0] + ".wav")
-        if not exists(target_audio_path) or args.overwrite:
-            audio, rate = read_audio(audio_file, resample_rate=16000, to_mono=True)
+        wav_name = splitext(mp3_file)[0] + ".wav"
+        wav_path = join(target_path, wav_name)
+        if not exists(wav_path) or args.overwrite:
+            mp3_path = join(raw_path, mp3_file)
+            audio, rate = read_audio(mp3_path, resample_rate=16000, to_mono=True)
             audio, rate, segments = crop_to_segments(audio, rate, segments)
-            write_wav(target_audio_path, audio, rate)
-        parms['media_info'] = mediainfo(target_audio_path)
+            write_wav(wav_path, audio, rate)
+        parms['media_info'] = mediainfo(wav_path)
 
         # Create corpus entry
-        corpus_entry = CorpusEntry(target_audio_path, segments, full_transcript=full_transcript, raw_path=raw_path,
-                                   parms=parms)
+        corpus_entry = CorpusEntry(wav_name, segments, full_transcript=full_transcript, raw_path=raw_path, parms=parms)
         corpus_entries.append(corpus_entry)
 
     corpus = LibriSpeechCorpus(corpus_entries)

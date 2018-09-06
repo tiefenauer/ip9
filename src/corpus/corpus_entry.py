@@ -20,10 +20,10 @@ class CorpusEntry(Audible):
     _audio = None
     _rate = None
 
-    def __init__(self, audio_file, segments, full_transcript='', raw_path='', parms=None):
+    def __init__(self, wav_name, segments, full_transcript='', raw_path='', parms=None):
         """
         Create a new corpus entry
-        :param audio_file: path to the audio file (will be read on-the-fly)
+        :param wav_name: path to the audio file (will be read on-the-fly)
         :param segments: list of speech- and pause-segments
         :param full_transcript: string containing the full transcript (if available) if not set, the concatenated
                                 transcripts of the segments will be used as full transcript
@@ -33,7 +33,7 @@ class CorpusEntry(Audible):
         if parms is None:
             parms = {}
         self.corpus = None
-        self.audio_file = audio_file
+        self.wav_name = wav_name
 
         for segment in segments:
             segment.corpus_entry = self
@@ -53,10 +53,14 @@ class CorpusEntry(Audible):
         self.media_info = parms['media_info'] if 'media_info' in parms else {}
 
     @property
+    def audio_path(self):
+        return join(self.corpus.root_path, self.wav_name)
+
+    @property
     def audio(self):
         if self._audio is not None:
             return self._audio
-        self.audio, self._rate = read_audio(self.audio_file)
+        self.audio, self._rate = read_audio(self.wav_name)
         return self._audio
 
     @audio.setter
@@ -67,7 +71,7 @@ class CorpusEntry(Audible):
     def rate(self):
         if self._rate is not None:
             return self._rate
-        self._audio, self._rate = read_audio(self.audio_file)
+        self._audio, self._rate = read_audio(self.wav_name)
         return self._rate
 
     def __iter__(self):
@@ -143,7 +147,7 @@ class CorpusEntry(Audible):
     def summary(self):
         print('')
         print('Corpus Entry: '.ljust(30) + f'{self.name} (id={self.id})')
-        print('Audio: '.ljust(30) + self.audio_file)
+        print('Audio: '.ljust(30) + self.wav_name)
         print('Spectrogram: '.ljust(30) + self.x_path)
         print('Labels: '.ljust(30) + self.y_path)
         print('')

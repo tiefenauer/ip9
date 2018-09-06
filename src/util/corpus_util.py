@@ -6,11 +6,13 @@ import pickle
 from os import listdir
 from os.path import join
 
-from constants import RL_CORPUS_ROOT, LS_CORPUS_ROOT
+from constants import LS_TARGET, RL_TARGET
 
 
 def get_corpus(corpus_id, lang=None):
-    corpus = load_corpus(get_corpus_root(corpus_id))
+    corpus_root = get_corpus_root(corpus_id)
+    corpus = load_corpus(corpus_root)
+    corpus.root_path = corpus_root
     if lang:
         corpus = corpus(languages=[lang])
     corpus.summary()
@@ -19,9 +21,9 @@ def get_corpus(corpus_id, lang=None):
 
 def get_corpus_root(corpus_id):
     if corpus_id == 'ls':
-        return LS_CORPUS_ROOT
+        return LS_TARGET
     if corpus_id == 'rl':
-        return RL_CORPUS_ROOT
+        return RL_TARGET
     raise ValueError(f'unknown corpus id: {corpus_id}')
 
 

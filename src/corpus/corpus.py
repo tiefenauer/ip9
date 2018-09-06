@@ -13,22 +13,20 @@ class Corpus(ABC):
     Base class for corpora
     """
 
-    def __init__(self, name, corpus_entries):
+    def __init__(self, corpus_entries):
         """
         Create a new corpus holding a list of corpus entries
         :param name: unique corpus name
         :param corpus_entries: list of CorpusEntry instances
         :param root_path: path to directory holding the audio files for the corpus entries
         """
-        self._name = ''
-        self.name = name
         for corpus_entry in corpus_entries:
             corpus_entry.corpus = self
         self.corpus_entries = corpus_entries
         self.root_path = None  # must be set when saving/loading
 
-    @abstractmethod
     @property
+    @abstractmethod
     def _name(self):
         raise NotImplementedError
 
@@ -67,10 +65,6 @@ class Corpus(ABC):
     def name(self):
         languages = ', '.join(self.languages)
         return self._name + f' (languages: {languages})'
-
-    @name.setter
-    def name(self, name):
-        self._name = name
 
     @property
     def languages(self):

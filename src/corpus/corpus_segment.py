@@ -4,13 +4,15 @@ from python_speech_features import mfcc
 
 from corpus.audible import Audible
 from util.audio_util import ms_to_frames
-from util.string_util import normalize
+from util.string_util import normalize, contains_numeric
 
 
-class Segment(Audible):
+class SpeechSegment(Audible):
     """
     Base class for audio segments
     """
+    text = ''
+    _transcript = ''
 
     # cache features
     _mag_specgram = None
@@ -18,16 +20,15 @@ class Segment(Audible):
     _mel_specgram = None
     _mfcc = None
 
-    def __init__(self, start_frame, end_frame, transcript, segment_type):
+    def __init__(self, start_frame, end_frame, transcript):
         self.start_frame = start_frame
         self.end_frame = end_frame
-
-        self.text = ''
-        self._transcript = ''
         self.transcript = transcript.strip() if transcript else ''
+        self.corpus_entry = None  # must be set by enclosing corpus entry
 
-        self.segment_type = segment_type
-        self.corpus_entry = None
+    @property
+    def contains_numeric(self):
+        return contains_numeric(self.text)
 
     @property
     def audio(self):
@@ -128,22 +129,3 @@ class Segment(Audible):
 
         self._mfcc = mfcc(self.audio, self.rate, numcep=num_ceps)
         return self._mfcc
-
-
-class Speech(Segment):
-    def __init__(self, start_frame, end_frame, transcript=''):
-        super().__init__(start_frame, end_frame, transcript, 'speech')
-
-
-class Pause(Segment):
-    def __init__(self, start_frame, end_frame):
-        super().__init__(start_frame, end_frame, '', 'pause')
-
-
-class UnalignedSpeech(Segment):
-    """special class for speech segments where the text is derived from the original book text but the exact start
-    and end position of the speech in the audio signal is not known (segment may contain pauses at start, end or
-    anywhere inside the audio signal that were not aligned)"""
-
-    def __init__(self, start_frame, end_frame, transcript=''):
-        super().__init__(start_frame, end_frame, transcript, 'speech*')

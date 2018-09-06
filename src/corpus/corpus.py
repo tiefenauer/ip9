@@ -13,19 +13,22 @@ class Corpus(ABC):
     Base class for corpora
     """
 
-    def __init__(self, name, corpus_entries, root_path):
+    def __init__(self, corpus_entries):
         """
         Create a new corpus holding a list of corpus entries
         :param name: unique corpus name
         :param corpus_entries: list of CorpusEntry instances
         :param root_path: path to directory holding the audio files for the corpus entries
         """
-        self._name = ''
-        self.name = name
         for corpus_entry in corpus_entries:
             corpus_entry.corpus = self
         self.corpus_entries = corpus_entries
-        self.root_path = root_path
+        self.root_path = None  # must be set when saving/loading
+
+    @property
+    @abstractmethod
+    def _name(self):
+        raise NotImplementedError
 
     def __iter__(self):
         for corpus_entry in self.corpus_entries:
@@ -63,10 +66,6 @@ class Corpus(ABC):
         languages = ', '.join(self.languages)
         return self._name + f' (languages: {languages})'
 
-    @name.setter
-    def name(self, name):
-        self._name = name
-
     @property
     def languages(self):
         return sorted(set(lang for lang in (corpus_entry.language for corpus_entry in self.corpus_entries)))
@@ -87,66 +86,43 @@ class Corpus(ABC):
         print(f'Corpus: {self.name}')
         print(self.root_path)
         table = {}
-        t_entries = t_speeches = len_speeches = t_speeches_u = len_speeches_u = t_pauses = len_pauses = len_segments = t_segments = t_duration = 0
+        t_entries = n_speeches_total = length_speeches_total = duration_total = 0
+
+        # stats per language
         for lang in self.languages:
             entries = [entry for entry in self.corpus_entries if entry.language == lang]
             n_entries = len(entries)
             t_entries += n_entries
 
-            speech_segments = [segment for entry in entries for segment in entry.speech_segments]
+            speech_segments = [segment for entry in entries for segment in entry]
             n_speeches = len(speech_segments)
-            l_speeches = sum(segment.audio_length for segment in speech_segments)
-            t_speeches += n_speeches
-            len_speeches += l_speeches
-
-            speeches_unaligned = [segment for entry in entries for segment in entry.speech_segments_unaligned]
-            n_speeches_u = len(speeches_unaligned)
-            l_speeches_u = sum(segment.audio_length for segment in speeches_unaligned)
-            t_speeches_u += n_speeches_u
-            len_speeches_u += l_speeches_u
-
-            pauses = [ps for entry in entries for ps in entry.pause_segments]
-            n_pauses = len(pauses)
-            l_pauses = sum(segment.audio_length for segment in pauses)
-            t_pauses += n_pauses
-            len_pauses += l_pauses
-
-            segments = [sg for entry in entries for sg in entry.segments]
-            n_segments = len(segments)
-            l_segments = sum([segment.audio_length for segment in segments])
-            t_segments += n_segments
-            len_segments += l_segments
+            length_speeches = sum(segment.audio_length for segment in speech_segments)
+            n_speeches_total += n_speeches
+            length_speeches_total += length_speeches
 
             duration = sum(entry.audio_length for entry in self.corpus_entries if entry.language == lang)
-            t_duration += duration
+            duration_total += duration
 
             table[lang] = (n_entries,
-                           n_speeches, timedelta(seconds=int(l_speeches)),
-                           n_speeches_u, timedelta(seconds=int(len_speeches_u)),
-                           n_pauses, timedelta(seconds=int(l_pauses)),
-                           n_segments, timedelta(seconds=int(l_segments)),
+                           n_speeches, timedelta(seconds=int(length_speeches)),
                            timedelta(seconds=int(duration)))
 
+        # total over all languages
         table['total'] = (t_entries,
-                          t_speeches, timedelta(seconds=int(len_speeches)),
-                          t_speeches_u, timedelta(seconds=int(len_speeches_u)),
-                          t_pauses, timedelta(seconds=int(len_speeches_u)),
-                          t_segments, timedelta(seconds=int(len_segments)),
-                          timedelta(seconds=int(t_duration))
+                          n_speeches_total, timedelta(seconds=int(length_speeches_total)),
+                          timedelta(seconds=int(duration_total))
                           )
         headers = ['lang', '#entries',
-                   '#speeches', '',
-                   '#speeches', '(unal.)',
-                   '#pauses', '',
-                   '#total', '',
-                   'audio']
+                   '#speech segments', 'speech segments length',
+                   'audio length']
         print(tabulate([(k,) + v for k, v in table.items()], headers=headers))
 
 
-class ReadyLinguaCorpus(Corpus):
+class ReadyLinguaCorpus(Corpus, ABC):
 
-    def __init__(self, corpus_entries, root_path):
-        super().__init__('ReadyLingua', corpus_entries, root_path)
+    @property
+    def _name(self):
+        return 'ReadyLingua'
 
     def train_dev_test_split(self):
         speech_segments = [seg for corpus_entry in self.corpus_entries
@@ -165,8 +141,9 @@ class ReadyLinguaCorpus(Corpus):
 
 class LibriSpeechCorpus(Corpus):
 
-    def __init__(self, corpus_entries, root_path):
-        super().__init__('LibriSpeech', corpus_entries, root_path)
+    @property
+    def _name(self):
+        return 'LibriSpeech'
 
     def train_dev_test_split(self):
         train_entries = filter_corpus_entry_by_subset_prefix(self.corpus_entries, 'train-')

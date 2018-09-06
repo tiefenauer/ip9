@@ -1,6 +1,6 @@
 from copy import deepcopy
 from datetime import timedelta
-from os.path import exists, join
+from os.path import join
 from random import randint
 
 import numpy as np
@@ -8,7 +8,6 @@ from tabulate import tabulate
 
 from corpus.audible import Audible
 from util.audio_util import read_audio
-from util.string_util import contains_numeric
 
 
 class CorpusEntry(Audible):
@@ -20,10 +19,10 @@ class CorpusEntry(Audible):
     _audio = None
     _rate = None
 
-    def __init__(self, audio_file, segments, full_transcript='', raw_path='', parms=None):
+    def __init__(self, wav_name, segments, raw_path='', parms=None):
         """
         Create a new corpus entry
-        :param audio_file: path to the audio file (will be read on-the-fly)
+        :param wav_name: path to the audio file (will be read on-the-fly)
         :param segments: list of speech- and pause-segments
         :param full_transcript: string containing the full transcript (if available) if not set, the concatenated
                                 transcripts of the segments will be used as full transcript
@@ -33,13 +32,11 @@ class CorpusEntry(Audible):
         if parms is None:
             parms = {}
         self.corpus = None
-        self.audio_file = audio_file
+        self.wav_name = wav_name
 
         for segment in segments:
             segment.corpus_entry = self
-        self.segments = segments
-
-        self.full_transcript = full_transcript if full_transcript else self.transcript
+        self.speech_segments = segments
 
         self.raw_path = raw_path
         self.name = parms['name'] if 'name' in parms else ''
@@ -53,10 +50,14 @@ class CorpusEntry(Audible):
         self.media_info = parms['media_info'] if 'media_info' in parms else {}
 
     @property
+    def audio_path(self):
+        return join(self.corpus.root_path, self.wav_name)
+
+    @property
     def audio(self):
         if self._audio is not None:
             return self._audio
-        self.audio, self._rate = read_audio(self.audio_file)
+        self._audio, self._rate = read_audio(self.audio_path)
         return self._audio
 
     @audio.setter
@@ -67,35 +68,23 @@ class CorpusEntry(Audible):
     def rate(self):
         if self._rate is not None:
             return self._rate
-        self._audio, self._rate = read_audio(self.audio_file)
+        self._audio, self._rate = read_audio(self.wav_name)
         return self._rate
 
     def __iter__(self):
-        for segment in self.segments:
+        for segment in self.speech_segments:
             yield segment
 
     def __getitem__(self, item):
         return self.speech_segments[item]
 
     @property
-    def speech_segments(self):
-        return [segment for segment in self.segments if segment.segment_type == 'speech']
-
-    @property
-    def speech_segments_unaligned(self):
-        return [segment for segment in self.segments if segment.segment_type == 'speech*']
-
-    @property
-    def pause_segments(self):
-        return [segment for segment in self.segments if segment.segment_type == 'pause']
-
-    @property
     def speech_segments_numeric(self):
-        return [segment for segment in self.speech_segments if contains_numeric(segment.text)]
+        return [segment for segment in self.speech_segments if segment.contains_numeric]
 
     @property
     def speech_segments_not_numeric(self):
-        return [segment for segment in self.speech_segments if not contains_numeric(segment.text)]
+        return [segment for segment in self.speech_segments if not segment.contains_numeric()]
 
     @property
     def transcript(self):
@@ -104,21 +93,6 @@ class CorpusEntry(Audible):
     @property
     def text(self):
         return '\n'.join(segment.text for segment in self.speech_segments)
-
-    @property
-    def x_path(self):
-        return join(self.corpus.root_path, self.id + '.X.npy')
-
-    @property
-    def y_path(self):
-        return join(self.corpus.root_path, self.id + '.Y.npy')
-
-    @property
-    def labels(self):
-        if exists(self.y_path):
-            labels = np.load(self.y_path)
-            return labels
-        return None
 
     @property
     def audio_length(self):
@@ -136,32 +110,24 @@ class CorpusEntry(Audible):
             return self
         _copy = deepcopy(self)
         segments = self.speech_segments_not_numeric
-        _copy.segments = segments
+        _copy.speech_segments = segments
         _copy.name = self.name + f' ==> only segments without numeric values'
         return _copy
 
     def summary(self):
         print('')
         print('Corpus Entry: '.ljust(30) + f'{self.name} (id={self.id})')
-        print('Audio: '.ljust(30) + self.audio_file)
-        print('Spectrogram: '.ljust(30) + self.x_path)
-        print('Labels: '.ljust(30) + self.y_path)
+        print('Audio Path: '.ljust(30) + self.wav_name)
         print('')
-        l_sg = sum(seg.audio_length for seg in self.speech_segments)
-        l_sp = sum(seg.audio_length for seg in self.speech_segments)
-        l_ps = sum(seg.audio_length for seg in self.pause_segments)
-        l_sp_u = sum(seg.audio_length for seg in self.speech_segments_unaligned)
+        total_length = sum(seg.audio_length for seg in self.speech_segments)
         l_sp_num = sum(seg.audio_length for seg in self.speech_segments_numeric)
         l_sp_nnum = sum(seg.audio_length for seg in self.speech_segments_not_numeric)
         table = {
-            '#speech segments': (len(self.speech_segments), timedelta(seconds=l_sp)),
-            '#pause segments': (len(self.pause_segments), timedelta(seconds=l_ps)),
-            '#segments (unaligned)': (len(self.speech_segments_unaligned), timedelta(seconds=l_sp_u)),
-            '#speech segments containing numbers in transcript': (
+            '#speech segments': (len(self.speech_segments), timedelta(seconds=total_length)),
+            '#speech segments with numbers in transcript': (
                 len(self.speech_segments_numeric), timedelta(seconds=l_sp_num)),
-            '#speech segments not containing numbers in transcript': (
-                len(self.speech_segments_not_numeric), timedelta(seconds=l_sp_nnum)),
-            '#total segments': (len(self.segments), timedelta(seconds=l_sg)),
+            '#speech segments without numbers in transcript': (
+                len(self.speech_segments_not_numeric), timedelta(seconds=l_sp_nnum))
         }
         headers = ['# ', 'hh:mm:ss']
         print(tabulate([(k,) + v for k, v in table.items()], headers=headers))

@@ -6,11 +6,13 @@ import pickle
 from os import listdir
 from os.path import join
 
-from constants import RL_CORPUS_ROOT, LS_CORPUS_ROOT
+from constants import LS_TARGET, RL_TARGET
 
 
 def get_corpus(corpus_id, lang=None):
-    corpus = load_corpus(get_corpus_root(corpus_id))
+    corpus_root = get_corpus_root(corpus_id)
+    corpus = load_corpus(corpus_root)
+    corpus.root_path = corpus_root
     if lang:
         corpus = corpus(languages=[lang])
     corpus.summary()
@@ -19,14 +21,14 @@ def get_corpus(corpus_id, lang=None):
 
 def get_corpus_root(corpus_id):
     if corpus_id == 'ls':
-        return LS_CORPUS_ROOT
+        return LS_TARGET
     if corpus_id == 'rl':
-        return RL_CORPUS_ROOT
+        return RL_TARGET
     raise ValueError(f'unknown corpus id: {corpus_id}')
 
 
 def load_corpus(corpus_root):
-    corpus_file = join(corpus_root, 'corpus')
+    corpus_file = join(corpus_root, 'index')
     print(f'loading {corpus_file} ...')
     if corpus_file.endswith('.gz'):
         with gzip.open(corpus_file, 'rb') as corpus_f:
@@ -38,15 +40,16 @@ def load_corpus(corpus_root):
     return corpus
 
 
-def save_corpus(corpus_entries, target_root, gzip=False):
-    corpus_file = join(target_root, 'corpus')
+def save_corpus(corpus, target_root, gzip=False):
+    corpus.root_path = target_root
+    corpus_file = join(target_root, 'index')
     if gzip:
         corpus_file += '.gz'
-        with gzip.open(corpus_file, 'wb') as corpus:
-            corpus.write(pickle.dumps(corpus_entries))
+        with gzip.open(corpus_file, 'wb') as f:
+            f.write(pickle.dumps(corpus))
     else:
-        with open(corpus_file, 'wb') as corpus:
-            pickle.dump(corpus_entries, corpus)
+        with open(corpus_file, 'wb') as f:
+            pickle.dump(corpus, f)
     return corpus_file
 
 

@@ -13,9 +13,9 @@ from tabulate import tabulate
 
 from constants import CORPUS, LANGUAGE, BATCH_SIZE, NUM_EPOCHS, TARGET_ROOT
 from core.callbacks import ReportCallback
-from core.dataset_generator import HFS5BatchGenerator, OnTheFlyFeaturesIterator
+from core.dataset_generator import HFS5BatchGenerator
 from util.brnn_util import deep_speech_model, ctc_dummy_loss, decoder_dummy_loss, ler
-from util.corpus_util import get_corpus, get_corpus_root
+from util.corpus_util import get_corpus_root
 from util.log_util import redirect_to_file, create_args_str
 from util.train_util import get_target_dir
 

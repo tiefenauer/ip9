@@ -1,17 +1,12 @@
 """
 Contains various helper functions to create/train a BRNN
 """
-from os import listdir
-from os.path import join, splitext
 
-import h5py
 import tensorflow as tf
 from keras import Input, Model, backend as K
 from keras.activations import relu
 from keras.layers import TimeDistributed, Dense, Activation, Dropout, Bidirectional, SimpleRNN, Lambda
 from keras.utils import get_custom_objects
-
-from core.dataset_generator import HFS5BatchGenerator, OnTheFlyFeaturesIterator
 
 
 def deep_speech_model(num_features, num_hidden=2048, dropout=0.1, num_classes=28):

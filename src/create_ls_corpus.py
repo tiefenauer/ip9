@@ -84,6 +84,7 @@ whitespace_pattern = re.compile(r'\s+')
 
 def main():
     print(create_args_str(args))
+    print(f'Processing files from {args.source} and saving them in {args.target}')
     corpus, corpus_file = create_corpus(args.source, args.target, args.max_entries)
     print(f'Done! Corpus with {len(corpus)} entries saved to {corpus_file}')
 
@@ -103,9 +104,9 @@ def create_librispeech_corpus(source_path, target_path, max_entries):
     audio_root = join(source_path, 'audio')
     book_info, chapter_info, speaker_info = collect_corpus_info(audio_root)
 
-    print('loading book texts')
-    books_root = join(source_path, 'books')
-    books = collect_book_texts(books_root)
+    # print('loading book texts')
+    # books_root = join(source_path, 'books')
+    # books = collect_book_texts(books_root)
 
     print('creating corpus entries')
     corpus_entries = []
@@ -129,12 +130,7 @@ def create_librispeech_corpus(source_path, target_path, max_entries):
             log.warning(f'Skipping directory (not all files found): {raw_path}')
             break
 
-        book_id = parms['book_id']
-        book_text = books[book_id] if book_id in books else ''
-        if not book_text:
-            log.warning(f'No book text found. Processing directory, but speech pauses might be wrong.')
-
-        segments, full_transcript = create_segments(segments_file, transcript_file, book_text)
+        segments = create_segments(segments_file, transcript_file)
 
         # Convert, resample and crop audio
         wav_name = splitext(mp3_file)[0] + ".wav"
@@ -142,12 +138,12 @@ def create_librispeech_corpus(source_path, target_path, max_entries):
         if not exists(wav_path) or args.overwrite:
             mp3_path = join(raw_path, mp3_file)
             audio, rate = read_audio(mp3_path, resample_rate=16000, to_mono=True)
-            audio, rate, segments = crop_to_segments(audio, rate, segments)
+            # audio, rate, segments = crop_to_segments(audio, rate, segments)
             write_wav(wav_path, audio, rate)
         parms['media_info'] = mediainfo(wav_path)
 
         # Create corpus entry
-        corpus_entry = CorpusEntry(wav_name, segments, full_transcript=full_transcript, raw_path=raw_path, parms=parms)
+        corpus_entry = CorpusEntry(wav_name, segments, raw_path=raw_path, parms=parms)
         corpus_entries.append(corpus_entry)
 
     corpus = LibriSpeechCorpus(corpus_entries)
@@ -309,45 +305,24 @@ def find_text_between(prev_text, next_text, book_text):
     return None
 
 
-def create_segments(segments_file, transcript_file, book_text):
-    book_text = normalize_text(book_text)
-    full_transcript = ''
-
+def create_segments(segments_file, transcript_file):
     segment_texts = {}
     with open(transcript_file, 'r') as f_transcript:
         for line in f_transcript.readlines():
-            segment_id, segment_text = line.split(' ', 1)
-            segment_texts[segment_id] = segment_text.replace('\n', '')
+            id, segment_text = line.split(' ', 1)
+            segment_texts[id] = segment_text.replace('\n', '')
 
     segments = []
     with open(segments_file, 'r') as f_segments:
         lines = f_segments.readlines()
         for i, line in enumerate(lines):
-            segment_id, next_start, next_end = parse_segment_line(line)
-            segment_text = segment_texts[segment_id] if segment_id in segment_texts else ''
-            full_transcript += segment_text + '\n'
+            id, start_frame, end_frame = parse_segment_line(line)
+            segment_text = segment_texts[id] if id in segment_texts else ''
 
-            # add pause or missing speech segment between speeches (if there is one)
-            if i > 0:
-                prev_id, prev_start, prev_end = parse_segment_line(lines[i - 1])
-                prev_text = segment_texts[prev_id] if prev_id in segment_texts else None
-                between_text = find_text_between(prev_text, segment_text, book_text)
-
-                between_start = prev_end + 1
-                between_end = next_start - 1
-                if between_end - between_start > 0:
-                    if between_text:
-                        full_transcript += between_text + '\n'
-                        between_segment = UnalignedSpeech(start_frame=between_start, end_frame=between_end,
-                                                          transcript=between_text)
-                    else:
-                        between_segment = Pause(start_frame=between_start, end_frame=between_end)
-                    segments.append(between_segment)
-
-            speech = Speech(start_frame=next_start, end_frame=next_end, transcript=segment_text)
+            speech = Speech(start_frame=start_frame, end_frame=end_frame, transcript=segment_text)
             segments.append(speech)
 
-    return segments, full_transcript
+    return segments
 
 
 def parse_segment_line(line):

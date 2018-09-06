@@ -20,7 +20,7 @@ class CorpusEntry(Audible):
     _audio = None
     _rate = None
 
-    def __init__(self, wav_name, segments, full_transcript='', raw_path='', parms=None):
+    def __init__(self, wav_name, segments, raw_path='', parms=None):
         """
         Create a new corpus entry
         :param wav_name: path to the audio file (will be read on-the-fly)
@@ -38,8 +38,6 @@ class CorpusEntry(Audible):
         for segment in segments:
             segment.corpus_entry = self
         self.segments = segments
-
-        self.full_transcript = full_transcript if full_transcript else self.transcript
 
         self.raw_path = raw_path
         self.name = parms['name'] if 'name' in parms else ''
@@ -60,7 +58,7 @@ class CorpusEntry(Audible):
     def audio(self):
         if self._audio is not None:
             return self._audio
-        self.audio, self._rate = read_audio(self.wav_name)
+        self._audio, self._rate = read_audio(self.audio_path)
         return self._audio
 
     @audio.setter

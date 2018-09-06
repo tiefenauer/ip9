@@ -1,6 +1,6 @@
 from copy import deepcopy
 from datetime import timedelta
-from os.path import exists, join
+from os.path import join
 from random import randint
 
 import numpy as np
@@ -8,7 +8,6 @@ from tabulate import tabulate
 
 from corpus.audible import Audible
 from util.audio_util import read_audio
-from util.string_util import contains_numeric
 
 
 class CorpusEntry(Audible):
@@ -37,7 +36,7 @@ class CorpusEntry(Audible):
 
         for segment in segments:
             segment.corpus_entry = self
-        self.segments = segments
+        self.speech_segments = segments
 
         self.raw_path = raw_path
         self.name = parms['name'] if 'name' in parms else ''
@@ -73,31 +72,19 @@ class CorpusEntry(Audible):
         return self._rate
 
     def __iter__(self):
-        for segment in self.segments:
+        for segment in self.speech_segments:
             yield segment
 
     def __getitem__(self, item):
         return self.speech_segments[item]
 
     @property
-    def speech_segments(self):
-        return [segment for segment in self.segments if segment.segment_type == 'speech']
-
-    @property
-    def speech_segments_unaligned(self):
-        return [segment for segment in self.segments if segment.segment_type == 'speech*']
-
-    @property
-    def pause_segments(self):
-        return [segment for segment in self.segments if segment.segment_type == 'pause']
-
-    @property
     def speech_segments_numeric(self):
-        return [segment for segment in self.speech_segments if contains_numeric(segment.text)]
+        return [segment for segment in self.speech_segments if segment.contains_numeric]
 
     @property
     def speech_segments_not_numeric(self):
-        return [segment for segment in self.speech_segments if not contains_numeric(segment.text)]
+        return [segment for segment in self.speech_segments if not segment.contains_numeric()]
 
     @property
     def transcript(self):
@@ -123,32 +110,24 @@ class CorpusEntry(Audible):
             return self
         _copy = deepcopy(self)
         segments = self.speech_segments_not_numeric
-        _copy.segments = segments
+        _copy.speech_segments = segments
         _copy.name = self.name + f' ==> only segments without numeric values'
         return _copy
 
     def summary(self):
         print('')
         print('Corpus Entry: '.ljust(30) + f'{self.name} (id={self.id})')
-        print('Audio: '.ljust(30) + self.wav_name)
-        print('Spectrogram: '.ljust(30) + self.x_path)
-        print('Labels: '.ljust(30) + self.y_path)
+        print('Audio Path: '.ljust(30) + self.wav_name)
         print('')
-        l_sg = sum(seg.audio_length for seg in self.speech_segments)
-        l_sp = sum(seg.audio_length for seg in self.speech_segments)
-        l_ps = sum(seg.audio_length for seg in self.pause_segments)
-        l_sp_u = sum(seg.audio_length for seg in self.speech_segments_unaligned)
+        total_length = sum(seg.audio_length for seg in self.speech_segments)
         l_sp_num = sum(seg.audio_length for seg in self.speech_segments_numeric)
         l_sp_nnum = sum(seg.audio_length for seg in self.speech_segments_not_numeric)
         table = {
-            '#speech segments': (len(self.speech_segments), timedelta(seconds=l_sp)),
-            '#pause segments': (len(self.pause_segments), timedelta(seconds=l_ps)),
-            '#segments (unaligned)': (len(self.speech_segments_unaligned), timedelta(seconds=l_sp_u)),
-            '#speech segments containing numbers in transcript': (
+            '#speech segments': (len(self.speech_segments), timedelta(seconds=total_length)),
+            '#speech segments with numbers in transcript': (
                 len(self.speech_segments_numeric), timedelta(seconds=l_sp_num)),
-            '#speech segments not containing numbers in transcript': (
-                len(self.speech_segments_not_numeric), timedelta(seconds=l_sp_nnum)),
-            '#total segments': (len(self.segments), timedelta(seconds=l_sg)),
+            '#speech segments without numbers in transcript': (
+                len(self.speech_segments_not_numeric), timedelta(seconds=l_sp_nnum))
         }
         headers = ['# ', 'hh:mm:ss']
         print(tabulate([(k,) + v for k, v in table.items()], headers=headers))

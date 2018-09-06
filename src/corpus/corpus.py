@@ -13,7 +13,7 @@ class Corpus(ABC):
     Base class for corpora
     """
 
-    def __init__(self, name, corpus_entries, root_path):
+    def __init__(self, name, corpus_entries):
         """
         Create a new corpus holding a list of corpus entries
         :param name: unique corpus name
@@ -25,7 +25,12 @@ class Corpus(ABC):
         for corpus_entry in corpus_entries:
             corpus_entry.corpus = self
         self.corpus_entries = corpus_entries
-        self.root_path = root_path
+        self.root_path = None  # must be set when saving/loading
+
+    @abstractmethod
+    @property
+    def _name(self):
+        raise NotImplementedError
 
     def __iter__(self):
         for corpus_entry in self.corpus_entries:
@@ -143,10 +148,11 @@ class Corpus(ABC):
         print(tabulate([(k,) + v for k, v in table.items()], headers=headers))
 
 
-class ReadyLinguaCorpus(Corpus):
+class ReadyLinguaCorpus(Corpus, ABC):
 
-    def __init__(self, corpus_entries, root_path):
-        super().__init__('ReadyLingua', corpus_entries, root_path)
+    @property
+    def _name(self):
+        return 'ReadyLingua'
 
     def train_dev_test_split(self):
         speech_segments = [seg for corpus_entry in self.corpus_entries
@@ -165,8 +171,9 @@ class ReadyLinguaCorpus(Corpus):
 
 class LibriSpeechCorpus(Corpus):
 
-    def __init__(self, corpus_entries, root_path):
-        super().__init__('LibriSpeech', corpus_entries, root_path)
+    @property
+    def _name(self):
+        return 'LibriSpeech'
 
     def train_dev_test_split(self):
         train_entries = filter_corpus_entry_by_subset_prefix(self.corpus_entries, 'train-')

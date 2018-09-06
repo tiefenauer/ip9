@@ -150,7 +150,7 @@ def create_librispeech_corpus(source_path, target_path, max_entries):
                                    parms=parms)
         corpus_entries.append(corpus_entry)
 
-    corpus = LibriSpeechCorpus(corpus_entries, target_path)
+    corpus = LibriSpeechCorpus(corpus_entries)
     corpus_file = save_corpus(corpus, target_path)
     return corpus, corpus_file
 

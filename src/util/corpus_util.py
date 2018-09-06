@@ -38,15 +38,16 @@ def load_corpus(corpus_root):
     return corpus
 
 
-def save_corpus(corpus_entries, target_root, gzip=False):
+def save_corpus(corpus, target_root, gzip=False):
+    corpus.root_path = target_root
     corpus_file = join(target_root, 'corpus')
     if gzip:
         corpus_file += '.gz'
-        with gzip.open(corpus_file, 'wb') as corpus:
-            corpus.write(pickle.dumps(corpus_entries))
+        with gzip.open(corpus_file, 'wb') as f:
+            f.write(pickle.dumps(corpus))
     else:
-        with open(corpus_file, 'wb') as corpus:
-            pickle.dump(corpus_entries, corpus)
+        with open(corpus_file, 'wb') as f:
+            pickle.dump(corpus, f)
     return corpus_file
 
 

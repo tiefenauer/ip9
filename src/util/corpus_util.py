@@ -28,7 +28,7 @@ def get_corpus_root(corpus_id):
 
 
 def load_corpus(corpus_root):
-    corpus_file = join(corpus_root, 'corpus')
+    corpus_file = join(corpus_root, 'index')
     print(f'loading {corpus_file} ...')
     if corpus_file.endswith('.gz'):
         with gzip.open(corpus_file, 'rb') as corpus_f:
@@ -42,7 +42,7 @@ def load_corpus(corpus_root):
 
 def save_corpus(corpus, target_root, gzip=False):
     corpus.root_path = target_root
-    corpus_file = join(target_root, 'corpus')
+    corpus_file = join(target_root, 'index')
     if gzip:
         corpus_file += '.gz'
         with gzip.open(corpus_file, 'wb') as f:

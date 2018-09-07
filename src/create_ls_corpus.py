@@ -9,6 +9,7 @@ from os import makedirs, walk
 from os.path import exists, splitext, join
 from pathlib import Path
 
+import librosa
 import soundfile as sf
 from pydub.utils import mediainfo
 from tqdm import tqdm
@@ -17,7 +18,7 @@ from constants import LS_SOURCE, LS_TARGET
 from corpus.corpus import LibriSpeechCorpus
 from corpus.corpus_entry import CorpusEntry
 from corpus.corpus_segment import SpeechSegment
-from util.audio_util import seconds_to_frame, read_audio
+from util.audio_util import seconds_to_frame
 from util.corpus_util import save_corpus, find_file_by_suffix
 from util.log_util import log_setup, create_args_str
 
@@ -131,7 +132,7 @@ def create_librispeech_corpus(source_path, target_path, max_entries):
         audio_dst = join(target_path, wav_name)
         if not exists(audio_dst) or args.overwrite:
             audio_src = join(raw_path, mp3_file)
-            audio, rate = read_audio(audio_src, resample_rate=16000, to_mono=True)
+            audio, rate = librosa.load(audio_src, sr=16000, mono=True)
             # audio, rate, segments = crop_to_segments(audio, rate, segments)  # uncomment to crop audio
             sf.write(audio_dst, audio, rate, 'PCM_16')
         parms['media_info'] = mediainfo(audio_dst)

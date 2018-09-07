@@ -9,7 +9,7 @@ from os import makedirs, walk
 from os.path import exists, splitext, join
 from pathlib import Path
 
-from librosa.output import write_wav
+import soundfile as sf
 from pydub.utils import mediainfo
 from tqdm import tqdm
 
@@ -128,13 +128,13 @@ def create_librispeech_corpus(source_path, target_path, max_entries):
 
         # Convert and resample audio
         wav_name = splitext(mp3_file)[0] + ".wav"
-        wav_path = join(target_path, wav_name)
-        if not exists(wav_path) or args.overwrite:
-            mp3_path = join(raw_path, mp3_file)
-            audio, rate = read_audio(mp3_path, resample_rate=16000, to_mono=True)
+        audio_dst = join(target_path, wav_name)
+        if not exists(audio_dst) or args.overwrite:
+            audio_src = join(raw_path, mp3_file)
+            audio, rate = read_audio(audio_src, resample_rate=16000, to_mono=True)
             # audio, rate, segments = crop_to_segments(audio, rate, segments)  # uncomment to crop audio
-            write_wav(wav_path, audio, rate)
-        parms['media_info'] = mediainfo(wav_path)
+            sf.write(audio_dst, audio, rate, 'PCM_16')
+        parms['media_info'] = mediainfo(audio_dst)
 
         # Create corpus entry
         corpus_entry = CorpusEntry(wav_name, segments, raw_path=raw_path, parms=parms)

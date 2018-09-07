@@ -24,6 +24,7 @@ class Corpus(ABC):
             corpus_entry.corpus = self
         self.corpus_entries = corpus_entries
         self.root_path = None  # must be set when saving/loading
+        self.creation_date = None  # must be set when saving/loading
 
     @property
     @abstractmethod
@@ -85,6 +86,8 @@ class Corpus(ABC):
         print('')
         print(f'Corpus: {self.name}')
         print(self.root_path)
+        print(f'Creation date: {self.creation_date}')
+        print()
         table = {}
         t_entries = n_speeches_total = length_speeches_total = duration_total = 0
 

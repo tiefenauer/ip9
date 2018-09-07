@@ -4,10 +4,10 @@ from os.path import join
 from random import randint
 
 import numpy as np
+import soundfile as sf
 from tabulate import tabulate
 
 from corpus.audible import Audible
-from util.audio_util import read_audio
 
 
 class CorpusEntry(Audible):
@@ -57,7 +57,7 @@ class CorpusEntry(Audible):
     def audio(self):
         if self._audio is not None:
             return self._audio
-        self._audio, self._rate = read_audio(self.audio_path)
+        self._audio, self._rate = sf.read(self.audio_path, dtype='int16')
         return self._audio
 
     @audio.setter
@@ -68,7 +68,7 @@ class CorpusEntry(Audible):
     def rate(self):
         if self._rate is not None:
             return self._rate
-        self._audio, self._rate = read_audio(self.wav_name)
+        self._audio, self._rate = sf.read(self.audio_path, dtype='int16')
         return self._rate
 
     def __iter__(self):

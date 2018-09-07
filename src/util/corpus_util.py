@@ -3,6 +3,7 @@ Utility functions to work with corpora
 """
 import gzip
 import pickle
+from datetime import datetime
 from os import listdir
 from os.path import join
 
@@ -42,6 +43,7 @@ def load_corpus(corpus_root):
 
 def save_corpus(corpus, target_root, gzip=False):
     corpus.root_path = target_root
+    corpus.creation_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     corpus_file = join(target_root, 'index')
     if gzip:
         corpus_file += '.gz'

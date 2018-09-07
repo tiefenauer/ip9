@@ -5,20 +5,21 @@ import math
 import os
 import sys
 import wave
-from os import makedirs, remove, walk
+from os import makedirs, walk
 from os.path import exists, join
 from pathlib import Path
 
-from librosa.output import write_wav
+import librosa
+import soundfile as sf
 from lxml import etree
 from pydub.utils import mediainfo
 from tqdm import tqdm
 
-from constants import CORPUS_RAW_ROOT, CORPUS_ROOT
+from constants import RL_TARGET, RL_SOURCE
 from corpus.corpus import ReadyLinguaCorpus
 from corpus.corpus_entry import CorpusEntry
-from corpus.corpus_segment import Speech, Pause
-from util.audio_util import resample_frame, crop_to_segments, read_audio
+from corpus.corpus_segment import SpeechSegment
+from util.audio_util import resample_frame
 from util.corpus_util import save_corpus, find_file_by_suffix
 from util.log_util import log_setup, create_args_str
 from util.string_util import create_filename
@@ -43,10 +44,10 @@ LANGUAGES = {  # mapping from folder names to language code
 # -------------------------------------------------------------
 parser = argparse.ArgumentParser(description="""Create ReadyLingua corpus from raw files""")
 parser.add_argument('-f', '--file', help='Dummy argument for Jupyter Notebook compatibility')
-parser.add_argument('-s', '--source_root', default=CORPUS_RAW_ROOT,
-                    help=f'(optional) source root directory (default: {CORPUS_RAW_ROOT}')
-parser.add_argument('-t', '--target_root', default=CORPUS_ROOT,
-                    help=f'(optional) target root directory (default: {CORPUS_ROOT})')
+parser.add_argument('-s', '--source_root', default=RL_SOURCE,
+                    help=f'(optional) source root directory (default: {RL_SOURCE}')
+parser.add_argument('-t', '--target_root', default=RL_TARGET,
+                    help=f'(optional) target root directory (default: {RL_TARGET})')
 parser.add_argument('-m', '--max_entries', type=int, default=None,
                     help='(optional) maximum number of corpus entries to process. Default=None=\'all\'')
 parser.add_argument('-o', '--overwrite', default=False, action='store_true',
@@ -61,13 +62,8 @@ args = parser.parse_args()
 
 def main():
     print(create_args_str(args))
-
-    source_root = join(args.source_root, 'readylingua-raw')
-    target_root = join(args.target_root, 'readylingua-corpus')
-    print(f'Processing files from {source_root} and saving them in {target_root}')
-
-    corpus, corpus_file = create_corpus(source_root, target_root, args.max_entries)
-
+    print(f'Processing files from {args.source_root} and saving them in {args.target_root}')
+    corpus, corpus_file = create_corpus(args.source_root, args.target_root, args.max_entries)
     print(f'Done! Corpus with {len(corpus)} entries saved to {corpus_file}')
 
 
@@ -109,25 +105,23 @@ def create_readylingua_corpus(source_root, target_root, max_entries):
         segmentation_file = join(raw_path, files['segmentation'])
         index_file = join(raw_path, files['index'])
         transcript_file = join(raw_path, files['text'])
-        audio_file = join(raw_path, files['audio'])
 
         segments = create_segments(index_file, transcript_file, segmentation_file, parms['rate'])
 
         # Resample and crop audio
-        target_audio_path = join(target_root, parms['id'] + ".wav")
-        if not exists(target_audio_path) or args.overwrite:
-            if exists(target_audio_path):
-                remove(target_audio_path)
-            audio, rate = read_audio(audio_file, resample_rate=16000, to_mono=True)
-            audio, rate, segments, crop_to_segments(audio, rate, segments)
-            write_wav(target_audio_path, audio, rate)
-        parms['media_info'] = mediainfo(target_audio_path)
+        audio_dst = join(target_root, parms['id'] + ".wav")
+        if not exists(audio_dst) or args.overwrite:
+            audio_src = join(raw_path, files['audio'])
+            audio, rate = librosa.load(audio_src, sr=16000, mono=True)
+            # audio, rate, segments, crop_to_segments(audio, rate, segments)
+            sf.write(audio_dst, audio, rate, subtype='PCM_16')
+        parms['media_info'] = mediainfo(audio_dst)
 
         # Create corpus entry
-        corpus_entry = CorpusEntry(target_audio_path, segments, raw_path=raw_path, parms=parms)
+        corpus_entry = CorpusEntry(audio_dst, segments, raw_path=raw_path, parms=parms)
         corpus_entries.append(corpus_entry)
 
-    corpus = ReadyLinguaCorpus(corpus_entries, target_root)
+    corpus = ReadyLinguaCorpus(corpus_entries)
     corpus_file = save_corpus(corpus, target_root)
     return corpus, corpus_file
 
@@ -202,32 +196,22 @@ def collect_corpus_entry_parms(directory, files):
     return {'id': corpus_entry_id, 'name': corpus_entry_name, 'language': language, 'rate': rate, 'channels': channels}
 
 
-def find_speech_within_segment(segment, speeches):
-    return next(iter([speech for speech in speeches
-                      if speech['start_frame'] >= segment['start_frame']
-                      and speech['end_frame'] <= segment['end_frame']]), None)
-
-
 def create_segments(index_file, transcript_file, segmentation_file, original_sample_rate):
-    segmentation = collect_segmentation(segmentation_file)
+    # segmentation = collect_segmentation(segmentation_file)
     speeches = collect_speeches(index_file)
     transcript = Path(transcript_file).read_text(encoding='utf-8')
 
     # merge information from index file (speech parts) with segmentation information
     segments = []
-    for audio_segment in segmentation:
+    for speech_meta in speeches:
         # re-calculate original frame values to resampled values
-        start_frame = resample_frame(audio_segment['start_frame'], old_sampling_rate=original_sample_rate)
-        end_frame = resample_frame(audio_segment['end_frame'], old_sampling_rate=original_sample_rate)
-        if audio_segment['class'] == 'Speech':
-            speech = find_speech_within_segment(audio_segment, speeches)
-            if speech:
-                start_text = speech['start_text']
-                end_text = speech['end_text'] + 1  # komische Indizierung
-                seg_transcript = transcript[start_text:end_text]
-                segments.append(Speech(start_frame=start_frame, end_frame=end_frame, transcript=seg_transcript))
-        else:
-            segments.append(Pause(start_frame=start_frame, end_frame=end_frame))
+        start_frame = resample_frame(speech_meta['start_frame'], old_sampling_rate=original_sample_rate)
+        end_frame = resample_frame(speech_meta['end_frame'], old_sampling_rate=original_sample_rate)
+        start_text = speech_meta['start_text']
+        end_text = speech_meta['end_text'] + 1  # komische Indizierung
+
+        seg_transcript = transcript[start_text:end_text]
+        segments.append(SpeechSegment(start_frame=start_frame, end_frame=end_frame, transcript=seg_transcript))
 
     return segments
 

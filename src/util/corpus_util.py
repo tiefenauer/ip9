@@ -16,7 +16,6 @@ def get_corpus(corpus_id, lang=None):
     corpus.root_path = corpus_root
     if lang:
         corpus = corpus(languages=[lang])
-    corpus.summary()
     return corpus
 
 

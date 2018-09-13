@@ -3,6 +3,7 @@ Utility functions for audio manipulation
 """
 import logging
 import random
+import subprocess
 import wave
 
 import numpy as np
@@ -10,6 +11,10 @@ from librosa.effects import time_stretch, pitch_shift
 from pydub import AudioSegment
 
 log = logging.getLogger(__name__)
+
+
+def to_wav(mp3_path, wav_path):
+    subprocess.call(['sox', mp3_path, '-r', '16000', '-b', '16', '-c', '1', wav_path])
 
 
 def crop_to_segments(audio, rate, segments):

@@ -9,8 +9,6 @@ from os import makedirs, walk
 from os.path import exists, join
 from pathlib import Path
 
-import librosa
-import soundfile as sf
 from lxml import etree
 from pydub.utils import mediainfo
 from tqdm import tqdm
@@ -19,7 +17,7 @@ from constants import RL_TARGET, RL_SOURCE
 from corpus.corpus import ReadyLinguaCorpus
 from corpus.corpus_entry import CorpusEntry
 from corpus.corpus_segment import SpeechSegment
-from util.audio_util import resample_frame
+from util.audio_util import resample_frame, to_wav
 from util.corpus_util import save_corpus, find_file_by_suffix
 from util.log_util import log_setup, create_args_str
 from util.string_util import create_filename
@@ -112,9 +110,10 @@ def create_readylingua_corpus(source_root, target_root, max_entries):
         audio_dst = join(target_root, parms['id'] + ".wav")
         if not exists(audio_dst) or args.overwrite:
             audio_src = join(raw_path, files['audio'])
-            audio, rate = librosa.load(audio_src, sr=16000, mono=True)
+            to_wav(audio_src, audio_dst)
+            # audio, rate = librosa.load(audio_src, sr=16000, mono=True)
             # audio, rate, segments, crop_to_segments(audio, rate, segments)
-            sf.write(audio_dst, audio, rate, subtype='PCM_16')
+            # sf.write(audio_dst, audio, rate, subtype='PCM_16')
         parms['media_info'] = mediainfo(audio_dst)
 
         # Create corpus entry

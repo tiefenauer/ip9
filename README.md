@@ -17,7 +17,9 @@ The `xx_TARGET` directories must provide enough space to store the processed fil
 
 * This application uses [Pydub](http://pydub.com/) which means you will need **libav** or **ffmpeg** on your `PATH`. See the [Pydub Repository](https://github.com/jiaaro/pydub#installation) for further instructions.
 * Visual C++ build tools to work with webrtcvad (google it for download link): must be installed before installing the python requirements (see below)!
-* [Sox](http://sox.sourceforge.net/) is used to convert MP3 into PCM-WAV and must be on the `PATH`
+* [Sox](http://sox.sourceforge.net/) is used to convert MP3 into PCM-WAV and must be on the `PATH`. You also need to install the handler for MP3 files. On Linux it this is easiest done by executing the following commants:
+  * `sudo apt-get install sox`: to install Sox
+  * `sudo apt-get install libsox-fmt-all`: to install all file handlers 
 
 ### Installation
 1. Clone [the repository](https://github.com/tiefenauer/ip9): `git clone git@github.com:tiefenauer/ip9.git` 

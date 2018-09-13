@@ -11,7 +11,7 @@ from keras.callbacks import TensorBoard
 from keras.optimizers import Adam
 from tabulate import tabulate
 
-from constants import CORPUS, LANGUAGE, BATCH_SIZE, NUM_EPOCHS, TARGET_ROOT
+from constants import DEFAULT_CORPUS, DEFAULT_LANGUAGE, DEFAULT_BATCH_SIZE, DEFAULT_N_EPOCHS, TARGET_ROOT
 from core.callbacks import ReportCallback
 from core.dataset_generator import HFS5BatchGenerator
 from util.brnn_util import deep_speech_model, ctc_dummy_loss, decoder_dummy_loss, ler
@@ -30,16 +30,16 @@ K.set_session(session)
 # -------------------------------------------------------------
 
 parser = argparse.ArgumentParser(description="""Train a simplified DeepSpeech model""")
-parser.add_argument('-c', '--corpus', type=str, choices=['rl', 'ls'], nargs='?', default=CORPUS,
-                    help=f'(optional) corpus on which to train (rl=ReadyLingua, ls=LibriSpeech). Default: {CORPUS}')
-parser.add_argument('-l', '--language', type=str, nargs='?', default=LANGUAGE,
-                    help=f'(optional) language on which to train the RNN. Default: {LANGUAGE}')
-parser.add_argument('-b', '--batch_size', type=int, nargs='?', default=BATCH_SIZE,
-                    help=f'(optional) number of speech segments to include in one batch (default: {BATCH_SIZE})')
+parser.add_argument('-c', '--corpus', type=str, choices=['rl', 'ls'], nargs='?', default=DEFAULT_CORPUS,
+                    help=f'(optional) corpus on which to train (rl=ReadyLingua, ls=LibriSpeech). Default: {DEFAULT_CORPUS}')
+parser.add_argument('-l', '--language', type=str, nargs='?', default=DEFAULT_LANGUAGE,
+                    help=f'(optional) language on which to train the RNN. Default: {DEFAULT_LANGUAGE}')
+parser.add_argument('-b', '--batch_size', type=int, nargs='?', default=DEFAULT_BATCH_SIZE,
+                    help=f'(optional) number of speech segments to include in one batch (default: {DEFAULT_BATCH_SIZE})')
 parser.add_argument('-t', '--target_root', type=str, nargs='?', default=TARGET_ROOT,
                     help=f'(optional) root of folder where results will be written to (default: {TARGET_ROOT})')
-parser.add_argument('-e', '--num_epochs', type=int, nargs='?', default=NUM_EPOCHS,
-                    help=f'(optional) number of epochs to train the model (default: {NUM_EPOCHS})')
+parser.add_argument('-e', '--num_epochs', type=int, nargs='?', default=DEFAULT_N_EPOCHS,
+                    help=f'(optional) number of epochs to train the model (default: {DEFAULT_N_EPOCHS})')
 args = parser.parse_args()
 
 

@@ -84,7 +84,7 @@ class CorpusEntry(Audible):
 
     @property
     def speech_segments_not_numeric(self):
-        return [segment for segment in self.speech_segments if not segment.contains_numeric()]
+        return [segment for segment in self.speech_segments if not segment.contains_numeric]
 
     @property
     def transcript(self):

@@ -76,7 +76,7 @@ class Corpus(ABC):
         return sorted([corpus_entry.id for corpus_entry in self.corpus_entries])
 
     @abstractmethod
-    def train_dev_test_split(self):
+    def train_dev_test_split(self, include_numeric=False):
         """return training-, validation- and test-set
         Since these sets are constructed
         """
@@ -127,9 +127,12 @@ class ReadyLinguaCorpus(Corpus, ABC):
     def _name(self):
         return 'ReadyLingua'
 
-    def train_dev_test_split(self):
-        speech_segments = [seg for corpus_entry in self.corpus_entries
-                           for seg in corpus_entry.speech_segments_not_numeric]
+    def train_dev_test_split(self, include_numeric=False):
+        if include_numeric:
+            speech_segments = [seg for corpus_entry in self.corpus_entries for seg in corpus_entry.speech_segments]
+        else:
+            speech_segments = [seg for corpus_entry in self.corpus_entries
+                               for seg in corpus_entry.speech_segments_not_numeric]
 
         # 80/10/10 split
         n_entries = len(speech_segments)
@@ -148,11 +151,18 @@ class LibriSpeechCorpus(Corpus):
     def _name(self):
         return 'LibriSpeech'
 
-    def train_dev_test_split(self):
+    def train_dev_test_split(self, include_numeric=False):
         train_entries = filter_corpus_entry_by_subset_prefix(self.corpus_entries, 'train-')
         dev_entries = filter_corpus_entry_by_subset_prefix(self.corpus_entries, 'dev-')
         test_entries = filter_corpus_entry_by_subset_prefix(self.corpus_entries, ['test-', 'unknown'])
-        train_set = [seg for corpus_entry in train_entries for seg in corpus_entry.speech_segments_not_numeric]
-        dev_set = [seg for corpus_entry in dev_entries for seg in corpus_entry.speech_segments_not_numeric]
-        test_set = [seg for corpus_entry in test_entries for seg in corpus_entry.speech_segments_not_numeric]
+
+        if include_numeric:
+            train_set = [seg for corpus_entry in train_entries for seg in corpus_entry.speech_segments]
+            dev_set = [seg for corpus_entry in dev_entries for seg in corpus_entry.speech_segments]
+            test_set = [seg for corpus_entry in test_entries for seg in corpus_entry.speech_segments]
+        else:
+            train_set = [seg for corpus_entry in train_entries for seg in corpus_entry.speech_segments_not_numeric]
+            dev_set = [seg for corpus_entry in dev_entries for seg in corpus_entry.speech_segments_not_numeric]
+            test_set = [seg for corpus_entry in test_entries for seg in corpus_entry.speech_segments_not_numeric]
+
         return train_set, dev_set, test_set

@@ -121,12 +121,12 @@ class HFS5BatchGenerator(BatchGenerator):
 
     def __init__(self, dataset, feature_type, batch_size, shuffle=True, seed=None, num_minutes=None):
         if num_minutes:
-            print(f'clipping dataset to first {num_minutes} of audio data')
+            print(f'clipping dataset to first {num_minutes} minutes of audio data ...')
             durations = dataset['durations']
             clip_ix = 0
             while sum(durations[:clip_ix]) < num_minutes * 60 and clip_ix < len(durations):
                 clip_ix += 1
-            print(f"clipped to first {clip_ix} records")
+            print(f"... done! Clipped to first {clip_ix} speech segments")
         else:
             clip_ix = None
 

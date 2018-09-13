@@ -10,6 +10,8 @@ LS_TARGET = os.environ.get('LS_TARGET')  # path where LibriSpeech corpus is stor
 RL_SOURCE = os.environ.get('RL_SOURCE')  # path to ReadyLingua source files
 RL_TARGET = os.environ.get('RL_TARGET')  # path where ReadyLingua corpus is stored
 
+TARGET_ROOT = os.environ.get('TARGET_ROOT')
+
 # default parameters for training
 DEFAULT_CORPUS = 'rl'
 DEFAULT_LANGUAGE = 'en'

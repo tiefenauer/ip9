@@ -109,7 +109,8 @@ def generate_subsets(corpus_id, language, batch_size, feature_type='mfcc', num_m
             ['', 'Train-Set', 'Dev-Set', 'Test-Set'],
             ['# speech segments', train_it.n, dev_it.n, test_it.n],
             ['# batches', len(train_it), len(dev_it), len(test_it)],
-            ['total audio length'] + [timedelta(seconds=subset.audio_total_length) for subset in [train_it, dev_it, test_it]]
+            ['total audio length'] + [timedelta(seconds=subset.audio_total_length) for subset in
+                                      [train_it, dev_it, test_it]]
 
         ]
         print(tabulate(table, headers='firstrow'))

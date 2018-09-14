@@ -1,0 +1,12 @@
+\section{Exploring the DeepSpeech architecture}\label{ds}
+The implementation of the RNN used for STT in the IP8 project was done in Python using Keras\footnote{https://keras.io/}. The following simplifications were made
+
+\begin{itemize}
+	\item No LM
+	\item No convolution in first layer
+	\item 
+\end{itemize}
+
+Although the RNN used a simpler architecture and no computational power is needed by querying a LM, performance was still a big issue. Training on aligned speech segments from the \textit{LibriSpeech} corpus was not possible within project time because it would have taken approximately two months when using a single GPU. However, this is constent with the experience made by the Machine Learning team at Mozilla Research, which used a cluster of 16 GPUs that required about a week \cite{mozillajourney} to train a variant of the RNN originally proposed in
+
+An open source implementation of a DeepSpeech model is available from Mozilla.\footnote{https://github.com/mozilla/DeepSpeech}

@@ -1,43 +1,47 @@
 \documentclass[11pt]{article}
-%\usepackage{cite} % nicht kompatibel mit biblatex
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{csquotes} % needed for babel
+\usepackage{fancyhdr, graphicx} % headeres, footeres, etc.. (see \fancypagestyle control sequence)
+\usepackage{listings} % source code listings
+\usepackage{hyperref} % Link citations with references at the end
+\usepackage{url} % make links clickable
+% \usepackage{cite} % nicht kompatibel mit biblatex
 
-\usepackage{hyperref}
-%biblio
-%\usepackage[style=alphabetic,citestyle=authoryear]{biblatex}
-%\addbibresource{mybib.bib} %biblatex
-%\usepackage{natbib}
-\usepackage{url}
-\usepackage{wrapfig}
+% Text
+%\usepackage{color} % superseeded by xcolor
+\usepackage{xcolor} % superseeds color
+\usepackage[font=it]{caption} % Captions
+\usepackage{subcaption} % captions for figures and the like
+\usepackage[scaled=0.92]{helvet}
+\def\code#1{\texttt{#1}} % shortcut for monospaced inline code
+\usepackage{makecell} % tables
 
-%Math
+% Page layout
+\usepackage[a4paper,top=2cm]{geometry}
+\usepackage{enumitem} % control layout of itemize, enumerate, description
+\usepackage{parskip}
+\setlength{\textwidth}{17cm}
+\setlength{\headheight}{27pt}
+\setlength{\oddsidemargin}{-0.5cm}
+\usepackage{lastpage} % for getting last page number
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{setspace} % line space
+\usepackage{acronym} % acronym index
+%\numberwithin{equation}{section} %Metadata
+
+% Bibliography
+\usepackage[backend=biber,style=alphabetic,citestyle=numeric]{biblatex}
+\addbibresource{../mybib.bib} %biblatex
+
+% Math
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{amssymb}
 \usepackage{amsthm}
-\usepackage{ulem}
 
-%PageStyle
-%\usepackage[ngerman]{babel} % deutsche Silbentrennung1
-%\usepackage[utf8x]{inputenc} % nicht kompatibel mit biblatex
-\usepackage{fancyhdr, graphicx}
-\usepackage{subcaption}
-\usepackage[scaled=0.92]{helvet}
-\usepackage{enumitem}
-\usepackage{parskip}
-\usepackage[a4paper,top=2cm]{geometry}
-\setlength{\textwidth}{17cm}
-\setlength{\oddsidemargin}{-0.5cm}
-\usepackage{lastpage} % for getting last page number
-\renewcommand{\familydefault}{\sfdefault}
-\usepackage{setspace}
-\usepackage{acronym}
+% Source code listings (coconfiguration of \usepackage{listings})
 
-
-% Code listenings
-\usepackage{color}
-\usepackage{xcolor}
-\usepackage{listings}
-\usepackage[font=it]{caption}
 \DeclareCaptionFont{white}{\color{white}}
 \DeclareCaptionFormat{listing}{\colorbox{gray}{\parbox{\textwidth}{#1#2#3}}}
 %\captionsetup[lstlisting]{format=listing,labelfont=white,textfont=white}
@@ -67,7 +71,7 @@
  showstringspaces=false      % Leerzeichen in Strings anzeigen ?        
 }
 
-%Config
+% Page Styles
 \fancypagestyle{firststyle}{ %Style of the first page
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
@@ -104,25 +108,20 @@
  \renewcommand{\headrulewidth}{0pt}
  \cfoot{}
 }
-
-
-%Metadata
-\numberwithin{equation}{section}
-
 \begin{document}
 \title{IP9}
 \author{Daniel Tiefenauer}
 \date{\today}
 \maketitle
-
 \newpage
+
 \pagestyle{abstract}
 \input{./chapters/abstract.tex}
+\newpage
 
-%TOC
+% TOC
 \newpage
 \pagestyle{tableofcontent}
-\pagenumbering{Roman}
 \tableofcontents  	
 \newpage
 
@@ -135,19 +134,15 @@
 
 \input{./chapters/02_ds/ds.tex}
 \newpage
-
-%\bibliographystyle{plain}
-\bibliographystyle{unsrt}
-\bibliography{mybib}{}
-%\printbibliography %biblatex command
-\newpage
-
 \listoffigures
 \listoftables
 
 \newpage
+\printbibliography
+
+\newpage
 \input{./chapters/99_appendix/appendix.tex}
+
 \newpage
 \input{./chapters/disclaimer.tex}
-
 \end{document}

@@ -1,12 +1,38 @@
 \section{Exploring the DeepSpeech architecture}\label{ds}
-The implementation of the RNN used for STT in the IP8 project was done in Python using Keras\footnote{https://keras.io/}. The following simplifications were made
+The implementation of the \ac{RNN} used for \ac{STT} in the IP8 project was done in Python using Keras\footnote{\url{https://keras.io}}. The following simplifications were made
 
 \begin{itemize}
-	\item No LM
+	\item No \ac{LM}
 	\item No convolution in first layer
-	\item 
 \end{itemize}
 
-Although the RNN used a simpler architecture and no computational power is needed by querying a LM, performance was still a big issue. Training on aligned speech segments from the \textit{LibriSpeech} corpus was not possible within project time because it would have taken approximately two months when using a single GPU. However, this is constent with the experience made by the Machine Learning team at Mozilla Research, which used a cluster of 16 GPUs that required about a week \cite{mozillajourney} to train a variant of the RNN originally proposed in
+Although the \ac{RNN} used a simpler architecture and no computational power is needed by querying a \ac{LM}, performance was still a big issue. Training on aligned speech segments from the \textit{LibriSpeech} corpus was not possible within project time because it would have taken approximately two months when using a single ac{GPU}. However, this is constent with the experience made by the Machine Learning team at Mozilla Research, which used a cluster of 16 \acsp{GPU} that required about a week \cite{mozillajourney} to train a variant \footnote{the variant used \ac{MFCC} as features whereas the original paper proposed raw spectrograms} of the \ac{RNN} originally proposed in \cite{ctc_paper}.
 
-An open source implementation of a DeepSpeech model is available from Mozilla.\footnote{https://github.com/mozilla/DeepSpeech}
+An open source implementation of a DeepSpeech model is available from Mozilla \footnote{\url{https://github.com/mozilla/DeepSpeech}}. Since the implementation uses a \ac{LM}, the quality of the model is measured as the percentage of misspelled or wrong words (called \ac{WER}) or as the edit distance (also called Levenshtein similarity or \ac{LER}). A pre-trained model for inference of English transcript can be downloaded, which achieves a \ac{WER} of just 6.5\%, which is close to human level performance \cite{mozillajourney}.
+
+An own model could be trained by providing training-, validation- and test-data in the format expected by the implementation. However, this is not the preferred procedure for this project for various reasons:
+
+\begin{enumerate}
+	\item The model's intended application is \ac{ASR}. In such settings a low \ac{WER} is desirable.  However, for this project \ac{ASR} is just one stage in a pipeline that has to be \textit{good enough} for the \ac{LSA} stage to make the alignments. As a result, although sensible for pure \ac{ASR} tasks, the architecture of the Mozilla implementation might be overly complicated for this project. The problem with this is that more complex models usually require more training data, which might not be available for the target languages used by \textit{ReadyLingua}.
+	\item The implementation requires an (optional) \ac{LM} which might not be available for the target languages.
+\end{enumerate}
+
+The second point becomes less crucial, since the \ac{LM} is optional for training and inference. However, without a \ac{LM} the quality of transcription drops perceivably, as the following example shows:
+
+\begin{table}[!htbp]
+	\centering
+	\begin{tabular}{|l|l|r|}
+		\hline
+		\thead{transcript} & \thead{value} & \thead{\ac{LER}} \\
+		\hline
+		actual transcript & \code{and i put the vice president in charge of mission control} & $1.00$ \\ 
+		\hline
+		inference without LM & \code{ii put he bice president in charge of mission control} & $0.89$ \\ 
+		\hline
+		inference with LM & \code{i put the vice president in charge of mission control} & $0.92$ \\
+		\hline
+	\end{tabular}
+	\caption{examples of infered transcripts with pre-trained DeepSpeech model with and without \ac{LM}\\(sample \code{20161203potusweeklyaddress} from the ReadyLingua corpus}
+\end{table}
+
+For these reasons the limits of the simplified implementation are explored first. The training of an own model using the Mozilla implementation can be used as a second resort if the simplified model is found to be not accurate enough.

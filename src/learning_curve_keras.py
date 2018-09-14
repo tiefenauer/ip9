@@ -19,16 +19,6 @@ from util.corpus_util import get_corpus_root
 from util.log_util import redirect_to_file, create_args_str
 from util.train_util import get_target_dir
 
-# -------------------------------------------------------------
-# some Keras/TF setup
-# os.environ['CUDA_VISIBLE_DEVICES'] = "2"
-config = tf.ConfigProto()
-config.gpu_options.visible_device_list = "2"
-config.gpu_options.allow_growth = True
-session = tf.Session(config=config)
-K.set_session(session)
-# -------------------------------------------------------------
-
 parser = argparse.ArgumentParser(description="""Train a simplified DeepSpeech model""")
 parser.add_argument('-c', '--corpus', type=str, choices=['rl', 'ls'], nargs='?', default=DEFAULT_CORPUS,
                     help=f'(optional) corpus on which to train (rl=ReadyLingua, ls=LibriSpeech). Default: {DEFAULT_CORPUS}')
@@ -51,6 +41,16 @@ def main():
     print(f'All results and artifacts will be written to: {target_dir}')
 
     for num_minutes in [1, 10, 100, 1000]:
+        # -------------------------------------------------------------
+        # some Keras/TF setup
+        # os.environ['CUDA_VISIBLE_DEVICES'] = "2"
+        config = tf.ConfigProto()
+        config.gpu_options.visible_device_list = "2"
+        config.gpu_options.allow_growth = True
+        session = tf.Session(config=config)
+        K.set_session(session)
+        # -------------------------------------------------------------
+
         print(f'training on {num_minutes} minutes of audio data ({timedelta(minutes=num_minutes)})')
         model, history = train_model(target_dir, args.corpus, args.language, args.batch_size, num_minutes)
 

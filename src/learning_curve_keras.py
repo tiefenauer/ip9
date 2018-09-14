@@ -45,7 +45,7 @@ def main():
         # some Keras/TF setup
         # os.environ['CUDA_VISIBLE_DEVICES'] = "2"
         config = tf.ConfigProto()
-        config.gpu_options.visible_device_list = "2"
+        config.gpu_options.visible_device_list = "2,3"
         config.gpu_options.allow_growth = True
         session = tf.Session(config=config)
         K.set_session(session)

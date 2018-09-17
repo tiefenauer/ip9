@@ -30,12 +30,11 @@ def main():
     makedirs(target_dir)
 
     corpus = get_corpus('ls')
-    sample = corpus[0].speech_segments[0]
-    print(f'training on a single sample with length {sample.audio_length}s')
-    print(f'transcription: {sample.text}')
+    samples = corpus[0].speech_segments[0:5]
+    print(f'training on {len(samples)} samples with lengths {[s.audio_length for s in samples]}')
 
-    train_gen = SampleGenerator(sample, shift_audio=False)
-    val_gen = SampleGenerator(sample, shift_audio=True)
+    train_gen = SampleGenerator(samples, shift_audio=False)
+    val_gen = SampleGenerator(samples, shift_audio=True)
 
     config = tf.ConfigProto()
     config.gpu_options.visible_device_list = "3"
@@ -65,27 +64,27 @@ def main():
 
 class SampleGenerator(Iterator):
 
-    def __init__(self, sample, shift_audio=False):
-        super().__init__(n=1, batch_size=1, shuffle=False, seed=0)
-        self.sample = sample
+    def __init__(self, samples, shift_audio=False):
+        super().__init__(n=1, batch_size=1, shuffle=True, seed=0)
+        self.samples = samples
         self.shift_audio = shift_audio
 
     def _get_batches_of_transformed_samples(self, index_array):
         if self.shift_audio:
-            audio = shift(self.sample.audio)
+            audio = [shift(s.audio) for s in self.samples]
         else:
-            audio = self.sample.audio
+            audio = [s.audio for s in self.samples]
 
-        features = mfcc(audio, self.sample.rate, numcep=26)
+        features = [mfcc(a, 16000, numcep=26) for a in audio]
 
-        self.X = pad_sequences([features], dtype='float32', padding='post')
-        self.X_lengths = np.array([features.shape[0]])
+        self.X = pad_sequences(features, dtype='float32', padding='post')
+        self.X_lengths = np.array([f.shape[0] for f in features])
 
-        self.Y_lengths = np.array([len(self.sample.text)])
+        self.Y_lengths = np.array([len(s.text) for s in self.samples])
 
-        self.source_str = np.array([self.sample.text])
+        self.source_str = np.array([s.text for s in self.samples])
 
-        labels_encoded = [encode(self.sample.text)]
+        labels_encoded = [encode(s.text) for s in self.samples]
         rows, cols, data = [], [], []
         for row, label in enumerate(labels_encoded):
             cols.extend(range(len(label)))

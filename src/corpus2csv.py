@@ -75,11 +75,14 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir):
         wav_path = join(target_dir, f'{segment_id}.wav')
         txt_path = join(target_dir, f'{segment_id}.txt')
 
-        progress.set_description(wav_path)
-        sf.write(wav_path, segment.audio, segment.rate, subtype='PCM_16')
-        with open(txt_path, 'w') as f:
-            transcript = f'{segment.start_frame} {segment.end_frame} {segment.text}'
-            f.write(transcript)
+        if not exists(wav_path) or not getsize(wav_path):
+            progress.set_description(wav_path)
+            sf.write(wav_path, segment.audio, segment.rate, subtype='PCM_16')
+
+        if not exists(txt_path) or not getsize(txt_path):
+            with open(txt_path, 'w') as f:
+                transcript = f'{segment.start_frame} {segment.end_frame} {segment.text}'
+                f.write(transcript)
 
         files.append((wav_path, getsize(wav_path), segment.text))
 

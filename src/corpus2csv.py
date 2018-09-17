@@ -15,6 +15,8 @@ parser.add_argument('-id', type=str, help='target-ID for processed files')
 parser.add_argument('-c', '--corpus', type=str, choices=['rl', 'ls'], help='corpus to export')
 parser.add_argument('-l', '--language', type=str, help='language to use')
 parser.add_argument('-t', '--target_dir', type=str, help='target directory to save results')
+parser.add_argument('-num', '--include_numeric', action='store_true', default=False,
+                    help='(optional) whether to include transcripts with numeric chars (default: False)')
 parser.add_argument('-m', '--max', nargs='?', type=int, default=None,
                     help='(optional) maximum number of speech segments to process')
 args = parser.parse_args()
@@ -46,7 +48,7 @@ def main():
 
 
 def extract_speech_segments(corpus_id, corpus, target_dir):
-    train_set, dev_set, test_set = corpus.train_dev_test_split(include_numeric=True)
+    train_set, dev_set, test_set = corpus.train_dev_test_split(include_numeric=args.include_numeric)
 
     print(f'processing training segments')
     process_subset('train', train_set, corpus_id, target_dir)

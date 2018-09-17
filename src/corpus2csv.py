@@ -19,6 +19,8 @@ parser.add_argument('-num', '--include_numeric', action='store_true', default=Fa
                     help='(optional) whether to include transcripts with numeric chars (default: False)')
 parser.add_argument('-m', '--max', nargs='?', type=int, default=None,
                     help='(optional) maximum number of speech segments to process')
+parser.add_argument('-f', '--force', nargs='?', type=bool, action='store_true',
+                    help='(optional) force override existing files. Default: False')
 args = parser.parse_args()
 
 
@@ -31,7 +33,7 @@ def main():
         print(f'target directory {target_dir} does not exist. Creating...')
         makedirs(target_dir)
 
-    if listdir(target_dir):
+    if args.force and listdir(target_dir):
         override = input(f"""WARNING: target directory {target_dir} already exists. Override? 
         (this will remove all files in {target_dir}!!!) (Y/n)        
         """)

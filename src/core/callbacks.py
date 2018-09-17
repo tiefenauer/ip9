@@ -84,11 +84,12 @@ class ReportCallback(callbacks.Callback):
 
     def validate_epoch_end(self, epoch):
         X, X_lengths = self.inputs['the_input'], self.inputs['input_length']
+        Y, Y_lengths = self.inputs['the_labels'], self.inputs['label_length']
 
         # truths = [decode(lbl).strip() for m in list(Y.todense()) for lbl in m.tolist()]
 
         y_pred = self.prediction_fun([X])[0]
-        sequences, probs = K.ctc_decode(y_pred, X_lengths, greedy=True)
+        sequences, probs = K.ctc_decode(y_pred, Y_lengths, greedy=True)
         sequence_values = [K.get_value(seq) for seq in sequences][0]
         predictions = [decode(seq_val) for seq_val in sequence_values]
 

@@ -10,6 +10,7 @@ from keras.callbacks import TensorBoard
 from keras.optimizers import Adam
 from keras_preprocessing.image import Iterator
 from keras_preprocessing.sequence import pad_sequences
+from python_speech_features import mfcc
 
 from core.callbacks import ReportCallback
 from util.audio_util import shift
@@ -33,15 +34,8 @@ def main():
     print(f'training on a single sample with length {sample.audio_length}s')
     print(f'transcription: {sample.text}')
 
-    train_gen = SampleGenerator(sample, lambda sample: sample.mfcc())
-
-    audio = sample.audio
-
-    def shift_audio_then_mfcc(sample):
-        sample._audio = shift(audio)
-        return sample.mfcc()
-
-    val_gen = SampleGenerator(sample, shift_audio_then_mfcc)
+    train_gen = SampleGenerator(sample, shift_audio=False)
+    val_gen = SampleGenerator(sample, shift_audio=True)
 
     config = tf.ConfigProto()
     config.gpu_options.visible_device_list = "3"
@@ -49,7 +43,7 @@ def main():
     session = tf.Session(config=config)
     K.set_session(session)
 
-    model = deep_speech_model(num_features=13)
+    model = deep_speech_model(num_features=26)
     model.summary()
 
     opt = Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-8, clipnorm=5)
@@ -71,19 +65,27 @@ def main():
 
 class SampleGenerator(Iterator):
 
-    def __init__(self, sample, features_fun):
+    def __init__(self, sample, shift_audio=False):
         super().__init__(n=1, batch_size=1, shuffle=False, seed=0)
         self.sample = sample
-        features = features_fun(sample)
+        self.shift_audio = shift_audio
+
+    def _get_batches_of_transformed_samples(self, index_array):
+        if self.shift_audio:
+            audio = shift(self.sample.audio)
+        else:
+            audio = self.sample.audio
+
+        features = mfcc(audio, self.sample.rate, numcep=26)
 
         self.X = pad_sequences([features], dtype='float32', padding='post')
         self.X_lengths = np.array([features.shape[0]])
 
-        self.Y_lengths = np.array([len(sample.text)])
+        self.Y_lengths = np.array([len(self.sample.text)])
 
-        self.source_str = np.array([sample.text])
+        self.source_str = np.array([self.sample.text])
 
-        labels_encoded = [encode(sample.text)]
+        labels_encoded = [encode(self.sample.text)]
         rows, cols, data = [], [], []
         for row, label in enumerate(labels_encoded):
             cols.extend(range(len(label)))
@@ -91,8 +93,6 @@ class SampleGenerator(Iterator):
             data.extend(label)
 
         self.Y = scipy.sparse.coo_matrix((data, (rows, cols)), dtype=np.int16)
-
-    def _get_batches_of_transformed_samples(self, index_array):
         inputs = {
             'the_input': self.X,
             'the_labels': self.Y,

@@ -5,11 +5,12 @@ Contains various helper functions to create/train a BRNN
 import tensorflow as tf
 from keras import Input, Model, backend as K
 from keras.activations import relu
+from keras.initializers import random_normal
 from keras.layers import TimeDistributed, Dense, Activation, Dropout, Bidirectional, SimpleRNN, Lambda
 from keras.utils import get_custom_objects
 
 
-def deep_speech_model(num_features, num_hidden=2048, dropout=0.1, num_classes=28):
+def deep_speech_model(num_features, num_hidden=2048, rnn_size=512, dropout=0.1, num_classes=28):
     """
     Deep Speech model with architecture as described in the paper:
         5 Layers (3xFC + 1xBRNN + 1xFC) with Dropout applied to FC layer
@@ -23,63 +24,53 @@ def deep_speech_model(num_features, num_hidden=2048, dropout=0.1, num_classes=28
     Reference: [1] https://arxiv.org/abs/1412.5567
     """
     get_custom_objects().update({"clipped_relu": clipped_relu})
-    x = Input(name='inputs', shape=(None, num_features))
-    o = x
+    K.set_learning_phase(1)
 
-    # First layer
-    o = TimeDistributed(Dense(num_hidden))(o)
-    o = TimeDistributed(Activation(clipped_relu))(o)
-    o = TimeDistributed(Dropout(dropout))(o)
+    input_data = Input(name='the_input', shape=(None, num_features))
 
-    # Second layer
-    o = TimeDistributed(Dense(num_hidden))(o)
-    o = TimeDistributed(Activation(clipped_relu))(o)
-    o = TimeDistributed(Dropout(dropout))(o)
+    # 3 FC layers with clipped ReLU followed by a Dropout
+    init = random_normal(stddev=0.046875)
+    x = TimeDistributed(
+        Dense(num_hidden, name='fc1', kernel_initializer=init, bias_initializer=init, activation=clipped_relu))(
+        input_data)
+    # o = TimeDistributed(Activation(clipped_relu))(o)
+    x = TimeDistributed(Dropout(dropout))(x)
+    x = TimeDistributed(
+        Dense(num_hidden, name='fc2', kernel_initializer=init, bias_initializer=init, activation=clipped_relu))(x)
+    # o = TimeDistributed(Activation(clipped_relu))(o)
+    x = TimeDistributed(Dropout(dropout))(x)
+    x = TimeDistributed(
+        Dense(num_hidden, name='fc3', kernel_initializer=init, bias_initializer=init, activation=clipped_relu))(x)
+    # o = TimeDistributed(Activation(clipped_relu))(o)
+    x = TimeDistributed(Dropout(dropout))(x)
 
-    # Third layer
-    o = TimeDistributed(Dense(num_hidden))(o)
-    o = TimeDistributed(Activation(clipped_relu))(o)
-    o = TimeDistributed(Dropout(dropout))(o)
+    # BRNN layer
+    x = Bidirectional(SimpleRNN(rnn_size, return_sequences=True, activation=clipped_relu, dropout=dropout,
+                                kernel_initializer='he_normal'), merge_mode='sum')(x)
+    # o = TimeDistributed(Dropout(dropout))(o)
 
-    # Fourth layer
-    o = Bidirectional(SimpleRNN(num_hidden, return_sequences=True,
-                                dropout=dropout,
-                                activation=clipped_relu,
-                                kernel_initializer='he_normal'), merge_mode='sum')(o)
-    o = TimeDistributed(Dropout(dropout))(o)
-
-    # Fifth layer
-    o = TimeDistributed(Dense(num_hidden))(o)
-    o = TimeDistributed(Activation(clipped_relu))(o)
-    o = TimeDistributed(Dropout(dropout))(o)
+    # another FC layer with dropout
+    x = TimeDistributed(Dense(num_hidden))(x)
+    x = TimeDistributed(Activation(clipped_relu))(x)
+    x = TimeDistributed(Dropout(dropout))(x)
 
     # Output layer
-    o = TimeDistributed(Dense(num_classes, name='y_pred', activation='softmax'), name='outputs')(o)
+    y_pred = TimeDistributed(
+        Dense(num_classes, name='y_pred', kernel_initializer=init, bias_initializer=init, activation='softmax'))(x)
 
-    return ctc_model(x, o)
-
-
-def ctc_model(inputs, output):
-    """
-    Create compilable model for input and output tensors
-    :param inputs: input tensor of the model
-    :param output: output tensor of the model
-    :return: instance of keras.engine.training.Model to compile with optimizer and loss
-    """
     # Input placeholders for true labels and input sequence lengths (need to be fed during training/validation)
-    labels = Input(name='labels', shape=(None,), dtype='int32', sparse=True)
-    inputs_length = Input(name='inputs_length', shape=[1], dtype='int32')
-    labels_length = Input(name='labels_length', shape=[1], dtype='int32')
+    labels = Input(name='the_labels', shape=(None,), dtype='int32', sparse=True)
+    input_length = Input(name='input_length', shape=[1], dtype='int32')
+    label_length = Input(name='label_length', shape=[1], dtype='int32')
 
     # Output layer for decoded label (values are integers)
-    dec = Lambda(decoder_lambda_func, arguments={'is_greedy': False}, name='decoder')
-    y_pred = dec([output, inputs_length])
+    # dec = Lambda(decoder_lambda_func, arguments={'is_greedy': False}, name='decoder')
+    # y_pred = dec([output, inputs_length])
 
-    # Output layer for CTC-loss
-    ctc = Lambda(ctc_lambda_func, output_shape=(1,), name="ctc")
-    loss = ctc([labels, output, inputs_length, labels_length])
+    # CTC-loss
+    loss_out = Lambda(ctc_lambda_func, output_shape=(1,), name="ctc")([y_pred, labels, input_length, label_length])
 
-    return Model(inputs=[inputs, labels, inputs_length, labels_length], outputs=[loss, y_pred])
+    return Model(inputs=[input_data, labels, input_length, label_length], outputs=loss_out)
 
 
 def decoder_lambda_func(args, is_greedy=False, beam_width=100, top_paths=1, merge_repeated=True):
@@ -162,9 +153,9 @@ def ctc_lambda_func(args):
 
     # hack: we need to import tensorflow here again to make keras.engine.saving.load_model work...
     import tensorflow as tf
-    y_true, y_pred, input_length, label_length = args
-    y_true = tf.sparse_tensor_to_dense(y_true)
-    return K.ctc_batch_cost(y_true, y_pred, input_length, label_length)
+    y_pred, labels, input_length, label_length = args
+    labels = tf.sparse_tensor_to_dense(labels)
+    return K.ctc_batch_cost(labels, y_pred, input_length, label_length)
 
 
 def clipped_relu(x):

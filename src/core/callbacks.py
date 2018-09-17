@@ -78,19 +78,21 @@ class ReportCallback(callbacks.Callback):
 
         # create Function-graph to get decoded sequences for validation data
         # K.function([self.model.get_layer('inputs').input], [self.model.get_layer('decoder').input[0]])([X])
-        input_data = model.get_layer('inputs').input
-        decoder = model.get_layer('decoder').input[0]
-        self.prediction_fun = K.function([input_data, K.learning_phase()], [decoder])
+        y_pred = model.get_layer('ctc').input[0]
+        input_data = model.get_layer('the_input').input
+        self.prediction_fun = K.function([input_data, K.learning_phase()], [y_pred])
 
     def validate_epoch_end(self, epoch):
-        X, Y, X_lengths, Y_lengths = self.inputs
+        X, X_lengths = self.inputs['the_input'], self.inputs['input_length']
 
-        truths = [decode(lbl).strip() for m in list(Y.todense()) for lbl in m.tolist()]
+        # truths = [decode(lbl).strip() for m in list(Y.todense()) for lbl in m.tolist()]
 
         y_pred = self.prediction_fun([X])[0]
-        sequences, probs = K.ctc_decode(y_pred, X_lengths, greedy=False)
+        sequences, probs = K.ctc_decode(y_pred, X_lengths, greedy=True)
         sequence_values = [K.get_value(seq) for seq in sequences][0]
         predictions = [decode(seq_val) for seq_val in sequence_values]
+
+        truths = self.inputs['source_str']
 
         with open(self.log_file_path, 'a') as f:
             for truth, pred in zip(truths, predictions):

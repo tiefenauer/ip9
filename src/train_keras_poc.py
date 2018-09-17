@@ -6,6 +6,7 @@ import numpy as np
 import scipy
 import tensorflow as tf
 from keras import backend as K
+from keras.callbacks import TensorBoard
 from keras.optimizers import Adam
 from keras_preprocessing.image import Iterator
 from keras_preprocessing.sequence import pad_sequences
@@ -52,14 +53,20 @@ def main():
     model.summary()
 
     opt = Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-8, clipnorm=5)
-    model.compile(loss={'ctc': ctc_dummy_loss, 'decoder': decoder_dummy_loss},
-                  optimizer=opt,
-                  metrics={'decoder': ler},  #
-                  loss_weights=[1, 0]  # only optimize CTC cost
-                  )
+    model.compile(optimizer=opt, loss=ctc_dummy_loss)
 
     report_cb = ReportCallback(model, val_gen, target_dir)
-    model.fit_generator(train_gen, validation_data=val_gen, epochs=10000, callbacks=[report_cb])
+    tb_cb = TensorBoard(log_dir=target_dir, write_graph=False, write_images=True)
+    callbacks = [report_cb, tb_cb]
+    model.fit_generator(generator=train_gen,
+                        validation_data=val_gen,
+                        epochs=10000,
+                        callbacks=callbacks,
+                        initial_epoch=0,
+                        verbose=1,
+                        class_weight=None,
+                        max_queue_size=10,
+                        workers=1)
 
 
 class SampleGenerator(Iterator):
@@ -74,6 +81,8 @@ class SampleGenerator(Iterator):
 
         self.Y_lengths = np.array([len(sample.text)])
 
+        self.source_str = np.array([sample.text])
+
         labels_encoded = [encode(sample.text)]
         rows, cols, data = [], [], []
         for row, label in enumerate(labels_encoded):
@@ -84,7 +93,18 @@ class SampleGenerator(Iterator):
         self.Y = scipy.sparse.coo_matrix((data, (rows, cols)), dtype=np.int16)
 
     def _get_batches_of_transformed_samples(self, index_array):
-        return [self.X, self.Y, self.X_lengths, self.Y_lengths], [np.zeros((self.X.shape[0],)), self.Y]
+        inputs = {
+            'the_input': self.X,
+            'the_labels': self.Y,
+            'input_length': self.X_lengths,
+            'label_length': self.Y_lengths,
+            'source_str': self.source_str
+        }
+        outputs = {
+            'ctc': np.zeros([self.X.shape[0]])
+        }
+        return inputs, outputs
+        # return [self.X, self.Y, self.X_lengths, self.Y_lengths], [np.zeros((self.X.shape[0],)), self.Y]
 
     def next(self):
         with self.lock:

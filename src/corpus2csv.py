@@ -96,9 +96,9 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir):
                 transcript = f'{segment.start_frame} {segment.end_frame} {segment.text}'
                 f.write(transcript)
 
-        files.append((wav_path, getsize(wav_path), segment.text))
+        files.append((wav_path, getsize(wav_path), segment.audio_length, segment.text))
 
-    return pandas.DataFrame(data=files, columns=['wav_filename', 'wav_filesize', 'transcript'])
+    return pandas.DataFrame(data=files, columns=['wav_filename', 'wav_filesize', 'wav_length', 'transcript'])
 
 
 def compute_features(df_train, df_valid, df_test, target_dir):

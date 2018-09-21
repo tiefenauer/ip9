@@ -1,3 +1,4 @@
+matplotlib
 nltk
 scipy
 numpy

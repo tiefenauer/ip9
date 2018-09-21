@@ -3,7 +3,9 @@ from os import listdir
 from os.path import join, abspath
 
 import pandas as pd
-import seaborn as sns; sns.set()
+import seaborn as sns
+
+sns.set()
 import matplotlib.pyplot as plt
 
 
@@ -13,7 +15,11 @@ def visualize(root_dir):
     df = pd.read_csv(csv_path).reset_index()
     df['index'] += 1
 
-    ax = df.plot(x='index', y=['WER', 'LER'], figsize=(16, 9), xticks=range(1, len(df.index) + 1))
+    fig, ax = plt.subplots(1, 1, figsize=(16, 9))
+    df.plot(x='index', y='WER', ax=ax)
+    df.plot(x='index', y='LER', ax=ax)
+
+    ax.set_xticks(range(1, len(df.index) + 1))
     ax.set_title(f'WER/LER for {csv_path}')
     ax.set_xlabel(f'Epoch')
     ax.set_ylabel(f'WER/LER')

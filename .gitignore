@@ -106,3 +106,4 @@ venv.bak/
 .idea/
 ds_example/
 /doc/build/
+/runs/

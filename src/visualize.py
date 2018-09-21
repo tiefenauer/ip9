@@ -1,6 +1,6 @@
 import argparse
 import re
-from glob import glob
+from glob import glob, iglob
 from os import listdir
 from os.path import join, abspath
 
@@ -10,22 +10,16 @@ import seaborn as sns
 sns.set()
 import matplotlib.pyplot as plt
 
-csv_pattern = re.compile('model_(\d*)_min\.csv')
-
 
 def visualize_learning_curve(root_dir, metric='WER'):
     print(f'visualizing learning curve from {root_dir}')
-    csv_files = dict()
-    for csv_path in glob(join(root_dir, '*.csv')):
-        matches = re.findall(csv_pattern, csv_path)
-        if matches:
-            minutes = int(matches[0])
-            csv_files[f'{minutes} minute' + ('s' if minutes > 1 else '')] = csv_path
+    csv_files = map_files_to_minutes(root_dir)
 
     fig, ax = plt.subplots(1, 1, figsize=(16, 9))
-    for label, csv_path in csv_files.items():
+    for minutes, csv_path in csv_files.items():
         df = pd.read_csv(csv_path).reset_index()
         df['index'] += 1
+        label = f'{minutes} minute' + ('s' if minutes > 1 else '')
         df.plot(x='index', y=metric, ax=ax, label=label)
 
     ax.set_xticks(range(1, len(df.index) + 1))
@@ -34,6 +28,15 @@ def visualize_learning_curve(root_dir, metric='WER'):
     ax.set_ylabel(f'{metric}')
 
     plt.show()
+
+
+def map_files_to_minutes(root_dir):
+    csv_pattern = re.compile('model_(\d*)_min\.csv')
+
+    all_csv_files = iglob(join(root_dir, '*.csv'))
+    matched_files = ((re.findall(csv_pattern, csv_path), csv_path) for csv_path in all_csv_files)
+
+    return dict((int(matches[0]), csv_path) for matches, csv_path in matched_files if matches)
 
 
 def visualize(root_dir):

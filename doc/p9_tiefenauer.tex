@@ -1,4 +1,5 @@
 \documentclass[11pt]{article}
+%\usepackage{lipsum,mathptmx,etoolbox} % Or swap mathptmx with newtxtext,newtxmath
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 \usepackage{csquotes} % needed for babel
@@ -32,7 +33,7 @@
 
 % Bibliography
 \usepackage[backend=biber,style=alphabetic,citestyle=numeric]{biblatex}
-\addbibresource{../mybib.bib} %biblatex
+\addbibresource{./mybib.bib} %biblatex
 
 % Math
 \usepackage{amsmath}
@@ -76,7 +77,7 @@
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
  \lhead{
- \includegraphics[scale=0.8]{./fhnw_logo.jpg}}
+ \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \lfoot{Institute for Data Science,\linebreak www.fhnw.ch }
 }
@@ -85,7 +86,7 @@
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
 \lhead{
- \includegraphics[scale=0.8]{./fhnw_logo.jpg}}
+ \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \lfoot{Forced Alignment with a Recurrent Neural Network}
  \rfoot{\thepage\ / \pageref{LastPage} }
@@ -95,7 +96,7 @@
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
 \lhead{
- \includegraphics[scale=0.8]{./fhnw_logo.jpg}}
+ \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \cfoot{\thepage}
 }
@@ -104,10 +105,11 @@
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
  \lhead{
- \includegraphics[scale=0.8]{./fhnw_logo.jpg}}
+ \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \cfoot{}
 }
+
 \begin{document}
 \title{IP9}
 \author{Daniel Tiefenauer}

@@ -83,11 +83,14 @@ fi
 #find $cleaned_dir -name '*bz2' |\! -exec bzip2 -k -c -d {} \; | \
 
 echo "uncompressing and preprocessing cleaned articles from $cleaned_dir and writing to $dewiki_processed"
-pv -cN source < $(find $cleaned_dir -name '*bz2' -exec bzcat {} + \
-     | tee >(   sed 's/<[^>]*>//g' \
-              | sed 's|["'\''„“‚‘]||g' \
-              | python3 ./lm/create_lm.py $lm_vocab > $dewiki_processed \
-          ))
+result=$(find $cleaned_dir -name '*bz2' -exec bzcat {} + \
+        | tee >(    sed 's/<[^>]*>//g' \
+                  | sed 's|["'\''„“‚‘]||g' \
+                  | python3 ./lm/create_lm.py $lm_vocab > $dewiki_processed \
+               ) \
+        | grep -e "<doc" \
+        | wc -l)
+echo "${result} articles"
 
 #echo "Number of articles: "
 #grep -o "<doc" $dewiki_raw | wc -w

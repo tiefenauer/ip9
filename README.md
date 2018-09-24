@@ -20,6 +20,7 @@ The `xx_TARGET` directories must provide enough space to store the processed fil
 * [Sox](http://sox.sourceforge.net/) is used to convert MP3 into PCM-WAV and must be on the `PATH`. You also need to install the handler for MP3 files. On Linux it this is easiest done by executing the following commants:
   * `sudo apt-get install sox`: to install Sox
   * `sudo apt-get install libsox-fmt-all`: to install all file handlers 
+* [PipeViewer](http://www.ivarch.com/programs/pv.shtml) for some bash scripts  
 
 ### Installation
 1. Clone [the repository](https://github.com/tiefenauer/ip9): `git clone git@github.com:tiefenauer/ip9.git` 

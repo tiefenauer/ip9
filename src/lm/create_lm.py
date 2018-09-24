@@ -1,4 +1,4 @@
-# creates a n-Gram LM
+# trains a n-Gram LM
 # http://victor.chahuneau.fr/notes/2012/07/03/kenlm.html
 import itertools
 import string
@@ -17,7 +17,7 @@ if __name__ == '__main__':
             print(' '.join(words).lower())
             vocab.update(words)
 
-    with open('vocab.txt', 'w') as f:
+    with open(sys.argv[1], 'w') as f:
         for word in sorted(vocab):
             f.write(f'{word.lower()}\n')
 

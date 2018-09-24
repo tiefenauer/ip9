@@ -76,32 +76,39 @@ fi
 if [ ! -d "$cleaned_dir" ]; then
     echo "extracting/cleaning text from Wikipedia data base dump at $target_file and saving to $cleaned_dir"
     echo "This can take several hours. Go to sleep or something..."
-    python2 ./lm/WikiExtractor.py -c -b 25M -o $cleaned_dir $target_file
+    mkdir -p $cleaned_dir
+    pv < $(python2 ./lm/WikiExtractor.py -c -b 25M -o $cleaned_dir $target_file)
 fi
 
-echo "uncompressing cleaned articles into file $dewiki_raw"
-find $cleaned_dir -name '*bz2' \! -exec bzip2 -k -c -d {} \; > $dewiki_raw
+#find $cleaned_dir -name '*bz2' |\! -exec bzip2 -k -c -d {} \; | \
 
-echo "Number of articles: "
-grep -o "<doc" $dewiki_raw | wc -w
+echo "uncompressing and preprocessing cleaned articles from $cleaned_dir and writing to $dewiki_processed"
+pv -cN source < $(find $cleaned_dir -name '*bz2' -exec bzcat {} + \
+     | tee >(   sed 's/<[^>]*>//g' \
+              | sed 's|["'\''„“‚‘]||g' \
+              | python3 ./lm/create_lm.py $lm_vocab > $dewiki_processed \
+          ))
 
-echo "removing XML tags and quotations in $dewiki_raw"
-sed -i 's/<[^>]*>//g' $dewiki_raw
-sed -i 's|["'\''„“‚‘]||g' $dewiki_raw
+#echo "Number of articles: "
+#grep -o "<doc" $dewiki_raw | wc -w
 
-echo "preprocessing text by tokenizing words and removing punctuation"
-cat $dewiki_raw | python3 ./lm/create_lm.py $lm_vocab > $dewiki_processed
+#echo "removing XML tags and quotations in $dewiki_raw"
+#sed -i 's/<[^>]*>//g' $dewiki_raw
+#sed -i 's|["'\''„“‚‘]||g' $dewiki_raw
 
-echo "Training $N-gram KenLM model with data from $dewiki_raw and saving ARPA file to $lm_arpa"
-#echo "#newlines  #words  #bytes"
-cat $dewiki_raw | python3 ./lm/create_lm.py | $KENLM_BIN_PATH/lmplz -o $N -S 40% <$dewiki_processed >$lm_arpa
-
-echo "Building binary file from $lm_arpa and saving to $lm_binary"
-$KENLM_BIN_PATH/build_binary $lm_arpa $lm_binary
-
-echo "Checking newly built model: Please enter a sentence in the language the model was trained on: "
-read test_sentence
-python3 -c "from lm.create_lm import *; check_lm('$lm_binary', 'vocab.txt', '$test_sentence')"
+#echo "preprocessing text by tokenizing words and removing punctuation"
+#cat $dewiki_raw | python3 ./lm/create_lm.py $lm_vocab > $dewiki_processed
+#
+#echo "Training $N-gram KenLM model with data from $dewiki_raw and saving ARPA file to $lm_arpa"
+##echo "#newlines  #words  #bytes"
+#cat $dewiki_raw | python3 ./lm/create_lm.py | $KENLM_BIN_PATH/lmplz -o $N -S 40% <$dewiki_processed >$lm_arpa
+#
+#echo "Building binary file from $lm_arpa and saving to $lm_binary"
+#$KENLM_BIN_PATH/build_binary $lm_arpa $lm_binary
+#
+#echo "Checking newly built model: Please enter a sentence in the language the model was trained on: "
+#read test_sentence
+#python3 -c "from lm.create_lm import *; check_lm('$lm_binary', 'vocab.txt', '$test_sentence')"
 
 if $REMOVE_FILES; then
     echo "removing downloaded file: ${}"

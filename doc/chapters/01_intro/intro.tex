@@ -7,7 +7,7 @@ This report documents the progress of the project \textit{Forced Alignment with 
 \subsection{Chosen approach and previous work}
 The approach chosen in this project is based on speech pauses, which can be detected using \textit{\ac{VAD}}. The utterances in between are transcribed using \textit{\ac{ASR}}, for which a \textit{\ac{RNN}} is used. The resulting partial transcripts contain the desired temporal information and can be matched up with the full transcript with a process called \textit{\ac{LSA}}.
 
-In the IP8 project, \ac{VAD}, \ac{ASR} and \ac{LSA} were treated as part of a pipeline which split a given audio file into individual utterances, transcribe them and localize them in the original transcript. Since the quality of the \ac{ASR} stage has an imminent impact on the downstream \ac{LSA} stage, the quality of the alignments is heavily dependent on the quality of the partial transcripts. However, \ac{ASR} is highly prone to external influences like background noise, properties of the speaker (gender, speaking rate, pitch, loudness). Apart from that, language is inherently abiguous (e.g. accents), inconsistent (e.g. linguistic subtleties like homonyms or homophones) and messy (stuttering, unwanted repetitions, mispronunciation).
+In the IP8 project, \ac{VAD}, \ac{ASR} and \ac{LSA} were treated as part of a pipeline which split a given audio file into individual utterances, transcribe them and localize them in the original transcript. Since the quality of the \ac{ASR} stage has an imminent impact on the subsequent \ac{LSA} stage, the quality of the alignments is heavily dependent on the quality of the partial transcripts. However, \ac{ASR} is highly prone to external influences like background noise, properties of the speaker (gender, speaking rate, pitch, loudness). Apart from that, language is inherently abiguous (e.g. accents), inconsistent (e.g. linguistic subtleties like homonyms or homophones) and messy (stuttering, unwanted repetitions, mispronunciation).
 
 \subsubsection{Previous results}
 For the \ac{VAD} stage, an implementation of WebRTC was used which was shown to be capable of detecting utterances with very high accuracy within reasonable time. For the \ac{LSA} stage a combination of the Smith-Waterman algorithm and the Levenshtein distance was used. This combination included tunable parameters and proved to be able to be able to localize partial transcript within the full transcript pretty well, provided the similarity between actual and predicted text was high enough.
@@ -16,9 +16,7 @@ Because the final pipeline should be language-agnostic, the IP8 project proposed
 
 \subsection{Goal of this project}
 
-In this project, the chosen pipelined approach shall further be refined. Because the VAD and the \ac{LSA} stage already work pretty well, the focus in this project is on the \ac{ASR} stage. By researching if and how an own \ac{STT} engine can be obtained the pipeline shall become self-contained by using an \ac{ASR} stage that is not dependent on a proprietary solution and can be individually tuned. Moreover the quality of the produced alignment shall be assessed. Since this is the overall goal, it shall become clear how this quality changes with varying properties of the \ac{ASR} system.
-
-Concretely, the following aspects shall be examined more closely:
+In this project, the chosen pipelined approach shall further be refined. Because the \ac{VAD} and the \ac{LSA} stage already work pretty well, the focus in this project is on the \ac{ASR} stage. A \ac{RNN} is trained that can be used as for this stage in the pipeline. Because the superordinated goal of this project is \ac{FA} and not Speech Recognition, this RNN only needs to be \textit{good enough} for the downstream \ac{LSA} stage. By exploring various combinations of properties of the network or the data as well as varying amounts of training data, the conditions should be researched under which such a network could be trained. Concretely, the following aspects shall be examined more closely:
 
 \begin{itemize}
 	\item \textbf{How does the quality of the simplified \textit{DeepSpeech}-\ac{RNN} change with increasing training data?} By plotting the learning curve we should be able to see whether the RNN is able to learn something useful at all and also get some intuition about how much training data is needed to get reasonably accurate partial transcripts.
@@ -27,5 +25,5 @@ Concretely, the following aspects shall be examined more closely:
 	\item \textbf{How can we assess the quality of the alignments?} This should give us some insight about how the quality of the alignment changes with varying capability of the \ac{STT}-engine and what quality of transcripts is required.
 \end{itemize}
 
-The answers to above questions should help in estimating the effort to create a generic solution (amount of training data, architecture, etc.). \footnote{Because \ac{ASR} is highly dependent on the language that should be recognized, a different \ac{STT} system has to be trained for each language.}
+The answers to above questions should help in estimating the effort to create a generic solution (required minimum amount of training data, architecture, etc.). \footnote{Because \ac{ASR} is highly dependent on the language that should be recognized, a different \ac{STT} system has to be trained for each language.}
 

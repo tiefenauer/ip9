@@ -1,25 +1,20 @@
 # trains a n-Gram LM
 # http://victor.chahuneau.fr/notes/2012/07/03/kenlm.html
-import itertools
 import string
 import sys
 from operator import itemgetter
 
 import nltk
 
+LANGUAGES = {'de': 'german', 'en': 'english'}
+
 if __name__ == '__main__':
+    lang = LANGUAGES[sys.argv[1]]
     vocab = set()
     for line in sys.stdin:
-        # for sentence in nltk.sent_tokenize(line.decode('utf-8').encode('ascii', 'ignore')):
-        for sentence in nltk.sent_tokenize(line):
-            # for sentence in nltk.sent_tokenize(unicode(line).decode('utf-8')):
-            words = [word for word in nltk.word_tokenize(sentence) if not any(p in word for p in string.punctuation)]
-            print(' '.join(words).lower())
-            vocab.update(words)
-
-    with open(sys.argv[1], 'w') as f:
-        for word in sorted(vocab):
-            f.write(f'{word.lower()}\n')
+        words = [w for w in nltk.word_tokenize(line, language=lang) if not any(p in w for p in string.punctuation)]
+        print(' '.join(words).lower())
+        vocab.update(words)
 
 
 def check_lm(lm_path, vocab_path, sentence):
@@ -36,7 +31,7 @@ def check_lm(lm_path, vocab_path, sentence):
         if oov:
             print(f'\t\"{words[i+1]}" is an OOV!')
 
-    vocab = set(word for line in open(vocab_path) for word in line.strip().split() )
+    vocab = set(word for line in open(vocab_path) for word in line.strip().split())
     print(f'loaded vocab with {len(vocab)} unique words')
     print()
     word = input('Your turn now! Start a sentence by writing a word: (enter nothing to abort)\n')

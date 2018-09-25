@@ -90,7 +90,7 @@ if [ -f $wikiparser_result ] && [ ! -f $dewiki_txt ]; then
     echo "found Wiki Parser result file at $wikiparser_result. Using this file."
     num_lines=$(cat $wikiparser_result | wc -l)
     export PYTHONPATH=./src:$PYTHONPATH
-    python3 ./lm/lm_preprocess.py --input $wikiparser_result --output $dewiki_txt --num_lines $num_lines
+    python3 ./lm/wikiparser2kenlm.py --input $wikiparser_result --output $dewiki_txt --num_lines $num_lines
 
 elif [ ! -f $dewiki_txt ] ; then
     if [ ! -d $cleaned_dir ] ; then

@@ -1,10 +1,9 @@
 import argparse
 import multiprocessing as mp
-import string
 
-import nltk
 from tqdm import tqdm
 
+from lm.lm_preprocessing import process_line
 from util.string_util import remove_multi_spaces, unidecode_keep_umlauts, remove_punctuation, replace_numeric
 
 
@@ -18,26 +17,13 @@ def main(input_path, output_path, num_lines=None, num_threads=1):
             f_out.write(sentence)
 
 
-def process_line(line, min_length=4):
-    sentences = []
-    sents = nltk.sent_tokenize(line.strip(), language='german')
-    for sent in sents:
-        words = [w.lower() for w in nltk.word_tokenize(sent, language='german') if w not in string.punctuation]
-        if len(words) >= min_length:
-            sentence_normalized = normalize_sentence(' '.join(words).lower())
-            # print(sentence_normalized)
-            sentences.append(sentence_normalized + '.\n')
-
-    return sentences
-
-
 def normalize_sentence(sentence):
     return remove_multi_spaces(unidecode_keep_umlauts(remove_punctuation(replace_numeric(sentence, by_single_digit=True))))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description="""Tokenize result file obtained from Wiki Parser to KenLM compatible input file (1 sentence per line)""")
+        description="""Tokenize text corpus to KenLM compatible input file (1 sentence per line)""")
     parser.add_argument('--input', type=str, help='path to input file to read from')
     parser.add_argument('--output', type=str, help='path to output file to read to')
     parser.add_argument('--num_lines', type=int, nargs='?', default=None,

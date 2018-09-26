@@ -1,20 +1,17 @@
 # trains a n-Gram LM
 # http://victor.chahuneau.fr/notes/2012/07/03/kenlm.html
-import string
 import sys
 from operator import itemgetter
 
-import nltk
+from lm.lm_util import process_line
 
 LANGUAGES = {'de': 'german', 'en': 'english'}
 
 if __name__ == '__main__':
     lang = LANGUAGES[sys.argv[1]]
-    vocab = set()
     for line in sys.stdin:
-        words = [w for w in nltk.word_tokenize(line, language=lang) if not any(p in w for p in string.punctuation)]
-        print(' '.join(words).lower())
-        vocab.update(words)
+        for sentence in process_line(line, language=lang):
+            print(sentence)
 
 
 def check_lm(lm_path, vocab_path, sentence):

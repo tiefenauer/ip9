@@ -35,10 +35,6 @@
 # ./create_lm.sh de 4
 # set -xe
 
-# replace this with the path to your KenLM binary folder
-# see https://kheafield.com/code/kenlm/ for details
-KENLM_BIN_PATH=/home/daniel/kenlm/build/bin
-
 # first argument defines the language and defaults to German
 LANGUAGE=${1:-"de"}
 # second argument defines the order of the LM and defaults to 2 (2-gram model)
@@ -62,6 +58,13 @@ case $key in
 esac
 done
 set -- "${POSITIONAL[@]}" # restore positional parameters
+
+# replace this with the path to your KenLM binary folder
+# see https://kheafield.com/code/kenlm/ for details
+KENLM_BIN_PATH=/home/daniel/kenlm/build/bin
+
+# set this to a directory with at least 40GB free storage
+tmp_dir=/home/daniel/tmp
 
 corpus_name="wiki_${LANGUAGE}"
 
@@ -134,7 +137,7 @@ elif [ ! -f "${corpus_file}.bz2" ] ; then
     recreate_vocab = true
 fi
 
-if ((${recreate_vocab} == 1)) ; then
+if ((${recreate_vocab} == true)) ; then
     echo "(re-)creating vocabulary of $corpus_file and saving it in $lm_vocab. "
     echo "This usually takes around half an hour. Get a coffee or something..."
     grep -oE '\w+' ${corpus_file} | pv -s $(stat --printf="%s" ${corpus_file}) | sort -u -f > ${lm_vocab}
@@ -156,7 +159,8 @@ fi
 if [ ! -f $lm_arpa ]; then
     echo "Training $N-gram KenLM model with data from $corpus_file.bz2 and saving ARPA file to $lm_arpa"
     echo "This can take several hours, depending on the order of the model"
-    ${KENLM_BIN_PATH}/lmplz -o $N -T /media/daniel/Ultra/tmp --skip_symbols -S 40% <${corpus_file}.bz2 >${lm_arpa}
+    ${KENLM_BIN_PATH}/lmplz -o $N -T $tmp_dir --skip_symbols -S 40% <${corpus_file}.bz2 \
+    | ${KENLM_BIN_PATH}/build_binary /dev/stdin ${lm_binary}
 fi
 
 if [ ! -f $lm_binary ]; then

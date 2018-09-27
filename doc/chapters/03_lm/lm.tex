@@ -1,0 +1,70 @@
+\section{Creating a Language Model for German}\label{lm}
+
+The learning curve above was plotted using the results from training on English samples. To compare get an intuition about whether the conclusions made are transferable to training on samples in other languages, the training was done again on German samples. In order to do this, a language model for German had to be created first. 
+
+\subsection{n-Gram Language Models}
+
+To understand the following sections better it might be helpful to get a quick recap about \ac{LM}. The most widely used type of LMs are $n$-gram LM. However, such models can estimate probabilities only for words that appear in the vocabulary of the corpus they were trained on. All other words are \ac{OOV} words with a probability of $0$. Single words are $1$-grams, but the same applies for $n$-grams of any order. But because of combinatorial explosion the $n$-gram, such \ac{LM} suffer from sparsity with increasing order $n$. To handle \ac{OOV} issues efficiently, a technique called \textit{smoothing} is applied. A very rudimentary form of smoothing is \textit{Laplace Smoothing}, which assigns a minimal count of $1$ to every $n$-gram. All other counts are also increased by adding $1$. This prevents counts of zero, which is important when calculating the perlexity of a model (because the count appears in the divisor and we cannot divide by zero) Although with Laplace Smoothing a very low probability is assigned to previously unseen $n$-grams (which results in a high perplexity), it performs poorly in application. A better way of smoothing is achieved using \textit{Kneser-Ney Smoothing}.
+
+\subsection{Creating a raw text corpus and training the model}
+
+A LM was trained on a raw text corpus of German Wikipedia articles using KenLM \parencite{kenlm}. The articles were pre-processed to meet the requirements of \textit{KenLM}.
+It was normalized by removing Wiki markup, punctuation and making everything lowercase. Accentuated characters (like \code{è,é,ê}, etc.) and special characters like the German \textit{ß} were translated to their most similar ASCII-equivalent (\code{e} resp. \code{ss}) to account for ambiguous spelling and reduce the number of words. Umlauts (although not part of the ASCII codeset) were kept as-is because they are used very frequently in German. 
+
+Because \textit{KenLM} expects the input as sentences (one sentence per line), the raw text was further tokenized into sentences and words using NLTK \parencite{nltk}. Word tokens that contain only numeric characters (such as year numbers) are changed to \code{<unk>}, a special token which is traditionally used to denote an \ac{OOV} word. Although numeric tokens occur frequently in the Wikipedia articles, they are unwanted in the corpus because they do not carry any semantic meaning and because there is an infinite number of possible numbers.
+
+The following lines are an excerpt of a article in the German Wikipedia along with its representation in the corpus.
+
+\begin{displayquote}[German Wikipedia article about Speech Recognition\footnote{\url{https://de.wikipedia.org/wiki/Spracherkennung}}]
+Die Größe des Wörterbuchs hängt stark von der Sprache ab. Zum einen haben durchschnittliche deutschsprachige Sprecher mit circa 4000 Wörtern einen deutlich größeren Wortschatz als englischsprachige mit rund 800 Wörtern. Außerdem ergeben sich durch die Flexion in der deutschen Sprache in etwa zehnmal so viele Wortformen, wie in der englischen Sprache, wo nur viermal so viele Wortformen entstehen.
+\end{displayquote}
+
+\begin{lstlisting}[numbers=left, caption=Representation in corpus]
+die grösse des wörterbuchs hängt stark von der sprache ab
+zum einen haben durchschnittliche deutschsprachige sprecher mit circa <unk> wörtern einen deutlich grösseren wortschatz als englischsprachige mit rund <unk> wörtern
+ausserdem ergeben sich durch die flexion in der deutschen sprache in etwa zehnmal so viele wortformen wie in der englischen sprache wo nur viermal so viele wortformen entstehen
+\end{lstlisting}
+
+The final corpus contained data from 2,221,101 Wikipedia articles (42,229,452 sentences, 712,167,726 words, 8,341,157 unique words). A $4$-gram \textit{KenLM} model was trained on this corpus. KenLM uses \textit{Kneser-Ney Smoothing}. $n$-grams can be represented with a tree structure \footnote{note that \textit{KenLM} offers a s.c. \textit{PROBING} data structure, which is fundamentally a hash table combined with interpolation search, a more sophisticated variant of binary search, which allows for constant space complexity and linear time complexity. This does however not change the fact that $n$-grams can conceptually be thought as a tree of grams}, which allows for pruning. The $n$-grams used to train the \ac{LM} have been pruned by setting the minimal threshold for $n$-Grams of any order ($n \in 1..4$) to 40. This is the value that Google used (reference from Jurafsky). Pruning unigrams helped getting rid of obvious spelling mistakes and very rare tokens that only appear in very special contexts (like the tokens \textit{aaaaa} or \textit{zzyzzyxx}) (EDIT: Pruning unigrams is not supported by KenLM, but the vocabulary can be limited). Such words are mostly not no real German words and should therefore not be trained on. Pruning higher-order $n$-grams was done to increase performance (both in space and time).
+
+\subsection{Evaluating the model}
+
+The best way to evaluate a \ac{LM}is to embed it in an application and measure how much the application improves \parencite{slp3}. This is called \textit{extrinsic evaluation} and has been done by comparing the learning curves with and without using a \ac{LM}. However, to measure the performance of a \ac{LM} independently (\textit{intrinsic evaluation}) one would have to provide a test set containing unseen sentences an assess the scores of the \ac{LM} on their $n$-grams. The results can then be compared to a reference \ac{LM}: Whatever model produces higher probabilities (or lower perplexity) to the $n$-grams in the test set is deemed to perform better. However, because models can only be compared if they use the same vocabulary \parencite{slp3}, this would require training the reference model would need to be trained on the same corpus, which can become very time consuming.
+
+\textit{KenLM} has been extensively compared to other \ac{LM} implementations like \ac{SRILM} both in terms of speed and accuracy. It has been found to be both faster and more memory efficient \parencite{kenlm} than the fastest alternative. Its low memory profile makes it runnable on a single machine, while other algorithms like \textit{MapReduce} target clusters \parencite{kenlm_estimation}. This was a big advantage especially for this project. The probabilistic performance of \textit{KenLM} has been evaluated by training a $5$-gram model on a 126 billion token corpus (393 unique words) \parencite{kenlm_estimation}. This model was embedded in some Machine Translation systems (Czech-English, French-English and Spanish-English) . Evaluation was done by calculating the BLEU score and comparing it to embeddings of other \ac{LM}. \textit{KenLM} placed first in all submissions.
+
+Because of time constraints and because \textit{KenLM} has already been extensively evaluated on English I resign from evaluating my German \ac{LM} intrinsically, although the corpus used for training is not as big as the one used in \cite{kenlm_estimation}. To this day \textit{KenLM} is widely recognized as the best performing \ac{LM} out there, which is emphasized by the usage of a \textit{KenLM} model in the Mozilla implementation of \textit{DeepSpeech}.
+
+To still get an intuition about how well the model performs, the model's score on some test sentences were calculated. To make sure the sentences could not have been seen during training, the following set of 5 sentences of the current newspaper (date after creation of the Wikipedia dump) was used:
+
+\begin{itemize}
+	\item Seine Pressebeauftragte ist ratlos.
+	\item Fünf Minuten später steht er im Eingang des Kulturcafés an der Zürcher Europaallee.
+	\item Den Leuten wird bewusst, dass das System des Neoliberalismus nicht länger tragfähig ist.
+	\item Doch daneben gibt es die beeindruckende Zahl von 30'000 Bienenarten, die man unter dem Begriff «Wildbienen» zusammenfasst.
+	\item Bereits 1964 plante die US-Airline Pan American touristische Weltraumflüge für das Jahr 2000.
+\end{itemize}
+
+The score for each sentence was calculated. Then the words of the sentences were shuffled and the score was calculated again. A good \ac{LM} should calculate a higher probability for the original sentence, because the shuffled sentence is most likely to be gibberish. All sentences have been normalized the same way sentences were preprocessed for training. Table \ref{LM_evaluation} shows the results of the comparison.
+
+
+\begin{table}[!htbp]
+	\centering
+	\begin{tabular}{|l|r|l|r|}
+		\hline
+		\thead{original sentence (normalized)} & \thead{score} & \thead{permuation} & \thead{score} \\
+		\hline
+		seine pressebeauftragte ist ratlos & 0 & foo & 0 \\ 
+		\hline
+		\makecell{fünf minuten später steht er im eingang\\des kulturcafes an der zürcher europaallee} & 0 & foo & 0 \\ 
+		\hline
+		\makecell{den leuten wird bewusst dass das system des \\ neoliberalismus nicht länger tragfähig ist} & 0 & foo & 0 \\
+		\hline
+		\makecell{doch daneben gibt es die beeindruckende zahl\\von \code{<unk>} bienenarten die man unter dem\\begriff wildbienen zusammenfasst} & 0 & foo & 0 \\
+		\hline		
+		\makecell{bereits \code{<unk>} plante die usairline\\pan american touristische weltraumflüge für das jahr \code{<unk>}} & 0 & foo & 0 \\
+		\hline		
+	\end{tabular}
+	\caption{Comparison of scores calculated for news sentences and a permutation of their words}
+	\label{LM_evaluation}
+\end{table}

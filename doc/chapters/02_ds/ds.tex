@@ -3,7 +3,7 @@ As stated above, this project does not aim at training a state of the art \ac{ST
 
 \subsection{Exploiting the \textit{DeepSpeech} model}
 
-A \ac{NN} that had quite an impact on \ac{ASR} was \textit{DeepSpeech} \cite{deepspeech} which reached recognition rates near-par to human performance, despite using a comparably simpler than traditional speech systems. Because the relation between audio signal and text was learned \ac{E2E} the network was also pretty robust to distortions like background noise or speaker variation. An open source implementation of a DeepSpeech model is available from Mozilla \footnote{\url{https://github.com/mozilla/DeepSpeech}}. Since this implementation uses a \ac{LM}, the quality of the model is measured as the percentage of misspelled or wrong words (called \ac{WER}) or as the edit distance (also called Levenshtein distance or \ac{LER}). A pre-trained model for inference of English transcript can be downloaded, which achieves a \ac{WER} of just 6.5\%, which is close to what a human is able to recognize \cite{mozillajourney}.
+A \ac{NN} that had quite an impact on \ac{ASR} was \textit{DeepSpeech} \parencite{deepspeech} which reached recognition rates near-par to human performance, despite using a comparably simpler than traditional speech systems. Because the relation between audio signal and text was learned \ac{E2E} the network was also pretty robust to distortions like background noise or speaker variation. An open source implementation of a DeepSpeech model is available from Mozilla \footnote{\url{https://github.com/mozilla/DeepSpeech}}. Since this implementation uses a \ac{LM}, the quality of the model is measured as the percentage of misspelled or wrong words (called \ac{WER}) or as the edit distance (also called Levenshtein distance or \ac{LER}). A pre-trained model for inference of English transcript can be downloaded, which achieves a \ac{WER} of just 6.5\%, which is close to what a human is able to recognize \parencite{mozillajourney}.
 
 A model could be trained by providing training-, validation- and test-data for an arbitrary language (e.g. from the \textit{ReadyLingua} corpus). However, this is not the preferred procedure for this project for various reasons:
 
@@ -29,14 +29,14 @@ Figure tbd. shows the architecture proposed in the \textit{DeepSpeech} compared 
 
 tbd: Hier Bild Architektur einfügen
 
-However, despite training on the \textit{LibriSpeech} corpus, this network did not seem converge. Furthermore, performance was a big issue, although the \ac{RNN} used a simpler architecture and no computational power was needed to query a \ac{LM}. Training on aligned speech segments from the \textit{LibriSpeech} corpus was not possible within project time because it would have taken approximately two months when using a single ac{GPU}. However, this duration is at least consistent with the experience made by the Machine Learning team at Mozilla Research, which used a cluster of 16 \acsp{GPU} that required about a week \cite{mozillajourney} to train a variant \footnote{the variant used \ac{MFCC} as features whereas the original paper proposed raw spectrograms} of the \ac{RNN} originally proposed in \cite{ctc_paper}.
+However, despite training on the \textit{LibriSpeech} corpus, this network did not seem converge. Furthermore, performance was a big issue, although the \ac{RNN} used a simpler architecture and no computational power was needed to query a \ac{LM}. Training on aligned speech segments from the \textit{LibriSpeech} corpus was not possible within project time because it would have taken approximately two months when using a single ac{GPU}. However, this duration is at least consistent with the experience made by the Machine Learning team at Mozilla Research, which used a cluster of 16 \acsp{GPU} that required about a week \parencite{mozillajourney} to train a variant \footnote{the variant used \ac{MFCC} as features whereas the original paper proposed raw spectrograms} of the \ac{RNN} originally proposed in \parencite{ctc_paper}.
 
 In this project some experimentation was done to make the model converge:
 
 \begin{itemize}
-	\item increased number of MFCC features from 13 to 26, because this is the value used in the \textit{DeepSpeech} model
-	\item tried out different optimizers. Surprisingly, SGD seemed to work better than Adam
-	\item switched back to a Simple RNN instead of LSTM
+	\item increased number of \ac{MFCC} features from 13 to 26, because this is the value used in the \textit{DeepSpeech} model
+	\item tried out different optimizers. Surprisingly, \ac{SGD} seemed to work better than Adam
+	\item switched back to a Simple \ac{RNN} instead of \ac{LSTM}
 	\item include a language model
 \end{itemize}
 
@@ -62,9 +62,9 @@ If a single evaluation metric is required, the \ac{WER} is often the better choi
 	\caption{examples of infered transcripts with pre-trained DeepSpeech model with and without \ac{LM}\\(sample \code{20161203potusweeklyaddress} from the ReadyLingua corpus}
 \end{table}
 
-tbd: Hier kurz LM zusammenfassen (n-Gram erklären)
+A \ac{LM} models probabilities of sequences of words. Therefore a \ac{LM} can be used to assign a probability to a sentence. A simple \ac{LM} that does that is the $n$-gram \ac{LM}. $n$-grams are overlapping tuples of words whose probability can be approximated by training on massive text corpora. Although a lot of research has been made in the field of using \ac{NN} for language modelling (like for machine translation), $n$-grams \ac{LM} are still widely used and often the right tool for many tasks \parencite{slp3}, because they are faster to train and require significantly less training data.
 
-The Mozilla implementation includes an n-Gram \ac{LM} using \textit{KenLM}. The \ac{LM} is queried while decoding the numeric matrices produced by \ac{CTC} using \textit{Beam Search} or \textit{Best-Path} decoding. It uses a \textit{trie} and precompiled custom implementations in C of \textit{TensorFlow}-operations to maximize performance and dedicated weights for the influence the number of valid words and the \ac{LM} itself on the inferred transcription. It is therefore deeply baked in with the decoding process.
+The Mozilla implementation includes an $n$-Gram \ac{LM} using \textit{KenLM}. The \ac{LM} is queried while decoding the numeric matrices produced by \ac{CTC} using \textit{Beam Search} or \textit{Best-Path} decoding. It uses a \textit{trie} and precompiled custom implementations in C of \textit{TensorFlow}-operations to maximize performance and dedicated weights for the influence the number of valid words and the \ac{LM} itself on the inferred transcription. It is therefore deeply baked in with the decoding process.
 
 A simpler variant that is used in this project is to infer the transcriptions first with \textit{Beam Search} or \textit{Best-Path} decoding using the standard tools provided by Keras. The inferred transcriptions are then post-processed by running it through some sort of spell-checking, which is done as follows:
 
@@ -98,11 +98,18 @@ A simpler variant that is used in this project is to infer the transcriptions fi
 
 \section{Plotting a learning curve}
 
-The total length of all transcribed speech segments in the \textit{LibriSpeech} corpus is roughly 47 days (1141 hours). Training on all these samples was not feasible within project time . However, we can get an estimation of the expected learning progress by plotting a \textit{learning curve}. This was done using transcribed audio segments from the \textit{LibriSpeech} corpus. Training was done on exponentially increasing amounts of training data (1, 10, 100 and 1000 minutes of transcribed audio).
+The total length of all transcribed speech segments in the \textit{LibriSpeech} corpus is roughly 47 days (1141 hours). Training on all these samples was not feasible within project time . However, we can get an estimation of the expected learning progress by plotting a \textit{learning curve}. This was done using transcribed audio segments from the \textit{LibriSpeech} corpus. Training was done on exponentially increasing amounts of training data (1, 10, 100 and 1000 minutes of transcribed audio). To assess the impact of using a \ac{LM}, the learning curve was plotted twice: Figure \ref{learning_curve_without_lm} shows the learning curve for \ac{WER} and \ac{LER} without using a \ac{LM}. Figure \ref{learning_curve_with_lm} shows the learning curve for training with a 4-gram \ac{LM}.
 
 \begin{figure}
 	\includegraphics[width=\linewidth]{./img/learning_curve_lm_beamsearch.png}
 	\caption{Learning curve for training on 1/10/100/1000 minutes of transcribed audio from \textit{ReadyLingua} using a 2-gram \ac{LM} and Beam-Search decoding}
+	\label{learning_curve_without_lm}
+\end{figure}
+
+\begin{figure}
+	\includegraphics[width=\linewidth]{./img/learning_curve_lm_beamsearch.png}
+	\caption{Learning curve for training on 1/10/100/1000 minutes of transcribed audio from \textit{ReadyLingua} using a 2-gram \ac{LM} and Beam-Search decoding}
+	\label{learning_curve_with_lm}
 \end{figure}
 
 % To do:

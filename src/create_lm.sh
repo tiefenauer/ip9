@@ -129,7 +129,7 @@ elif [ ! -f "${corpus_file}.bz2" ] ; then
             | pv \
             | tee >(    sed 's/<[^>]*>//g' \
                       | sed 's|["'\''„“‚‘]||g' \
-                      | python3 ./lm/create_lm.py ${LANGUAGE} > ${corpus_file} \
+                      | python3 ./lm/create_corpus.py ${LANGUAGE} > ${corpus_file} \
                    ) \
             | grep -e "<doc" \
             | wc -l)

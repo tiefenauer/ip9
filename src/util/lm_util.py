@@ -1,22 +1,46 @@
 import kenlm
+import re
 from heapq import heapify
 from operator import itemgetter
-from os.path import abspath
+from os.path import abspath, basename, splitext, dirname, join, exists
 
 import nltk
 
 from util.rnn_util import ALLOWED_CHARS
 from util.string_util import replace_numeric, remove_punctuation, unidecode_keep_umlauts
 
-LANGUAGE_MODELS = {}
+LM_MODELS = {}
 
 
 def load_LM(lm_path):
-    global LANGUAGE_MODELS
+    global LM_MODELS
     lm_abs_path = abspath(lm_path)
-    if lm_path not in LANGUAGE_MODELS:
-        LANGUAGE_MODELS[lm_abs_path] = kenlm.Model(lm_abs_path)
-    return LANGUAGE_MODELS[lm_abs_path]
+    if not exists(lm_abs_path):
+        raise ValueError(f'ERROR: LM not found at {lm_abs_path}')
+
+    lm_dir = dirname(lm_abs_path)
+    lm_name, _ = splitext(basename(lm_abs_path))
+    lm_vocab_abs_path = abspath(join(lm_dir, lm_name + '.vocab'))
+    if not exists(lm_vocab_abs_path):
+        raise ValueError(f'ERROR: LM vocabulary not found at {lm_vocab_abs_path}')
+
+    if lm_abs_path not in LM_MODELS:
+        with open(lm_vocab_abs_path) as vocab_f:
+            lm = kenlm.Model(lm_abs_path)
+            vocab = words(vocab_f.read())
+            LM_MODELS[lm_abs_path] = (lm, vocab)
+    else:
+        lm, vocab = LM_MODELS[lm_abs_path]
+    return lm, vocab
+
+
+def words(text):
+    """
+    splits a text into a list of words
+    :param text: a text-string
+    :return: list of word-strings
+    """
+    return re.findall(r'\w+', text.lower())
 
 
 def score(word_list, lm):
@@ -28,7 +52,7 @@ def score(word_list, lm):
     return lm.score(' '.join(word_list), bos=False, eos=False)
 
 
-def correction(sentence, lm_path=None, lm=None):
+def correction(sentence, lm_path=None, lm=None, lm_vocab=None):
     """
     Get most probable spelling correction for a given sentence.
     :param sentence:
@@ -37,35 +61,39 @@ def correction(sentence, lm_path=None, lm=None):
     if not lm_path and not lm:
         raise ValueError("ERROR: either lm_path or lm must be set!")
 
-    lm = lm if lm else load_LM(lm_path)
+    if lm and not lm_vocab:
+        raise ValueError("ERROR: if lm is set, then LM vocabulary must also be set!")
+
+    lm, vocab = lm, lm_vocab if lm  and lm_vocab else load_LM(lm_path)
     beam_width = 1024
     layer = [(0, [])]  # list of (score, 2-gram)-pairs
     for word in words(sentence):
-        layer = [(-score(node + [word_c], lm), node + [word_c]) for word_c in candidate_words(word) for sc, node in layer]
+        layer = [(-score(node + [word_c], lm), node + [word_c]) for word_c in candidate_words(word, lm_vocab) for sc, node in
+                 layer]
         heapify(layer)
         layer = layer[:beam_width]
     return ' '.join(layer[0][1])
 
 
-def candidate_words(word):
+def candidate_words(word, vocab):
     """
     Generate possible spelling corrections for a given word.
     :param word: single word as a string
     :return: list of possible spelling corrections for each word
     """
-    return known_words([word]) \
-           or known_words(edits_1(word)) \
-           or known_words(edits_2(word)) \
+    return known_words([word], vocab) \
+           or known_words(edits_1(word), vocab) \
+           or known_words(edits_2(word), vocab) \
            or [word]  # fallback: the original word as a list
 
 
-def known_words(word_list):
+def known_words(word_list, vocab):
     """
     Filters out from a list of words the subset of words that appear in the vocabulary of KNOWN_WORDS.
     :param word_list: list of word-strings
     :return: set of unique words that appear in vocabulary
     """
-    return set(w for w in word_list if w in KNOWN_WORDS)
+    return set(w for w in word_list if w in vocab)
 
 
 def edits_1(word_list):

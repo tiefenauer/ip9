@@ -32,7 +32,7 @@ args = parser.parse_args()
 
 def main():
     print(create_args_str(args))
-    test_set, asr_model, lm, stats_file_path = setup(args)
+    test_set, asr_model, lm, lm_vocab, stats_file_path = setup(args)
 
     df = pd.DataFrame(index=np.arange(len(test_set)), columns=['C', 'O', 'D'])
 
@@ -40,7 +40,7 @@ def main():
         # this is the pipeline
         audio, rate, transcript = preprocess(test_entry)
         voiced_segments = vad(audio, rate)
-        partial_transcripts = asr(voiced_segments, rate, asr_model, lm)
+        partial_transcripts = asr(voiced_segments, rate, asr_model, lm, lm_vocab)
         alignments = lsa(partial_transcripts, transcript)
 
         c, o, d = calculate_stats(alignments)
@@ -69,11 +69,11 @@ def setup(args):
     lm_path = abspath(args.lm)
     if not exists(lm_path):
         raise ValueError(f'ERROR: LM not found at {lm_path}')
-    lm = load_LM(lm_path)
+    lm, lm_vocab = load_LM(lm_path)
 
     stats_file_path = args.stats_file if args.stats_file else getcwd()
 
-    return test_set, asr_model, lm, stats_file_path
+    return test_set, asr_model, lm, lm_vocab, stats_file_path
 
 
 def preprocess(test_entry):
@@ -88,11 +88,11 @@ def vad(audio, rate):
     return speech_segments
 
 
-def asr(voiced_segments, rate, model, lm):
+def asr(voiced_segments, rate, model, lm, lm_vocab):
     partial_transcripts = []
     for segment in voiced_segments:
         transcription_inferred = infer_transcription(model, segment.audio, rate)
-        transcription_corrected = correction(transcription_inferred, lm)
+        transcription_corrected = correction(transcription_inferred, lm, lm_vocab)
         partial_transcripts.append(transcription_corrected)
     return partial_transcripts
 
@@ -101,7 +101,7 @@ def lsa(partial_transcripts, full_transcript):
     alignments = []
     for partial_transcript in partial_transcripts:
         text_start, text_end, b_ = smith_waterman(partial_transcript, full_transcript)
-        alignment_text = transcript[text_start:text_end]
+        alignment_text = full_transcript[text_start:text_end]
         similarity = levenshtein_similarity(normalize(partial_transcript), normalize(alignment_text))
         alignment = {'text': alignment_text, 'similarity': similarity, 'text_start': text_start, 'text_end': text_end}
         alignments.append(alignment)

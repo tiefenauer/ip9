@@ -27,7 +27,7 @@ def normalize_word(token):
     _token = unidecode_keep_umlauts(token)
     _token = remove_punctuation(_token)  # remove any special chars
     _token = replace_numeric(_token, by_single_digit=True)
-    _token = '<unk>' if _token == '#' else _token  # if token was a number, replace it with <unk> token
+    _token = '<num>' if _token == '#' else _token  # if token was a number, replace it with <unk> token
     return _token.strip().lower()
 
 

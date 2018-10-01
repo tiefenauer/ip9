@@ -2,7 +2,7 @@
 # http://victor.chahuneau.fr/notes/2012/07/03/kenlm.html
 import sys
 
-from lm.lm_util import process_line
+from util.lm_util import process_line
 
 LANGUAGES = {'de': 'german', 'en': 'english'}
 

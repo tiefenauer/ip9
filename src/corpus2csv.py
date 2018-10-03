@@ -16,9 +16,9 @@ from util.log_util import create_args_str
 
 parser = argparse.ArgumentParser(description="""Export speech segments of corpus to CSV and split audio files""")
 parser.add_argument('-id', type=str, help='target-ID for processed files')
-parser.add_argument('-c', '--corpus', type=str, choices=['rl', 'ls'], help='corpus to export')
-parser.add_argument('-l', '--language', type=str, help='language to use')
+parser.add_argument('-s', '--source_dir', type=str, help='id of corpus or path to corpus to export')
 parser.add_argument('-t', '--target_dir', type=str, help='target directory to save results')
+parser.add_argument('-l', '--language', type=str, help='language to use')
 parser.add_argument('-num', '--include_numeric', action='store_true', default=False,
                     help='(optional) whether to include transcripts with numeric chars (default: False)')
 parser.add_argument('-m', '--max', nargs='?', type=int, default=None,
@@ -45,7 +45,7 @@ def main():
             rmtree(target_dir)
             makedirs(target_dir)
 
-    corpus = get_corpus(args.corpus)(languages=args.language)
+    corpus = get_corpus(args.source_dir)(languages=args.language)
     corpus.summary()
 
     print(f'processing {corpus.name} corpus and saving split segments in {target_dir}')

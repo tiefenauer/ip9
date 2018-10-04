@@ -36,7 +36,8 @@ def main():
         print(f'target directory {target_dir} does not exist. Creating...')
         makedirs(target_dir)
 
-    if args.force and listdir(target_dir):
+    override = False
+    if not args.force and listdir(target_dir):
         inp = input(f"""
         WARNING: target directory {target_dir} already exists. Override?
         (this will overwrite all existing files in {target_dir} with the same names!!!) (Y/n)

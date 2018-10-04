@@ -59,14 +59,14 @@ def extract_speech_segments(corpus_id, corpus, target_dir):
     print(f'processing training segments')
     df_train = process_subset('train', train_set, corpus_id, target_dir)
 
-    print(f'processing validation segments')
-    df_valid = process_subset('dev', dev_set, corpus_id, target_dir)
-
-    print(f'processing validation segments')
-    df_test = process_subset('test', test_set, corpus_id, target_dir)
-
-    print(f'pre-computing features')
-    compute_features(df_train, df_valid, df_test, target_dir)
+    # print(f'processing validation segments')
+    # df_valid = process_subset('dev', dev_set, corpus_id, target_dir)
+    #
+    # print(f'processing validation segments')
+    # df_test = process_subset('test', test_set, corpus_id, target_dir)
+    #
+    # print(f'pre-computing features')
+    # compute_features(df_train, df_valid, df_test, target_dir)
 
 
 def process_subset(subset_id, subset, corpus_id, target_dir):

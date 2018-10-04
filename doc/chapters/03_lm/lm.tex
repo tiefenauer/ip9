@@ -35,9 +35,20 @@ The best way to evaluate a \ac{LM}is to embed it in an application and measure h
 
 \textit{KenLM} has been extensively compared to other \ac{LM} implementations like \ac{SRILM} both in terms of speed and accuracy. It has been found to be both faster and more memory efficient \parencite{kenlm} than the fastest alternative. Its low memory profile makes it runnable on a single machine, while other algorithms like \textit{MapReduce} target clusters \parencite{kenlm_estimation}. This was a big advantage especially for this project. The probabilistic performance of \textit{KenLM} has been evaluated by training a $5$-gram model on a 126 billion token corpus (393 unique words) \parencite{kenlm_estimation}. This model was embedded in some Machine Translation systems (Czech-English, French-English and Spanish-English) . Evaluation was done by calculating the BLEU score and comparing it to embeddings of other \ac{LM}. \textit{KenLM} placed first in all submissions.
 
-Because of time constraints and because \textit{KenLM} has already been extensively evaluated on English I resign from evaluating my German \ac{LM} intrinsically, although the corpus used for training is not as big as the one used in \cite{kenlm_estimation}. To this day \textit{KenLM} is widely recognized as the best performing \ac{LM} out there, which is emphasized by the usage of a \textit{KenLM} model in the Mozilla implementation of \textit{DeepSpeech}.
+Because of time constraints and because \textit{KenLM} has already been extensively evaluated on English I resign from evaluating my German \ac{LM} intrinsically, although the corpus used for training is not as big as the one used in \cite{kenlm_estimation}. To this day \textit{KenLM} is widely recognized as the best performing \ac{LM} out there, which is also emphasized by the usage of a \textit{KenLM} model in the Mozilla implementation of \textit{DeepSpeech}.
 
-To still get an intuition about how well the model performs, the model's score on some test sentences were calculated. To make sure the sentences could not have been seen during training, the following set of 5 sentences of the current newspaper (date after creation of the Wikipedia dump) was used:
+To still get an intuition about how well the model performs, two different experiments were made:
+
+\begin{itemize}
+	\item \textbf{Experiment 1}: The probability calculated for valid German sentences was compared against variants of the same sentences where the words appear in randomized order.
+	\item \textbf{Experiment 2}: The \ac{LM} was used together with its vocabulary to build a simple word predictor.
+\end{itemize}
+
+Both experiments are explained in more depth below.
+
+\subsubsection{Evaluation 1: Comparing scores of randomized sentences}
+
+The first experiment tests the validity of the probabilities (\textit{scores}) calculated by the \ac{LM}. For this, an arbitrary choice of 5 valid sentences in German was used. To make sure the sentences could not have been seen during training, the following 5 sentences were taken out of the current newspaper (dated after the creation of the Wikipedia dump):
 
 \begin{itemize}
 	\item \textit{Seine Pressebeauftragte ist ratlos.}
@@ -47,7 +58,7 @@ To still get an intuition about how well the model performs, the model's score o
 	\item \textit{Bereits 1964 plante die US-Airline Pan American touristische Weltraumflüge für das Jahr 2000.}
 \end{itemize}
 
-The score for each sentence was calculated. Then the words of the sentences were shuffled and the score was calculated again. A good \ac{LM} should calculate a higher probability for the original sentence, because the shuffled sentence is most likely to be gibberish. All sentences have been normalized the same way sentences were preprocessed for training. Table \ref{LM_evaluation} shows the results of the comparison. We can see that the probabilities for the shuffled sentences are much lower than for the sentences where the words appear in the correct order.
+For each of these sentences the score was calculated. Then the words of the sentences were shuffled and the score was calculated again. A good \ac{LM} should calculate a (much) higher probability for the original sentence, because the shuffled sentence is most likely to be gibberish. All sentences have been normalized the same way sentences were preprocessed for training. Table \ref{LM_evaluation} shows the results of the comparison. It is evident that the probabilities for the shuffled sentences are much lower than for the sentences where the words appear in the correct order. The probabilities calculated by the \ac{LM} are therefore deemed valid.
 
 \begin{table}[!htbp]
 	\centering
@@ -69,3 +80,135 @@ The score for each sentence was calculated. Then the words of the sentences were
 	\caption{Comparison of log10-probabilities calculated for news sentences and a permutation of their words}
 	\label{LM_evaluation}
 \end{table}
+
+\subsubsection{Experiment 2: Word predictor}
+
+The second experiment tests whether the trained \ac{LM} is able to continue a sentence given its beginning. For this each word from the vocabulary is appended and the score of the resulting stumps is calculated. The most likely continuation can be estimated by sorting the resulting list in descending order (the probabilities are $\log_10$-based, i.e. negative) and taking the first element. This behavior can be applied iteratively to construct a sentence from a stump. For this experiment a sentence was started with the stump \textit{Ein - 2007 - erschienenes}. Afterwards a word from the five most probable continuations was appended. The extended stump was then again fed into the \ac{LM}. This process was repeated until some kind of sentence ending was encountered. Eacg extended stump was preprocessed the same way the sentences were preprocessed for training (lowercasing, replacing numbers with \code{<num>}, etc.). Figure \ref{word_predictor} shows the path taken through the predictions. Note that the predictions for the second and third word of the stump after typing the first word are shown in grey for illustrative purposes, although they were not considered for continuation.
+
+\begin{figure}
+	\includegraphics[width=\linewidth]{./img/word_predictor.png}
+	\caption{Word predictions of the trained 5-gram model for continuations of the stump \textit{«Ein 2007 erschienenes ...»}. The blue path represents a grammatically valid German sentence.}
+	\label{word_predictor}
+\end{figure}
+
+Although prediction was slow we can observe that the words suggested by the \ac{LM} are generally grammatically correct continuations and often make sense, although the probability for some of the predicted words (like \textit{Michelangelo}) is sometimes unexplicably high. Nevertheless it was possible to create a grammatically correct German sentence from the stump using only the suggested words. The \ac{LM} even seems to have captured some notion about grammatical concepts like German cases (e.g. that \textit{"die Geschichte Chinas"} is more likely than \textit{"die Geschichte China"}). On the other hand we can observe that the meaningfulness of the suggestions decreases with the progress because some long-distance relationships between words are lost for small values of $n$.
+
+%score for 'ein': -2.5511488914489746
+%top 5 words:
+%word        log10-probability
+%--------  -------------------
+%weiteres             -5.973
+%<num>                -6.00614
+%weiterer             -6.18446
+%zweiter              -6.21412
+%dritter              -6.30031
+%
+%score for 'ein <num>': -4.864611625671387
+%top 5 words:
+%word         log10-probability
+%---------  -------------------
+%<num>                 -7.34603
+%erreichte             -7.75604
+%ab                    -7.77345
+%aus                   -7.86214
+%an                    -7.87674
+%
+%score for 'ein <num> erschienenes': -7.372537136077881
+%top 5 words:
+%word                      log10-probability
+%----------------------  -------------------
+%computerspiel                      -8.47756
+%buch                               -8.86841
+%album                              -9.2071
+%werk                               -9.30259
+%pointandclickadventure             -9.31129
+%
+%score for 'ein <num> erschienenes werk': -8.43615436553955
+%top 5 words:
+%word          log10-probability
+%----------  -------------------
+%an                     -10.5713
+%auf                    -10.863
+%abseits                -10.9379
+%über                   -11.0053
+%bezeichnet             -11.0132
+%
+%score for 'ein <num> erschienenes werk über': -9.723254203796387
+%top 5 words:
+%word            log10-probability
+%------------  -------------------
+%die                      -12.0887
+%ihn                      -12.1763
+%michelangelo             -12.4766
+%<num>                    -12.4973
+%deutschland              -12.5661
+%
+%score for 'ein <num> erschienenes werk über die': -9.965542793273926
+%top 5 words:
+%word              log10-probability
+%--------------  -------------------
+%<num>                      -11.9341
+%landwirtschaft             -12.1469
+%stadt                      -12.2681
+%natur                      -12.2898
+%geschichte                 -12.5322
+%
+%score for 'ein <num> erschienenes werk über die geschichte': -11.084966659545898
+%top 5 words:
+%word           log10-probability
+%-----------  -------------------
+%pommerns                -12.7682
+%der                     -13.4756
+%des                     -13.5903
+%frankreichs             -13.6889
+%chinas                  -13.7065
+%
+%score for 'ein <num> erschienenes werk über die geschichte chinas': -13.830591201782227
+%top 5 words:
+%word              log10-probability
+%--------------  -------------------
+%dar                        -14.8973
+%sei                        -14.9483
+%widerspiegelte             -15.1113
+%indiens                    -15.555
+%verbunden                  -15.6136
+%
+%score for 'ein <num> erschienenes werk über die geschichte chinas widerspiegelte': -15.959598541259766
+%top 5 words:
+%word                    log10-probability
+%--------------------  -------------------
+%führte                           -19.0873
+%donauillerrheinlimes             -19.3014
+%auf                              -19.3185
+%die                              -19.3199
+%und                              -19.3243
+%
+%score for 'ein <num> erschienenes werk über die geschichte chinas widerspiegelte die': -17.793916702270508
+%top 5 words:
+%word         log10-probability
+%---------  -------------------
+%<num>                 -19.5746
+%besetzung             -20.353
+%rede                  -20.706
+%sog                   -20.7197
+%suche                 -20.7211
+%
+%score for 'ein <num> erschienenes werk über die geschichte chinas widerspiegelte die suche': -19.95460319519043
+%top 5 words:
+%word       log10-probability
+%-------  -------------------
+%auf                 -21.5493
+%fort                -21.8571
+%danach              -21.8975
+%beendet             -22.052
+%nach                -22.0672
+
+%score for 'ein <num> erschienenes werk über die geschichte chinas widerspiegelte die suche danach': -22.0571231842041
+%top 5 words:
+%word           log10-probability
+%-----------  -------------------
+%diskutiert              -23.6575
+%abzielen                -23.9694
+%begeben                 -23.9833
+%beeinflusst             -24.0387
+%auf                     -24.0435

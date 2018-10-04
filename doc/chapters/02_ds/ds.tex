@@ -1,6 +1,8 @@
 \section{Training an \ac{RNN} for \ac{ASR}}\label{ds}
 As stated above, this project does not aim at training a state of the art \ac{STT} engine. Because the \ac{SW} algorithm used for local alignment is tolerant to a certain amount of errors in the transcripts, the \ac{RNN} need only be \textit{good enough} for the task at hand (\ac{FA}). If such a network can be trained under the given circumstances it could be used in the \ac{ASR} stage of the pipeline. The pipeline would then become become self-contained and would not ne dependent on a commercial solution that cannot eb tuned and whose inner workings are unknown. Furthermore such a \ac{RNN} would open up to recognizing languages for which there is not a third-party solution yet, such as Swiss German.
 
+Hier etwas über Transfer Learning (z.B. wie in https://arxiv.org/pdf/1706.00290.pdf) und warum es nicht eingesetzt wurde (CNN anstatt RNN, Zeitaufwand). Layer Freezen bringt ausserdem offenbar auch nix. \parencite{budget}
+
 \subsection{Exploiting the \textit{DeepSpeech} model}
 
 A \ac{NN} that had quite an impact on \ac{ASR} was \textit{DeepSpeech} \parencite{deepspeech} which reached recognition rates near-par to human performance, despite using a comparably simpler than traditional speech systems. Because the relation between audio signal and text was learned \ac{E2E} the network was also pretty robust to distortions like background noise or speaker variation. An open source implementation of a DeepSpeech model is available from Mozilla \footnote{\url{https://github.com/mozilla/DeepSpeech}}. Since this implementation uses a \ac{LM}, the quality of the model is measured as the percentage of misspelled or wrong words (called \ac{WER}) or as the edit distance (also called Levenshtein distance or \ac{LER}). A pre-trained model for inference of English transcript can be downloaded, which achieves a \ac{WER} of just 6.5\%, which is close to what a human is able to recognize \parencite{mozillajourney}.
@@ -106,7 +108,7 @@ A simpler variant that is used in this project is to infer the transcriptions fi
 
 \section{Plotting a learning curve}
 
-The total length of all transcribed speech segments in the \textit{LibriSpeech} corpus is roughly 47 days (1141 hours). Training on all these samples was not feasible within project time . However, we can get an estimation of the expected learning progress by plotting a \textit{learning curve}. This was done using transcribed audio segments from the \textit{LibriSpeech} corpus. Training was done on exponentially increasing amounts of training data (1, 10, 100 and 1000 minutes of transcribed audio). To assess the impact of using a \ac{LM}, the learning curve was plotted twice: Figure \ref{learning_curve_without_lm} shows the learning curve for \ac{WER} and \ac{LER} without using a \ac{LM}. Figure \ref{learning_curve_with_lm} shows the learning curve for training with a 4-gram \ac{LM}.
+The total length of all transcribed speech segments in the \textit{LibriSpeech} corpus is roughly 47 days (1,141 hours). Training on all these samples was not feasible within project time . However, we can get an estimation of the expected learning progress by plotting a \textit{learning curve}. This was done using transcribed audio segments from the \textit{LibriSpeech} corpus. Training was done on exponentially increasing amounts of training data (1, 10, 100 and 1000 minutes of transcribed audio). To assess the impact of using a \ac{LM}, the learning curve was plotted twice: Figure \ref{learning_curve_without_lm} shows the learning curve for \ac{WER} and \ac{LER} without using a \ac{LM}. Figure \ref{learning_curve_with_lm} shows the learning curve for training with a 4-gram \ac{LM}.
 
 \begin{figure}
 	\includegraphics[width=\linewidth]{./img/learning_curve_lm_beamsearch.png}
@@ -119,6 +121,13 @@ The total length of all transcribed speech segments in the \textit{LibriSpeech} 
 	\caption{Learning curve for training on 1/10/100/1000 minutes of transcribed audio from \textit{ReadyLingua} using a 2-gram \ac{LM} and Beam-Search decoding}
 	\label{learning_curve_with_lm}
 \end{figure}
+
+Hier etwas über
+
+- Batchgrösse (Qualität nimmt mit zunehmender batchgrösse ab!)
+- Padding der Trainingssequenzen
+- Sortierung der Trainingsdaten nach Länge (ist besser, da weniger blanks gepadded)
+- ...
 
 % To do:
 % - train on LibriSpeech data

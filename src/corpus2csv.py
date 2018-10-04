@@ -24,6 +24,8 @@ parser.add_argument('-m', '--max', nargs='?', type=int, default=None,
                     help='(optional) maximum number of speech segments to process')
 parser.add_argument('-f', '--force', action='store_true',
                     help='(optional) force override existing files. Default: False')
+parser.add_argument('-p', '--precompute_features', action='store_true',
+                    help='(optional) precompute MFCC features in HDF5 format. Default: False')
 args = parser.parse_args()
 
 
@@ -48,11 +50,11 @@ def main():
     corpus.summary()
 
     print(f'processing {corpus.name} corpus and saving split segments in {target_dir}')
-    extract_speech_segments(args.id, corpus, target_dir, override)
+    extract_speech_segments(args.id, corpus, target_dir, override, args.precompute_features)
     print(f'done! All files are in {target_dir}')
 
 
-def extract_speech_segments(corpus_id, corpus, target_dir, override):
+def extract_speech_segments(corpus_id, corpus, target_dir, override=False, precompute_features=False):
     train_set, dev_set, test_set = corpus.train_dev_test_split(include_numeric=args.include_numeric)
 
     print(f'processing training segments')
@@ -64,8 +66,9 @@ def extract_speech_segments(corpus_id, corpus, target_dir, override):
     print(f'processing validation segments')
     df_test = process_subset('test', test_set, corpus_id, target_dir, override)
 
-    print(f'pre-computing features')
-    compute_features(df_train, df_valid, df_test, target_dir, override)
+    if precompute_features:
+        print(f'pre-computing features')
+        compute_features(df_train, df_valid, df_test, target_dir, override)
 
 
 def process_subset(subset_id, subset, corpus_id, target_dir, override):

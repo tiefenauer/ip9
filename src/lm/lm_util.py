@@ -1,25 +1,34 @@
-# creates a n-Gram LM
-# http://victor.chahuneau.fr/notes/2012/07/03/kenlm.html
-import itertools
-import string
-import sys
 from operator import itemgetter
 
 import nltk
 
-if __name__ == '__main__':
-    vocab = set()
-    for line in sys.stdin:
-        # for sentence in nltk.sent_tokenize(line.decode('utf-8').encode('ascii', 'ignore')):
-        for sentence in nltk.sent_tokenize(line):
-            # for sentence in nltk.sent_tokenize(unicode(line).decode('utf-8')):
-            words = [word for word in nltk.word_tokenize(sentence) if not any(p in word for p in string.punctuation)]
-            print(' '.join(words).lower())
-            vocab.update(words)
+from util.string_util import replace_numeric, remove_punctuation, unidecode_keep_umlauts
 
-    with open('vocab.txt', 'w') as f:
-        for word in sorted(vocab):
-            f.write(f'{word.lower()}\n')
+
+def process_line(line, language='german', min_words=4, ):
+    sentences = []
+    sents = nltk.sent_tokenize(line.strip(), language=language)
+    for sentence in sents:
+        sentence_processed = process_sentence(sentence, language, min_words)
+        if sentence_processed:
+            sentences.append(sentence_processed)
+
+    return sentences
+
+
+def process_sentence(sent, language, min_words=0):
+    words = [normalize_word(word) for word in nltk.word_tokenize(sent, language=language)]
+    if len(words) >= min_words:
+        return ' '.join(w for w in words if w).strip()  # prevent multiple spaces
+    return ''
+
+
+def normalize_word(token):
+    _token = unidecode_keep_umlauts(token)
+    _token = remove_punctuation(_token)  # remove any special chars
+    _token = replace_numeric(_token, by_single_digit=True)
+    _token = '<num>' if _token == '#' else _token  # if token was a number, replace it with <unk> token
+    return _token.strip().lower()
 
 
 def check_lm(lm_path, vocab_path, sentence):
@@ -36,7 +45,7 @@ def check_lm(lm_path, vocab_path, sentence):
         if oov:
             print(f'\t\"{words[i+1]}" is an OOV!')
 
-    vocab = set(word for line in open(vocab_path) for word in line.strip().split() )
+    vocab = set(word for line in open(vocab_path) for word in line.strip().split())
     print(f'loaded vocab with {len(vocab)} unique words')
     print()
     word = input('Your turn now! Start a sentence by writing a word: (enter nothing to abort)\n')

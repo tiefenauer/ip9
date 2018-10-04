@@ -1,4 +1,5 @@
 matplotlib
+gensim
 nltk
 scipy
 numpy

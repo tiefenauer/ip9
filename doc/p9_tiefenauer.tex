@@ -1,4 +1,5 @@
 \documentclass[11pt]{article}
+%\usepackage{lipsum,mathptmx,etoolbox} % Or swap mathptmx with newtxtext,newtxmath
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 \usepackage{csquotes} % needed for babel
@@ -31,8 +32,8 @@
 %\numberwithin{equation}{section} %Metadata
 
 % Bibliography
-\usepackage[backend=biber,style=alphabetic,citestyle=numeric]{biblatex}
-\addbibresource{../mybib.bib} %biblatex
+\usepackage[backend=biber,style=authoryear,citestyle=authoryear]{biblatex}
+\addbibresource{./mybib.bib} %biblatex
 
 % Math
 \usepackage{amsmath}
@@ -46,29 +47,44 @@
 \DeclareCaptionFormat{listing}{\colorbox{gray}{\parbox{\textwidth}{#1#2#3}}}
 %\captionsetup[lstlisting]{format=listing,labelfont=white,textfont=white}
 \lstset{
- language=Java,
+% language=Python,
  basicstyle=\footnotesize\ttfamily, % Standardschrift
- numbers=left,               % Ort der Zeilennummern
+ captionpos=b,
+% numbers=left,               % Ort der Zeilennummern
  numberstyle=\tiny,          % Stil der Zeilennummern
- stepnumber=5,              % Abstand zwischen den Zeilennummern
- numbersep=5pt,              % Abstand der Nummern zum Text
- tabsize=2,                  % Groesse von Tabs
- extendedchars=true,         %
+% stepnumber=5,              % Abstand zwischen den Zeilennummern
+% numbersep=5pt,              % Abstand der Nummern zum Text
+% tabsize=2,                  % Groesse von Tabs
+% extendedchars=true,         %
  breaklines=true,            % Zeilen werden Umgebrochen
- frame=b,         
+% frame=b,         
  %commentstyle=\itshape\color{LightLime}, Was isch das? O_o
  %keywordstyle=\bfseries\color{DarkPurple}, und das O_o
- basicstyle=\small,
- stringstyle=\color[RGB]{42,0,255}\ttfamily, % Farbe der String
- keywordstyle=\color[RGB]{127,0,85}\ttfamily, % Farbe der Keywords
- commentstyle=\color[RGB]{63,127,95}\ttfamily, % Farbe des Kommentars
- showspaces=false,           % Leerzeichen anzeigen ?
- showtabs=false,             % Tabs anzeigen ?
- xleftmargin=17pt,
- framexleftmargin=17pt,
- framexrightmargin=5pt,
- framexbottommargin=4pt,
- showstringspaces=false      % Leerzeichen in Strings anzeigen ?        
+% basicstyle=\small,
+% stringstyle=\color[RGB]{42,0,255}\ttfamily, % Farbe der String
+% keywordstyle=\color[RGB]{127,0,85}\ttfamily, % Farbe der Keywords
+% commentstyle=\color[RGB]{63,127,95}\ttfamily, % Farbe des Kommentars
+% showspaces=false,           % Leerzeichen anzeigen ?
+% showtabs=false,             % Tabs anzeigen ?
+% xleftmargin=17pt,
+% framexleftmargin=17pt,
+% framexrightmargin=5pt,
+% framexbottommargin=4pt,
+% showstringspaces=false,      % Leerzeichen in Strings anzeigen ?        
+ literate=
+ {á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+ {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+ {à}{{\`a}}1 {è}{{\`e}}1 {ì}{{\`i}}1 {ò}{{\`o}}1 {ù}{{\`u}}1
+ {À}{{\`A}}1 {È}{{\'E}}1 {Ì}{{\`I}}1 {Ò}{{\`O}}1 {Ù}{{\`U}}1
+ {ä}{{\"a}}1 {ë}{{\"e}}1 {ï}{{\"i}}1 {ö}{{\"o}}1 {ü}{{\"u}}1
+ {Ä}{{\"A}}1 {Ë}{{\"E}}1 {Ï}{{\"I}}1 {Ö}{{\"O}}1 {Ü}{{\"U}}1
+ {â}{{\^a}}1 {ê}{{\^e}}1 {î}{{\^i}}1 {ô}{{\^o}}1 {û}{{\^u}}1
+ {Â}{{\^A}}1 {Ê}{{\^E}}1 {Î}{{\^I}}1 {Ô}{{\^O}}1 {Û}{{\^U}}1
+ {œ}{{\oe}}1 {Œ}{{\OE}}1 {æ}{{\ae}}1 {Æ}{{\AE}}1 {ß}{{\ss}}1
+ {ű}{{\H{u}}}1 {Ű}{{\H{U}}}1 {ő}{{\H{o}}}1 {Ő}{{\H{O}}}1
+ {ç}{{\c c}}1 {Ç}{{\c C}}1 {ø}{{\o}}1 {å}{{\r a}}1 {Å}{{\r A}}1
+ {€}{{\euro}}1 {£}{{\pounds}}1 {«}{{\guillemotleft}}1
+ {»}{{\guillemotright}}1 {ñ}{{\~n}}1 {Ñ}{{\~N}}1 {¿}{{?`}}1
 }
 
 % Page Styles
@@ -76,7 +92,7 @@
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
  \lhead{
- \includegraphics[scale=0.8]{./fhnw_logo.jpg}}
+ \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \lfoot{Institute for Data Science,\linebreak www.fhnw.ch }
 }
@@ -85,7 +101,7 @@
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
 \lhead{
- \includegraphics[scale=0.8]{./fhnw_logo.jpg}}
+ \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \lfoot{Forced Alignment with a Recurrent Neural Network}
  \rfoot{\thepage\ / \pageref{LastPage} }
@@ -95,7 +111,7 @@
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
 \lhead{
- \includegraphics[scale=0.8]{./fhnw_logo.jpg}}
+ \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \cfoot{\thepage}
 }
@@ -104,10 +120,11 @@
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
  \lhead{
- \includegraphics[scale=0.8]{./fhnw_logo.jpg}}
+ \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \cfoot{}
 }
+
 \begin{document}
 \title{IP9}
 \author{Daniel Tiefenauer}
@@ -134,6 +151,16 @@
 
 \input{./chapters/02_ds/ds.tex}
 \newpage
+
+\input{./chapters/03_lm/lm.tex}
+\newpage
+
+\input{./chapters/04_e2e/e2e.tex}
+\newpage
+
+\input{./chapters/98_conclusion/conclusion.tex}
+\newpage
+
 \listoffigures
 \listoftables
 

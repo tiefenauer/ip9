@@ -110,3 +110,7 @@ ds_example/
 /runs/
 /lm_data/
 /lm/
+/bin/
+/lib64
+/pyvenv.cfg
+/share/

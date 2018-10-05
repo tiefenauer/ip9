@@ -1,6 +1,6 @@
 \section{Creating a Language Model for German}\label{lm}
 
-The learning curve above was plotted using the results from training on English samples. To compare get an intuition about whether the conclusions made are transferable to training on samples in other languages, the training was done again on German samples. In order to do this, a \ac{LM} for German had to be created first. 
+The learning curve above was plotted using the results from training on English samples. To compare get an intuition about whether the conclusions made are transferable to training on samples in other languages, the training was done again on German samples. In order to do this, a \ac{LM} for German had to be created first.
 
 \subsection{n-Gram Language Models}
 
@@ -9,7 +9,7 @@ To understand the following sections better it might be helpful to get a quick r
 \subsection{Creating a raw text corpus and training the model}
 
 A LM was trained on a raw text corpus of German Wikipedia articles using KenLM \parencite{kenlm}. The articles were pre-processed to meet the requirements of \textit{KenLM}.
-It was normalized by removing Wiki markup, punctuation and making everything lowercase. Accentuated characters (like \code{è,é,ê}, etc.) and special characters like the German \textit{ß} were translated to their most similar ASCII-equivalent (\code{e} resp. \code{ss}) to account for ambiguous spelling and reduce the number of words. Umlauts (although not part of the ASCII codeset) were kept as-is because they are used very frequently in German. 
+It was normalized by removing Wiki markup, punctuation and making everything lowercase. Accentuated characters (like \code{è,é,ê}, etc.) and special characters like the German \textit{ß} were translated to their most similar ASCII-equivalent (\code{e} resp. \code{ss}) to account for ambiguous spelling and reduce the number of words. Umlauts (although not part of the ASCII codeset) were kept as-is because they are used very frequently in German.
 
 Because \textit{KenLM} expects the input as sentences (one sentence per line), the raw text was further tokenized into sentences and words using NLTK \parencite{nltk}. Word tokens that contain only numeric characters (such as year numbers) are changed to \code{<unk>}, a special token which is traditionally used to denote an \ac{OOV} word. Although numeric tokens occur frequently in the Wikipedia articles, they are unwanted in the corpus because they do not carry any semantic meaning and because there is an infinite number of possible numbers.
 
@@ -66,16 +66,16 @@ For each of these sentences the score was calculated. Then the words of the sent
 		\hline
 		\thead{original sentence (normalized)} & \thead{score} & \thead{permuation} & \thead{score} \\
 		\hline
-		\makecell[l]{seine pressebeauftragte\\ist ratlos} & -17.58 & \makecell[l]{ist ratlos\\pressebeauftragte seine} & -21.52 \\ 
+		\makecell[l]{seine pressebeauftragte\\ist ratlos} & -17.58 & \makecell[l]{ist ratlos\\pressebeauftragte seine} & -21.52 \\
 		\hline
-		\makecell[l]{fünf minuten später steht\\er im eingang des kulturcafes\\an der zürcher europaallee} & -40.23 & \makecell[l]{des er minuten zürcher kulturcafes\\steht europaallee eingang\\fünf im später an der} & -57.69 \\ 
+		\makecell[l]{fünf minuten später steht\\er im eingang des kulturcafes\\an der zürcher europaallee} & -40.23 & \makecell[l]{des er minuten zürcher kulturcafes\\steht europaallee eingang\\fünf im später an der} & -57.69 \\
 		\hline
 		\makecell[l]{den leuten wird bewusst\\dass das system des \\ neoliberalismus nicht\\länger tragfähig ist} & -35.52 & \makecell[l]{system nicht das ist\\dass leuten tragfähig des\\neoliberalismus den\\bewusst länger wird} & -51.27 \\
 		\hline
 		\makecell[l]{doch daneben gibt es die\\beeindruckende zahl von \code{<num>}\\bienenarten die man unter dem\\begriff wildbienen zusammenfasst} & -48.36 & \makecell[l]{dem gibt wildbienen zahl\\beeindruckende doch man\\zusammenfasst es daneben bienenarten\\von die unter die \code{<num>} begriff} & -75.95 \\
-		\hline		
+		\hline
 		\makecell[l]{bereits \code{<num>} plante\\die usairline pan american\\touristische weltraumflüge\\für das jahr \code{<num>}} & -58.04 & \makecell[l]{plante touristische für\\jahr pan american das\\bereits usairline \code{<num>}\\\code{<num>} weltraumflüge die} & -64.02 \\
-		\hline		
+		\hline
 	\end{tabular}
 	\caption{Comparison of log10-probabilities calculated for news sentences and a permutation of their words}
 	\label{LM_evaluation}

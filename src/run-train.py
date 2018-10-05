@@ -16,11 +16,12 @@ import tensorflow as tf
 from keras.callbacks import TensorBoard
 from keras.optimizers import SGD
 
-from generator import CSVBatchGenerator
-from model import *
-from report import ReportCallback
+from core.generator import CSVBatchGenerator
+from core.model import *
+from core.report import ReportCallback
 from util.log_util import create_args_str
-from utils import load_model_checkpoint, MemoryCallback
+from utils import MemoryCallback
+from util.brnn_util import load_model
 
 #######################################################
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Prevent pool_allocator message
@@ -112,7 +113,7 @@ def create_model(target_dir, opt):
         if not isdir(args.model_path):
             print(f'ERROR: directory {target_dir} does not exist!', file=sys.stderr)
             exit(0)
-        model = load_model_checkpoint(target_dir, opt)
+        model = load_model(target_dir, opt)
     else:
         print('Creating new model')
         # model = deep_speech_dropout(input_dim=26, fc_size=args.fc_size, rnn_size=args.rnn_size, output_dim=29)
@@ -131,9 +132,6 @@ def train_model(model, target_dir, num_minutes=None):
                                    batch_size=args.batch_size)
 
     cb_list = []
-    if args.memcheck:
-        cb_list.append(MemoryCallback())
-
     if args.tensorboard:
         tb_cb = TensorBoard(log_dir=join(target_dir, 'tensorboard'), write_graph=False, write_images=True)
         cb_list.append(tb_cb)

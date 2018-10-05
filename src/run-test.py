@@ -5,8 +5,10 @@ from operator import itemgetter
 
 from keras.optimizers import SGD
 
-from generator import CSVBatchGenerator
-from report import *
+from core.generator import CSVBatchGenerator
+from core.report import *
+
+from util.brnn_util import load_model
 from util.log_util import create_args_str
 from utils import *
 
@@ -40,7 +42,7 @@ def main():
     print()
 
     opt = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True, clipnorm=5)
-    model = load_model_checkpoint(args.model_dir, opt)
+    model = load_model(args.model_dir, opt)
     model.summary()
 
     lm, vocab = None, None

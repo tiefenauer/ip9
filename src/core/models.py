@@ -31,11 +31,11 @@ def deep_speech_lstm(n_features=26, n_fc=1024, n_recurrent=1024, n_labels=29):
     init = random_normal(stddev=0.046875)
 
     # input layer
-    x = Input(name='the_input', shape=(None, n_features))
+    input = Input(name='the_input', shape=(None, n_features))
 
     # First 3 FC layers
     x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
-                        name='FC_1')(x)
+                        name='FC_1')(input)
     x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
                         name='FC_2')(x)
     x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
@@ -72,12 +72,12 @@ def deep_speech_dropout(input_dim=26, fc_size=2048, rnn_size=512, output_dim=29)
     K.set_learning_phase(1)
 
     # input layer
-    x = Input(name='the_input', shape=(None, input_dim))
+    input = Input(name='the_input', shape=(None, input_dim))
 
     # 3 x FC layer
     init = random_normal(stddev=0.046875)
     x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
-                        name='FC_1')(x)
+                        name='FC_1')(input)
     x = TimeDistributed(Dropout(0.1))(x)
     x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
                         name='FC_2')(x)

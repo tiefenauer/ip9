@@ -82,6 +82,9 @@ def setup():
     if not args.run_id:
         args.run_id = 'DS_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
 
+    if not args.gpu:
+        args.tpu = input('Choose GPU: ')
+
     target_dir = join(args.target_dir, args.run_id)
     if not isdir(target_dir):
         makedirs(target_dir)

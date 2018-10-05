@@ -19,7 +19,7 @@ from keras.optimizers import SGD
 from core.batch_generator import CSVBatchGenerator
 from core.models import *
 from core.report_callback import ReportCallback
-from util.log_util import create_args_str
+from util.log_util import create_args_str, log_setup
 from util.rnn_util import load_model
 
 #######################################################
@@ -66,6 +66,7 @@ args = parser.parse_args()
 
 def main():
     print(create_args_str(args))
+    log_setup()
 
     target_dir = setup()
     print()

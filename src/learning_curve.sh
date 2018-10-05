@@ -26,7 +26,7 @@ decoder='beamsearch'
 train_files='/media/D1/readylingua-en/readylingua-en-train.csv'
 valid_files='/media/D1/readylingua-en/readylingua-en-dev.csv'
 target_dir='/home/daniel_tiefenauer/learning_curve_0'
-gpu='2'
+gpu=''
 batch_size='16'
 epochs='20'
 

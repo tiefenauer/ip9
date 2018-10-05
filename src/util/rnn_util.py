@@ -30,6 +30,7 @@ def encode(text):
 
 
 def encode_token(token):
+    print(token)
     return 0 if token == SPACE_TOKEN else CHAR_TOKENS.index(token)
 
 

@@ -34,18 +34,22 @@ def deep_speech_lstm(n_features=26, n_fc=1024, n_recurrent=1024, n_labels=29):
     x = Input(name='the_input', shape=(None, n_features))
 
     # First 3 FC layers
-    x = TimeDistributed(Dense(n_fc, clipped_relu, kernel_initializer=init, bias_initializer=init), name='FC_1')(x)
-    x = TimeDistributed(Dense(n_fc, clipped_relu, kernel_initializer=init, bias_initializer=init), name='FC_2')(x)
-    x = TimeDistributed(Dense(n_fc, clipped_relu, kernel_initializer=init, bias_initializer=init), name='FC_3')(x)
+    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
+                        name='FC_1')(x)
+    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
+                        name='FC_2')(x)
+    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
+                        name='FC_3')(x)
 
     # recurrent layer: BiDirectional LSTM
     x = Bidirectional(
-        LSTM(n_recurrent, clipped_relu, return_sequences=True, kernel_initializer='glorot_uniform'), merge_mode='sum',
-        name='BRNN')(x)
+        LSTM(n_recurrent, activation=clipped_relu, return_sequences=True, kernel_initializer='glorot_uniform'),
+        merge_mode='sum', name='BRNN')(x)
 
     # output layer
     y_pred = TimeDistributed(
-        Dense(n_labels, "softmax", name="y_pred", kernel_initializer=init, bias_initializer=init), name="out")(x)
+        Dense(n_labels, activation="softmax", name="y_pred", kernel_initializer=init, bias_initializer=init),
+        name="out")(x)
 
     # Input for CTC
     labels = Input(name='the_labels', shape=[None, ], dtype='int32')
@@ -72,22 +76,26 @@ def deep_speech_dropout(input_dim=26, fc_size=2048, rnn_size=512, output_dim=29)
 
     # 3 x FC layer
     init = random_normal(stddev=0.046875)
-    x = TimeDistributed(Dense(fc_size, clipped_relu, kernel_initializer=init, bias_initializer=init), name='FC_1')(x)
+    x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
+                        name='FC_1')(x)
     x = TimeDistributed(Dropout(0.1))(x)
-    x = TimeDistributed(Dense(fc_size, clipped_relu, kernel_initializer=init, bias_initializer=init), name='FC_2')(x)
+    x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
+                        name='FC_2')(x)
     x = TimeDistributed(Dropout(0.1))(x)
-    x = TimeDistributed(Dense(fc_size, clipped_relu, kernel_initializer=init, bias_initializer=init), name='FC_3')(x)
+    x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
+                        name='FC_3')(x)
     x = TimeDistributed(Dropout(0.1))(x)
 
     # recurrent layer: BiDirectional LSTM
     x = Bidirectional(
-        LSTM(rnn_size, clipped_relu, return_sequences=True, dropout=0.1, kernel_initializer='he_normal', name='birnn'),
+        LSTM(rnn_size, activation=clipped_relu, return_sequences=True, dropout=0.1, kernel_initializer='he_normal'),
         merge_mode='sum', name='BRNN')(x)
     x = TimeDistributed(Dropout(0.1))(x)
 
     # output layer
     y_pred = TimeDistributed(
-        Dense(output_dim, "softmax", name="y_pred", kernel_initializer=init, bias_initializer=init), name="out")(x)
+        Dense(output_dim, activation="softmax", name="y_pred", kernel_initializer=init, bias_initializer=init),
+        name="out")(x)
 
     # Input for CTC
     labels = Input(name='the_labels', shape=[None, ], dtype='int32')

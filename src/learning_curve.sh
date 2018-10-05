@@ -119,6 +119,11 @@ epochs          = ${epochs}
 -----------------------------------------------------
 " | tee ${lc_result_dir%/}/${lc_run_id}.log
 
+if [[ ${gpu} = '' ]]; then
+    echo "Enter GPU # to use for training"
+    read gpu
+    echo "using GPU #${gpu} for all trainin runs!"
+fi
 
 for minutes in 1 10 100 1000
 do

@@ -116,6 +116,12 @@ epochs        = ${epochs}
 -----------------------------------------------------
 " | tee ${gs_result_dir%/}/${gs_run_id}.log
 
+if [[ ${gpu} = '' ]]; then
+    echo "Enter GPU # to use for training"
+    read gpu
+    echo "using GPU #${gpu} for all trainin runs!"
+fi
+
 # time dimension
 for minutes in 1 10 100 1000
 do

@@ -62,10 +62,10 @@ def extract_speech_segments(corpus_id, corpus, target_dir, max_audio_length, ove
     df_train = process_subset('train', train_set, corpus_id, target_dir, max_audio_length, override)
 
     print(f'processing validation segments')
-    df_valid = process_subset('dev', dev_set, corpus_id, target_dir, max_audio_length, override)
+    df_valid = process_subset('dev', dev_set, corpus_id, target_dir, max_audio_length * 0.2, override)
 
     print(f'processing validation segments')
-    df_test = process_subset('test', test_set, corpus_id, target_dir, max_audio_length, override)
+    df_test = process_subset('test', test_set, corpus_id, target_dir, max_audio_length * 0.2, override)
 
     if precompute_features:
         print(f'pre-computing features')
@@ -83,27 +83,30 @@ def process_subset(subset_id, subset, corpus_id, target_dir, max_audio_length, o
 
 def split_speech_segments(subset, corpus_id, subset_id, target_dir, max_audio_length, override):
     files = []
-    total_audio_length = 0
+    sum_audio_length = 0
 
     total = len(subset)
 
     if max_audio_length:
-        for i, s in enumerate(subset):
-            if sum([s.audio_length for s in subset[:i]]) > max_audio_length * 60:
-                break
-        if i < total:
+        print(f'trying to cap numer of corpus entry to a total length of {max_audio_length} minutes. '
+              f'Speech segements will be sorted by length prior to capping.')
+        tot_audio_length = sum([s.audio_length for s in subset]) / 60
+        if tot_audio_length < max_audio_length:
+            print(f'WARNING: maximum length of corpus was set to {max_audio_length} minutes, but total length of all '
+                  f'speech segments is only {tot_audio_length} minutes! '
+                  f'-> using all entries from corpus ({total} speech segments)')
+        else:
+            for i, s in enumerate(sorted(subset, key=lambda s: s.audio_length)):
+                if sum([s.audio_length for s in subset[:i]]) > max_audio_length * 60:
+                    break
             print(f'total length of corpus will be capped at {max_audio_length} minutes ({i} speech segments)')
             total = i
-        else:
-            tot_audio_length = sum([s.audio_length for s in subset])
-            print(f'max length of corpus was set to {max_audio_length} but total corpus length is {tot_audio_length}!'
-                  f'using all entries from corpus ({total} speech segments)')
 
     progress = tqdm(subset, total=total, unit=' speech segments')
     for i, segment in enumerate(progress):
         segment_id = f'{corpus_id}-{subset_id}-{i:0=3d}'
-        wav_path = join(target_dir, f'{segment_id}.wav')
-        txt_path = join(target_dir, f'{segment_id}.txt')
+        wav_path = f'{segment_id}.wav'
+        txt_path = f'{segment_id}.txt'
 
         if not exists(wav_path) or not getsize(wav_path) or override:
             sf.write(wav_path, segment.audio, segment.rate, subtype='PCM_16')
@@ -114,14 +117,14 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, max_audio_le
                 f.write(transcript)
 
         files.append((wav_path, getsize(wav_path), segment.audio_length, segment.text))
-        total_audio_length += segment.audio_length
+        sum_audio_length += segment.audio_length
 
         description = wav_path
         if max_audio_length:
-            description += f' {timedelta(seconds=total_audio_length)}'
+            description += f' {timedelta(seconds=sum_audio_length)}'
         progress.set_description(description)
 
-        if max_audio_length and total_audio_length > max_audio_length * 60:
+        if max_audio_length and sum_audio_length > max_audio_length * 60:
             break
 
     return pandas.DataFrame(data=files, columns=['wav_filename', 'wav_filesize', 'wav_length', 'transcript'])

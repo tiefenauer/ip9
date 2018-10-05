@@ -19,7 +19,7 @@ from keras.optimizers import SGD
 from core.batch_generator import CSVBatchGenerator
 from core.models import *
 from core.report_callback import ReportCallback
-from util.log_util import create_args_str, log_setup
+from util.log_util import create_args_str
 from util.rnn_util import load_model
 
 #######################################################
@@ -66,7 +66,6 @@ args = parser.parse_args()
 
 def main():
     print(create_args_str(args))
-    log_setup()
 
     target_dir = setup()
     print()
@@ -100,7 +99,7 @@ def setup():
     # os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     config = tf.ConfigProto(log_device_placement=False)
     config.gpu_options.visible_device_list = args.gpu
-    # config.gpu_options.allow_growth = True
+    config.gpu_options.allow_growth = True
     session = tf.Session(config=config)
     K.set_session(session)
 

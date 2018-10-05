@@ -59,7 +59,7 @@ def deep_speech_lstm(n_features=26, n_fc=1024, n_recurrent=1024, n_labels=29):
     # Implement CTC loss in lambda layer
     loss_out = Lambda(ctc_lambda_func, output_shape=(1,), name='ctc')([y_pred, labels, input_length, label_length])
 
-    model = Model(inputs=[x, labels, input_length, label_length], outputs=[loss_out])
+    model = Model(inputs=[features, labels, input_length, label_length], outputs=[loss_out])
 
     return model
 

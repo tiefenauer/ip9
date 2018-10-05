@@ -8,7 +8,7 @@ from os.path import abspath, exists
 import numpy as np
 from pattern3.metrics import levenshtein_similarity, levenshtein
 
-from util.rnn_util import ALLOWED_CHARS
+from util.ctc_util import ALLOWED_CHARS
 
 
 def ler(ground_truth, prediction):

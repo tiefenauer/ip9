@@ -8,6 +8,8 @@ from os.path import join
 from keras import backend as K
 from keras.engine.saving import model_from_json
 
+from core.models import clipped_relu, ctc
+
 
 def save_model(model, target_dir):
     if not exists(target_dir):
@@ -33,7 +35,6 @@ def load_model(root_path, opt=None):
     """
     from keras.utils.generic_utils import get_custom_objects
     get_custom_objects().update({"clipped_relu": clipped_relu})
-    get_custom_objects().update({"selu": selu})
 
     # prefer single file over architecture + weight
     model_h5 = join(root_path, 'model.h5')

@@ -1,5 +1,6 @@
 import re
 import string
+import warnings
 from sys import version_info
 
 from unidecode import unidecode, _warn_if_not_unicode, Cache

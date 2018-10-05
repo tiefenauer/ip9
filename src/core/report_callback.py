@@ -6,11 +6,11 @@ import keras.backend as K
 import pandas as pd
 from keras import callbacks
 from tabulate import tabulate
+from text import *
 from tqdm import tqdm
-from util.brnn_util import save_model
 
 from core.decoder import Decoder
-from text import *
+from util.rnn_util import save_model
 
 
 class ReportCallback(callbacks.Callback):

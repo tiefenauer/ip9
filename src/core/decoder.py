@@ -1,6 +1,9 @@
+import itertools
+
+import numpy as np
 from keras import backend as K
 
-from util.rnn_util import decode
+from util.ctc_util import decode
 
 
 class Decoder(object):

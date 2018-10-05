@@ -116,7 +116,7 @@ def create_model(target_dir, opt):
     else:
         print('Creating new model')
         # model = deep_speech_dropout(input_dim=26, fc_size=args.fc_size, rnn_size=args.rnn_size, output_dim=29)
-        model = ds1(input_dim=26, fc_size=args.fc_size, rnn_size=args.rnn_size, output_dim=29)
+        model = deep_speech_lstm(input_dim=26, fc_size=args.fc_size, rnn_size=args.rnn_size, output_dim=29)
         model.compile(optimizer=opt, loss=ctc)
 
     model.summary()

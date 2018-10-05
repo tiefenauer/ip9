@@ -11,7 +11,7 @@ from keras.preprocessing.sequence import pad_sequences
 from python_speech_features import mfcc
 from sklearn.utils import shuffle
 
-from util.rnn_util import encode
+from util.ctc_util import encode
 
 
 class BatchGenerator(object):

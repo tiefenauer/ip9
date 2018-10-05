@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from hamcrest import assert_that, is_
 
-from util.rnn_util import encode, decode
+from util.ctc_util import encode, decode
 
 
 class TestEncodingDecoding(TestCase):

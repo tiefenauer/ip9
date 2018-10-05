@@ -10,7 +10,7 @@ where:
     -x|--decoder <'beamsearch'|'bestpath'>   decoder to use (default: beamsearch)
     -t|--train_files <path>                  one or more comma-separated paths to CSV files containing the corpus files to use for training
     -v|--valid_files <path>                  one or more comma-separated paths to CSV files containing the corpus files to use for validation
-    -g|--gpu <int>                           GPU to use (default: 2)
+    -g|--gpu <int>                           GPU to use
     -b|--batch_size <int>                    batch size
     -e|--epochs <int>                        number of epochs to train
 

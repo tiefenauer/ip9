@@ -1,4 +1,5 @@
 import argparse
+from datetime import timedelta
 from os import listdir, makedirs, remove
 from os.path import join, exists, getsize
 
@@ -21,7 +22,7 @@ parser.add_argument('-l', '--language', type=str, help='language to use')
 parser.add_argument('-num', '--include_numeric', action='store_true', default=False,
                     help='(optional) whether to include transcripts with numeric chars (default: False)')
 parser.add_argument('-m', '--max', nargs='?', type=int, default=None,
-                    help='(optional) maximum number of speech segments to process')
+                    help='(optional) maximum number of speech segments minutes to process')
 parser.add_argument('-f', '--force', action='store_true',
                     help='(optional) force override existing files. Default: False')
 parser.add_argument('-p', '--precompute_features', action='store_true',
@@ -50,29 +51,29 @@ def main():
     corpus.summary()
 
     print(f'processing {corpus.name} corpus and saving split segments in {target_dir}')
-    extract_speech_segments(args.id, corpus, target_dir, override, args.precompute_features)
+    extract_speech_segments(args.id, corpus, target_dir, args.max, override, args.precompute_features)
     print(f'done! All files are in {target_dir}')
 
 
-def extract_speech_segments(corpus_id, corpus, target_dir, override=False, precompute_features=False):
+def extract_speech_segments(corpus_id, corpus, target_dir, max_audio_length, override=False, precompute_features=False):
     train_set, dev_set, test_set = corpus.train_dev_test_split(include_numeric=args.include_numeric)
 
     print(f'processing training segments')
-    df_train = process_subset('train', train_set, corpus_id, target_dir, override)
+    df_train = process_subset('train', train_set, corpus_id, target_dir, max_audio_length, override)
 
     print(f'processing validation segments')
-    df_valid = process_subset('dev', dev_set, corpus_id, target_dir, override)
+    df_valid = process_subset('dev', dev_set, corpus_id, target_dir, max_audio_length, override)
 
     print(f'processing validation segments')
-    df_test = process_subset('test', test_set, corpus_id, target_dir, override)
+    df_test = process_subset('test', test_set, corpus_id, target_dir, max_audio_length, override)
 
     if precompute_features:
         print(f'pre-computing features')
         compute_features(df_train, df_valid, df_test, target_dir, override)
 
 
-def process_subset(subset_id, subset, corpus_id, target_dir, override):
-    df = split_speech_segments(subset, corpus_id, subset_id, target_dir, override)
+def process_subset(subset_id, subset, corpus_id, target_dir, max_audio_length, override):
+    df = split_speech_segments(subset, corpus_id, subset_id, target_dir, max_audio_length, override)
 
     csv_path = join(target_dir, f'{corpus_id}-{subset_id}.csv')
     print(f'saving metadata in {csv_path}')
@@ -80,17 +81,31 @@ def process_subset(subset_id, subset, corpus_id, target_dir, override):
     return df
 
 
-def split_speech_segments(subset, corpus_id, subset_id, target_dir, override):
+def split_speech_segments(subset, corpus_id, subset_id, target_dir, max_audio_length, override):
     files = []
+    total_audio_length = 0
 
-    progress = tqdm(subset, unit=' speech segments')
+    total = len(subset)
+
+    if max_audio_length:
+        for i, s in enumerate(subset):
+            if sum([s.audio_length for s in subset[:i]]) > max_audio_length * 60:
+                break
+        if i < total:
+            print(f'total length of corpus will be capped at {max_audio_length} minutes ({i} speech segments)')
+            total = i
+        else:
+            tot_audio_length = sum([s.audio_length for s in subset])
+            print(f'max length of corpus was set to {max_audio_length} but total corpus length is {tot_audio_length}!'
+                  f'using all entries from corpus ({total} speech segments)')
+
+    progress = tqdm(subset, total=total, unit=' speech segments')
     for i, segment in enumerate(progress):
         segment_id = f'{corpus_id}-{subset_id}-{i:0=3d}'
         wav_path = join(target_dir, f'{segment_id}.wav')
         txt_path = join(target_dir, f'{segment_id}.txt')
 
         if not exists(wav_path) or not getsize(wav_path) or override:
-            progress.set_description(wav_path)
             sf.write(wav_path, segment.audio, segment.rate, subtype='PCM_16')
 
         if not exists(txt_path) or not getsize(txt_path) or override:
@@ -99,6 +114,15 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, override):
                 f.write(transcript)
 
         files.append((wav_path, getsize(wav_path), segment.audio_length, segment.text))
+        total_audio_length += segment.audio_length
+
+        description = wav_path
+        if max_audio_length:
+            description += f' {timedelta(seconds=total_audio_length)}'
+        progress.set_description(description)
+
+        if max_audio_length and total_audio_length > max_audio_length * 60:
+            break
 
     return pandas.DataFrame(data=files, columns=['wav_filename', 'wav_filesize', 'wav_length', 'transcript'])
 

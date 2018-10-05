@@ -6,6 +6,7 @@ scipy
 numpy
 tqdm
 h5py
+lxml
 keras=2.2.2
 librosa
 pydub

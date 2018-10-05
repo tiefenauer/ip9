@@ -152,7 +152,7 @@ def read_data_from_csv(csv_path, sort=True, create_word_list=False):
     avg_audio_length = df['wav_length'].mean()
     avg_trans_length = np.mean([len(trans) for trans in df['transcript']])
     print(f'average audio length: {timedelta(seconds=avg_audio_length)}')
-    print(f'average transcript length: {timedelta(seconds=avg_trans_length)}')
+    print(f'average transcript length: {avg_trans_length}')
     return df.reset_index(drop=True), total_audio_length
 
 

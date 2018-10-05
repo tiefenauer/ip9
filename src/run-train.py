@@ -99,7 +99,7 @@ def setup():
     # os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     config = tf.ConfigProto(log_device_placement=False)
     config.gpu_options.visible_device_list = args.gpu
-    config.gpu_options.allow_growth = True
+    # config.gpu_options.allow_growth = True
     session = tf.Session(config=config)
     K.set_session(session)
 

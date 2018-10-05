@@ -124,9 +124,9 @@ def create_model(target_dir, opt):
 
 def train_model(model, target_dir, num_minutes=None):
     print("Creating data batch generators")
-    data_train = CSVBatchGenerator(args.train_files, sort=False, n_batches=args.train_batches,
+    data_train = CSVBatchGenerator(args.train_files, sort=True, n_batches=args.train_batches,
                                    batch_size=args.batch_size, num_minutes=num_minutes)
-    data_valid = CSVBatchGenerator(args.valid_files, sort=True, n_batches=args.valid_batches,
+    data_valid = CSVBatchGenerator(args.valid_files, sort=False, n_batches=args.valid_batches,
                                    batch_size=args.batch_size)
 
     cb_list = []

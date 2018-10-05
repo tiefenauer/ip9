@@ -3,8 +3,11 @@ from abc import ABC
 
 import numpy as np
 
+# 29 target classes
+# <space> = 0, a=1, b=2, ..., z=26, '=27, _ (padding token) = 28
 SPACE_TOKEN = '<space>'
-CHAR_TOKENS = string.ascii_lowercase
+ALLOWED_CHARS = string.ascii_lowercase  # add umlauts here
+CHAR_TOKENS = ' ' + ALLOWED_CHARS + '\''
 
 
 def tokenize(text):
@@ -23,12 +26,11 @@ def tokenize(text):
 
 
 def encode(text):
-    tokens = tokenize(text)
-    return np.array([encode_token(token) for token in tokens])
+    return [encode_token(token) for token in tokenize(text)]
 
 
 def encode_token(token):
-    return 0 if token == SPACE_TOKEN else CHAR_TOKENS.index(token) + 1
+    return 0 if token == SPACE_TOKEN else CHAR_TOKENS.index(token)
 
 
 def decode(tokens):
@@ -36,7 +38,7 @@ def decode(tokens):
 
 
 def decode_token(ind):
-    return ' ' if ind == 0 else CHAR_TOKENS[ind - 1]
+    return '' if ind in [-1, len(CHAR_TOKENS)] else CHAR_TOKENS[ind]
 
 
 def sparse_tuple_from(sequences, dtype=np.int32):

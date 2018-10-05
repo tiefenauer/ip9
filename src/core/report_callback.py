@@ -3,13 +3,14 @@ from os import makedirs
 from os.path import isdir, join
 
 import keras.backend as K
+import numpy as np
 import pandas as pd
 from keras import callbacks
 from tabulate import tabulate
-from text import *
 from tqdm import tqdm
 
 from core.decoder import Decoder
+from util.lm_util import ler, wer, load_lm, correction, lers, wers
 from util.rnn_util import save_model
 
 

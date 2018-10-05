@@ -9,11 +9,11 @@ from keras import backend as K
 from keras.optimizers import Adam
 from keras_preprocessing.image import Iterator
 from keras_preprocessing.sequence import pad_sequences
+from util.brnn_util import ctc_dummy_loss, decoder_dummy_loss, ler
 
 from core.models import deep_speech_lstm
 from core.report_callback import ReportCallback
 from util.audio_util import shift
-from util.brnn_util import ctc_dummy_loss, decoder_dummy_loss, ler
 from util.corpus_util import get_corpus
 from util.rnn_util import encode
 

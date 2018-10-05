@@ -3,14 +3,13 @@ import argparse
 import datetime
 from operator import itemgetter
 
-from keras.optimizers import SGD
-
 from core.generator import CSVBatchGenerator
 from core.report import *
-
+from keras.optimizers import SGD
 from util.brnn_util import load_model
-from util.log_util import create_args_str
 from utils import *
+
+from util.log_util import create_args_str
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_dir', type=str, required=True,

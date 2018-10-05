@@ -16,12 +16,11 @@ import tensorflow as tf
 from keras.callbacks import TensorBoard
 from keras.optimizers import SGD
 
-from core.generator import CSVBatchGenerator
-from core.model import *
-from core.report import ReportCallback
+from core.batch_generator import CSVBatchGenerator
+from core.models import *
+from core.report_callback import ReportCallback
 from util.log_util import create_args_str
-from utils import MemoryCallback
-from util.brnn_util import load_model
+from util.rnn_util import load_model
 
 #######################################################
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Prevent pool_allocator message
@@ -137,7 +136,8 @@ def train_model(model, target_dir, num_minutes=None):
         cb_list.append(tb_cb)
 
     report_cb = ReportCallback(data_valid, model, num_minutes=num_minutes, num_epochs=args.epochs,
-                               target_dir=target_dir, decode_strategy=args.decoder, lm_path=args.lm, vocab_path=args.lm_vocab)
+                               target_dir=target_dir, decode_strategy=args.decoder, lm_path=args.lm,
+                               vocab_path=args.lm_vocab)
     cb_list.append(report_cb)
 
     model.fit_generator(generator=data_train,

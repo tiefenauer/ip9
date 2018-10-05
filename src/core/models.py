@@ -34,10 +34,10 @@ def deep_speech_lstm(n_features=26, n_fc=1024, n_recurrent=1024, n_labels=29):
     input = Input(name='the_input', shape=(None, n_features))
 
     # First 3 FC layers
-    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
-                        name='FC_1')(input)
-    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
-                        name='FC_2')(x)
+    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
+                        name='FC_1'))(input)
+    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
+                        name='FC_2'))(x)
     x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
                         name='FC_3')(x)
 
@@ -76,14 +76,14 @@ def deep_speech_dropout(input_dim=26, fc_size=2048, rnn_size=512, output_dim=29)
 
     # 3 x FC layer
     init = random_normal(stddev=0.046875)
-    x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
-                        name='FC_1')(input)
+    x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
+                              name='FC_1'))(input)
     x = TimeDistributed(Dropout(0.1))(x)
-    x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
-                        name='FC_2')(x)
+    x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
+                              name='FC_2'))(x)
     x = TimeDistributed(Dropout(0.1))(x)
-    x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
-                        name='FC_3')(x)
+    x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
+                        name='FC_3'))(x)
     x = TimeDistributed(Dropout(0.1))(x)
 
     # recurrent layer: BiDirectional LSTM

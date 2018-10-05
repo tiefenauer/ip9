@@ -140,7 +140,7 @@ def read_data_from_csv(csv_path, sort=True, create_word_list=False):
 
     print(f'Reading samples from {csv_path}...', end='')
     df = pd.read_csv(csv_path, sep=',', encoding='utf-8')
-    total_audio_length = sum(df['wav_length'])
+    total_audio_length = df['wav_length'].sum()
     print(f'done! ({len(df.index)} samples, {timedelta(seconds=total_audio_length)})')
 
     if create_word_list:
@@ -149,6 +149,10 @@ def read_data_from_csv(csv_path, sort=True, create_word_list=False):
     if sort:
         df = df.sort_values(by='wav_filesize', ascending=True)
 
+    avg_audio_length = df['wav_length'].mean()
+    avg_trans_length = np.mean([len(trans) for trans in df['transcript']])
+    print(f'average audio length: {timedelta(seconds=avg_audio_length)}')
+    print(f'average transcript length: {timedelta(seconds=avg_trans_length)}')
     return df.reset_index(drop=True), total_audio_length
 
 

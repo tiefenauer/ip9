@@ -31,11 +31,11 @@ def deep_speech_lstm(n_features=26, n_fc=1024, n_recurrent=1024, n_labels=29):
     init = random_normal(stddev=0.046875)
 
     # input layer
-    input = Input(name='the_input', shape=(None, n_features))
+    features = Input(name='the_input', shape=(None, n_features))
 
     # First 3 FC layers
     x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
-                        name='FC_1'))(input)
+                        name='FC_1'))(features)
     x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
                         name='FC_2'))(x)
     x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
@@ -64,7 +64,7 @@ def deep_speech_lstm(n_features=26, n_fc=1024, n_recurrent=1024, n_labels=29):
     return model
 
 
-def deep_speech_dropout(input_dim=26, fc_size=2048, rnn_size=512, output_dim=29):
+def deep_speech_dropout(n_features=26, n_fc=2048, n_recurrent=512, n_labels=29):
     """
     Simplified DeepSpeech model with LSTM-cells in recurrent layer. Like deep_speech_lstm, but with dropouts.
     """
@@ -72,29 +72,29 @@ def deep_speech_dropout(input_dim=26, fc_size=2048, rnn_size=512, output_dim=29)
     K.set_learning_phase(1)
 
     # input layer
-    input = Input(name='the_input', shape=(None, input_dim))
+    features = Input(name='the_input', shape=(None, n_features))
 
     # 3 x FC layer
     init = random_normal(stddev=0.046875)
-    x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
-                              name='FC_1'))(input)
+    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
+                              name='FC_1'))(features)
     x = TimeDistributed(Dropout(0.1))(x)
-    x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
+    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
                               name='FC_2'))(x)
     x = TimeDistributed(Dropout(0.1))(x)
-    x = TimeDistributed(Dense(fc_size, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
-                        name='FC_3'))(x)
+    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
+                              name='FC_3'))(x)
     x = TimeDistributed(Dropout(0.1))(x)
 
     # recurrent layer: BiDirectional LSTM
     x = Bidirectional(
-        LSTM(rnn_size, activation=clipped_relu, return_sequences=True, dropout=0.1, kernel_initializer='he_normal'),
+        LSTM(n_recurrent, activation=clipped_relu, return_sequences=True, dropout=0.1, kernel_initializer='he_normal'),
         merge_mode='sum', name='BRNN')(x)
     x = TimeDistributed(Dropout(0.1))(x)
 
     # output layer
     y_pred = TimeDistributed(
-        Dense(output_dim, activation="softmax", name="y_pred", kernel_initializer=init, bias_initializer=init),
+        Dense(n_labels, activation="softmax", name="y_pred", kernel_initializer=init, bias_initializer=init),
         name="out")(x)
 
     # Input for CTC

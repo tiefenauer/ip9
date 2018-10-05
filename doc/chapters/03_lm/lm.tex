@@ -1,6 +1,6 @@
 \section{Creating a Language Model for German}\label{lm}
 
-The learning curve above was plotted using the results from training on English samples. To compare get an intuition about whether the conclusions made are transferable to training on samples in other languages, the training was done again on German samples. In order to do this, a \ac{LM} for German had to be created first.
+The learning curve above was plotted using the results from training on English samples. To get an intuition about whether the conclusions made are transferable to training on samples in other languages, the training was done again on German samples. In order to do this, a \ac{LM} for German had to be created first.
 
 \subsection{n-Gram Language Models}
 
@@ -9,9 +9,9 @@ To understand the following sections better it might be helpful to get a quick r
 \subsection{Creating a raw text corpus and training the model}
 
 A LM was trained on a raw text corpus of German Wikipedia articles using KenLM \parencite{kenlm}. The articles were pre-processed to meet the requirements of \textit{KenLM}.
-It was normalized by removing Wiki markup, punctuation and making everything lowercase. Accentuated characters (like \code{è,é,ê}, etc.) and special characters like the German \textit{ß} were translated to their most similar ASCII-equivalent (\code{e} resp. \code{ss}) to account for ambiguous spelling and reduce the number of words. Umlauts (although not part of the ASCII codeset) were kept as-is because they are used very frequently in German.
+It was normalized by removing Wiki markup, punctuation and making everything lowercase. Accentuated characters (like \code{è,é,ê}, etc.) and special characters like the German \textit{ß} were translated to their most similar ASCII-equivalent (\code{e} resp. \code{ss}) to account for ambiguous spelling and reduce the number of words. Umlauts (although not part of the ASCII codeset) were kept as-is because they are very common in German.
 
-Because \textit{KenLM} expects the input as sentences (one sentence per line), the raw text was further tokenized into sentences and words using NLTK \parencite{nltk}. Word tokens that contain only numeric characters (such as year numbers) are changed to \code{<unk>}, a special token which is traditionally used to denote an \ac{OOV} word. Although numeric tokens occur frequently in the Wikipedia articles, they are unwanted in the corpus because they do not carry any semantic meaning and because there is an infinite number of possible numbers.
+Because \textit{KenLM} expects the input as sentences (one sentence per line), the raw text was further tokenized into sentences and words using NLTK \parencite{nltk}. Word tokens that contain only numeric characters (such as year numbers) are changed to \code{<num>}. Although numeric tokens occur frequently in the Wikipedia articles, they are unwanted in the corpus because they do not carry any semantic meaning and because there is an infinite number of possible numbers. The special tokens \code{<s>} and \code{</s>} used to mark beginnings and endings of sentences as well as the \code{<unk>} token \footnote{a special token which is traditionally used to denote an \ac{OOV} word} are however not part of the corpus because they are added automatically by KenLM.
 
 The following lines are an excerpt of a article in the German Wikipedia along with its representation in the corpus.
 
@@ -21,7 +21,7 @@ Die Größe des Wörterbuchs hängt stark von der Sprache ab. Zum einen haben du
 
 \begin{lstlisting}[numbers=left, caption=Representation in corpus]
 die grösse des wörterbuchs hängt stark von der sprache ab
-zum einen haben durchschnittliche deutschsprachige sprecher mit circa <unk> wörtern einen deutlich grösseren wortschatz als englischsprachige mit rund <unk> wörtern
+zum einen haben durchschnittliche deutschsprachige sprecher mit circa <num> wörtern einen deutlich grösseren wortschatz als englischsprachige mit rund <num> wörtern
 ausserdem ergeben sich durch die flexion in der deutschen sprache in etwa zehnmal so viele wortformen wie in der englischen sprache wo nur viermal so viele wortformen entstehen
 \end{lstlisting}
 

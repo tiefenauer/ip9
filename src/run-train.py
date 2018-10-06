@@ -20,7 +20,7 @@ from core.batch_generator import CSVBatchGenerator
 from core.models import *
 from core.report_callback import ReportCallback
 from util.log_util import create_args_str
-from util.rnn_util import load_model_from_dir
+from util.rnn_util import load_model_from_dir, create_keras_session
 
 #######################################################
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Prevent pool_allocator message
@@ -60,7 +60,8 @@ parser.add_argument('--epochs', type=int, default=20, help='Number of epochs to 
 parser.add_argument('--minutes', type=int, default=None,
                     help='Number of minutes of training data to use. Default: None (=all)')
 parser.add_argument('--batch_size', type=int, default=16, help='batch_size used to train the model')
-parser.add_argument('--gpu', type=str, nargs='?', default='2', help='(optional) GPU(s) to use for training. Default: 2')
+parser.add_argument('--gpu', type=str, required=False, default=None,
+                    help='(optional) GPU(s) to use for training. If not set, you will be asked at runtime.')
 args = parser.parse_args()
 
 
@@ -82,9 +83,6 @@ def setup():
     if not args.run_id:
         args.run_id = 'DS_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
 
-    if not args.gpu:
-        args.gpu = input('Choose GPU: ')
-
     target_dir = join(args.target_dir, args.run_id)
     if not isdir(target_dir):
         makedirs(target_dir)
@@ -99,12 +97,7 @@ def setup():
         args.train_files = abspath(join(test_path, "ldc93s1.csv"))
         args.valid_files = abspath(join(test_path, "ldc93s1.csv"))
 
-    # os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-    config = tf.ConfigProto(log_device_placement=False)
-    config.gpu_options.visible_device_list = args.gpu
-    # config.gpu_options.allow_growth = True
-    session = tf.Session(config=config)
-    K.set_session(session)
+    create_keras_session(args.gpu)
 
     return target_dir
 

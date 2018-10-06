@@ -8,7 +8,7 @@ from keras.optimizers import SGD
 from core.batch_generator import CSVBatchGenerator
 from core.report_callback import *
 from util.log_util import create_args_str
-from util.rnn_util import load_model_from_dir
+from util.rnn_util import load_model_from_dir, create_keras_session
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_dir', type=str, required=True,
@@ -27,6 +27,8 @@ parser.add_argument('-l', '--lm', type=str, default='',
                     help='path to compiled KenLM binary for spelling correction (optional)')
 parser.add_argument('-a', '--lm_vocab', type=str, default='',
                     help='path to vocabulary of LM (mandatory, if lm is set!)')
+parser.add_argument('-g', '--gpu', type=str, default=None, required=False,
+                    help='GPU to use (optional). If not set, you will be asked at runtime')
 args = parser.parse_args()
 
 
@@ -56,6 +58,7 @@ def setup(args):
     if not isdir(target_dir):
         makedirs(target_dir)
 
+    create_keras_session(args.gpu)
     return target_dir
 
 

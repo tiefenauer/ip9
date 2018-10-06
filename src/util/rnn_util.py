@@ -5,6 +5,7 @@ from genericpath import exists
 from os import makedirs
 from os.path import join
 
+import tensorflow as tf
 from keras import backend as K
 from keras.engine.saving import model_from_json, load_model
 from keras.utils import get_custom_objects
@@ -64,3 +65,15 @@ def load_model_from_dir(root_path, opt=None):
         loaded_model.load_weights(model_weights)
         loaded_model.compile(optimizer=opt, loss=ctc)
         return loaded_model
+
+
+def create_keras_session(gpu, allow_growth=False, log_device_placement=False):
+    if gpu is None:
+        gpu = input('Enter GPU to use: ')
+        print(f'GPU set to {gpu}')
+
+    config = tf.ConfigProto(log_device_placement=log_device_placement)
+    config.gpu_options.visible_device_list = gpu
+    config.gpu_options.allow_growth = allow_growth
+    session = tf.Session(config=config)
+    K.set_session(session)

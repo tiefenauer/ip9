@@ -20,7 +20,7 @@ from core.batch_generator import CSVBatchGenerator
 from core.models import *
 from core.report_callback import ReportCallback
 from util.log_util import create_args_str
-from util.rnn_util import load_model
+from util.rnn_util import load_model_from_dir
 
 #######################################################
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Prevent pool_allocator message
@@ -115,7 +115,7 @@ def create_model(target_dir, opt):
         if not isdir(args.model_path):
             print(f'ERROR: directory {target_dir} does not exist!', file=sys.stderr)
             exit(0)
-        model = load_model(target_dir, opt)
+        model = load_model_from_dir(target_dir, opt)
     else:
         print('Creating new model')
         model = deep_speech_lstm(n_features=26, n_fc=args.fc_size, n_recurrent=args.rnn_size, n_labels=29)

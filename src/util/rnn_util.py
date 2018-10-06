@@ -6,7 +6,8 @@ from os import makedirs
 from os.path import join
 
 from keras import backend as K
-from keras.engine.saving import model_from_json
+from keras.engine.saving import model_from_json, load_model
+from keras.utils import get_custom_objects
 
 from core.models import clipped_relu, ctc
 
@@ -26,15 +27,15 @@ def save_model(model, target_dir):
         json_file.write(model.to_json())
 
 
-def load_model(root_path, opt=None):
+def load_model_from_dir(root_path, opt=None):
     """
     Load model from directory
     :param root_path: directory with model files
     :param opt: optimizer to use (optional if model is loaded from HDF5 file
     :return: the compiled model
     """
-    from keras.utils.generic_utils import get_custom_objects
     get_custom_objects().update({"clipped_relu": clipped_relu})
+    get_custom_objects().update({"ctc": ctc})
 
     # prefer single file over architecture + weight
     model_h5 = join(root_path, 'model.h5')

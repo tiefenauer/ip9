@@ -8,7 +8,7 @@ from keras.optimizers import SGD
 from core.batch_generator import CSVBatchGenerator
 from core.report_callback import *
 from util.log_util import create_args_str
-from util.rnn_util import load_model
+from util.rnn_util import load_model_from_dir
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_dir', type=str, required=True,
@@ -40,7 +40,7 @@ def main():
     print()
 
     opt = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True, clipnorm=5)
-    model = load_model(args.model_dir, opt)
+    model = load_model_from_dir(args.model_dir, opt)
     model.summary()
 
     lm, vocab = None, None

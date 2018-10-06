@@ -95,6 +95,9 @@ class CSVBatchGenerator(BatchGenerator):
         df, total_audio_length = read_data_from_csv(csv_path=csv_path, sort=sort)
         if n_batches:
             df = df.head(n_batches * batch_size)
+        elif num_minutes and 'wav_length' not in df:
+            print(f'limited minutes to {num_minutes} but CSV file at {csv_path} has no \'wav_length\' column!')
+            print(f'cannot trim to {num_minutes} minutest and will use all entries instead.')
         elif num_minutes:
             # truncate dataset to first {num_minutes} minutes of audio data
             if num_minutes * 60 > total_audio_length:
@@ -118,7 +121,7 @@ class CSVBatchGenerator(BatchGenerator):
         self.wav_files = [join(dirname(abspath(csv_path)), wav_file) for wav_file in df['wav_filename']]
         self.transcripts = df['transcript'].tolist()
         self.wav_sizes = df['wav_filesize'].tolist()
-        self.wav_lengths = df['wav_length'].tolist()
+        self.wav_lengths = df['wav_length'].tolist() if 'wav_length' in df else []
 
         super().__init__(n=len(df.index), batch_size=batch_size)
         del df

@@ -13,7 +13,7 @@ from util.rnn_util import load_model_from_dir
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_dir', type=str, required=True,
                     help='path to trained Keras model')
-parser.add_argument('-t', '--target_dir', type=str, required=True,
+parser.add_argument('-t', '--target_dir', type=str, required=False,
                     help='target directory for results (optional). If not set, results will be written to model_dir')
 parser.add_argument('-f', '--test_files', type=str, default='',
                     help='list of all test files, seperate by a comma if multiple')

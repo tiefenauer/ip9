@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import argparse
-import datetime
 from operator import itemgetter
+from os.path import abspath
 
 from keras.optimizers import SGD
 
@@ -14,9 +14,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_dir', type=str, required=True,
                     help='path to trained Keras model')
 parser.add_argument('-t', '--target_dir', type=str, required=True,
-                    help='target directory for results (required)')
-parser.add_argument('-r', '--run_id', type=str, required=False,
-                    help='ID of test run (optional)')
+                    help='target directory for results (optional). If not set, results will be written to model_dir')
 parser.add_argument('-f', '--test_files', type=str, default='',
                     help='list of all test files, seperate by a comma if multiple')
 parser.add_argument('-b', '--test_batches', type=int, default=0,
@@ -27,7 +25,7 @@ parser.add_argument('-x', '--decoder', type=str, default='beamsearch',
                     help='decoder to use. Valid values are: old | bestpath | beamsearch (default: beamsearch)')
 parser.add_argument('-l', '--lm', type=str, default='',
                     help='path to compiled KenLM binary for spelling correction (optional)')
-parser.add_argument('-v', '--lm_vocab', type=str, default='',
+parser.add_argument('-a', '--lm_vocab', type=str, default='',
                     help='path to vocabulary of LM (mandatory, if lm is set!)')
 args = parser.parse_args()
 
@@ -51,10 +49,10 @@ def main():
 
 
 def setup(args):
-    if not args.run_id:
-        args.run_id = 'DS_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
+    if not args.target_dir:
+        args.target_dir = args.model_dir
 
-    target_dir = join(args.target_dir, args.run_id)
+    target_dir = abspath(args.target_dir)
     if not isdir(target_dir):
         makedirs(target_dir)
 

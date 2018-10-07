@@ -30,7 +30,7 @@ target_dir='/home/daniel_tiefenauer/learning_curve_0'
 gpu=''
 batch_size='16'
 epochs='30'
-valid_batches=''
+valid_batches='0'
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]

@@ -132,8 +132,7 @@ def train_model(model, target_dir, num_minutes=None):
         cb_list.append(tb_cb)
 
     report_cb = ReportCallback(data_valid, model, num_minutes=num_minutes, num_epochs=args.epochs,
-                               target_dir=target_dir, decode_strategies=args.decoder, lm_path=args.lm,
-                               vocab_path=args.lm_vocab)
+                               target_dir=target_dir, lm_path=args.lm, vocab_path=args.lm_vocab)
     cb_list.append(report_cb)
 
     model.fit_generator(generator=data_train,

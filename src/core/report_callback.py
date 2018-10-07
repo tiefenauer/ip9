@@ -16,8 +16,7 @@ from util.rnn_util import save_model
 
 class ReportCallback(callbacks.Callback):
     def __init__(self, data_valid, model, target_dir, num_epochs, num_minutes=None, save_progress=True,
-                 early_stopping=False, shuffle_data=True, force_output=False,
-                 decode_strategies=None, lm_path=None, vocab_path=None):
+                 early_stopping=False, shuffle_data=True, force_output=False, lm_path=None, vocab_path=None):
         """
         Will calculate WER and LER at epoch end and print out infered transcriptions from validation set using the 
         current model and weights
@@ -51,13 +50,8 @@ class ReportCallback(callbacks.Callback):
         if not isdir(self.target_dir):
             makedirs(self.target_dir)
 
-        if decode_strategies is None:
-            decode_strategies = ['bestpath', 'beamsearch']
-        else:
-            if not isinstance(decode_strategies, lst):
-                ValueError(f'ERROR: decoding_strategies must be a list but was set to {decode_strategies}')
-        for decode_strategy in decode_strategies:
-            self.decoders[decode_strategy] = Decoder(model, decode_strategy)
+        self.decoder_greedy = Decoder(model, 'bestpath')
+        self.decoder_beam = Decoder(model, 'beamsearch')
 
         # WER/LER history
         self.df_history = pd.DataFrame(index=np.arange(num_epochs), columns=['WER', 'LER', 'ler_raw'])
@@ -77,7 +71,7 @@ class ReportCallback(callbacks.Callback):
         originals, results = [], []
         self.data_valid.cur_index = 0  # reset index
 
-        validation_results = []
+        validation_results = {}
 
         for _ in tqdm(range(len(self.data_valid))):
             batch_inputs, _ = next(self.data_valid)
@@ -85,34 +79,21 @@ class ReportCallback(callbacks.Callback):
             batch_input_lengths = batch_inputs['input_length']
             ground_truths = batch_inputs['source_str']
 
-            predictions = {}
-            for decode_strategy, decoder in self.decoders.items():
-                predictions[decode_strategy] = decoder.decode(batch_input, batch_input_lengths)
+            predictions_greedy = self.decoder_greedy.decode(batch_input, batch_input_lengths)
+            predictions_beam = self.decoder_beam.decode(batch_input, batch_input_lengths)
 
-            for decode_strategy, decoded_predictions in predictions.items():
-                for ground_truth, prediction in zip(ground_truths, decoded_predictions):
+            validation_row = self.calculate_wer_ler(ground_truths, predictions_greedy, predictions_beam)
 
-                    if self.lm and self.lm_vocab:
-                        pred_lm = correction(prediction, self.lm, self.lm_vocab)
-                    else:
-                        pred_lm = prediction
-
-                    ler_pred = ler(ground_truth, prediction)
-                    ler_lm = ler(ground_truth, pred_lm)
-
-                    wer_pred = wer(ground_truth, prediction)
-                    wer_lm = wer(ground_truth, pred_lm)
-
-                    if self.force_output or wer_pred < 0.4 or wer_lm < 0.4:
-                        validation_results.append(
-                            (ground_truth, prediction, ler_pred, wer_pred, pred_lm, ler_lm, wer_lm))
-
-                    originals.append(ground_truth)
-                    results.append(pred_lm)
+            for row in validation_row:
+                if self.force_output or any([v < 0.6 for k in row.keys() for v in row[k] if k.startswith('WER')]):
+                    for key in row.keys():
+                        if key not in validation_results:
+                            validation_results[key] = []
+                        validation_results[key].append(row[key])
 
         if validation_results:
-            headers = ['Ground Truth', 'Prediction', 'LER', 'WER', 'Prediction (LM-corrected)', 'LER', 'WER']
-            print(tabulate(validation_results, headers=headers, floatfmt=".4f"))
+            print(tabulate(validation_results, headers="keys", floatfmt=".4f"))
+
         wer_values, wer_mean = wers(originals, results)
         ler_values, ler_mean, ler_raw, ler_raw_mean = lers(originals, results)
         print('--------------------------------------------------------')
@@ -130,6 +111,31 @@ class ReportCallback(callbacks.Callback):
         self.df_history.loc[epoch] = [wer_mean, ler_mean, ler_raw_mean]
 
         K.set_learning_phase(1)
+
+    def calculate_wer_ler(self, ground_truths, predictions_greedy, predictions_beam):
+        rows = []
+
+        for ground_truth, pred_greedy, pred_beam in zip(ground_truths, predictions_greedy, predictions_beam):
+            pred_greedy_lm = correction(pred_greedy, self.lm, self.lm_vocab)
+            pred_beam_lm = correction(pred_beam, self.lm, self.lm_vocab)
+            row = {
+                'ground truth': ground_truth,
+                'prediction (best path)': pred_greedy,
+                'LER (best path)': ler(ground_truth, pred_greedy),
+                'WER (best path)': wer(ground_truth, pred_greedy),
+                'prediction (best path, LM-corrected)': pred_greedy_lm,
+                'LER (best path, LM-corrected)': ler(ground_truth, pred_greedy_lm),
+                'WER (best path, LM-corrected)': wer(ground_truth, pred_greedy_lm),
+                'prediction (beam search)': pred_beam,
+                'LER (beam search)': ler(ground_truth, pred_beam),
+                'WER (beam search)': wer(ground_truth, pred_beam),
+                'prediction (beam search, LM-corrected)': pred_beam_lm,
+                'LER (beam search, LM-corrected)': ler(ground_truth, pred_beam_lm),
+                'WER (beam search, LM-corrected)': wer(ground_truth, pred_beam_lm)
+            }
+            rows.append(row)
+
+        return rows
 
     def finish(self):
         self.df_history.index.name = 'epoch'

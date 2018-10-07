@@ -87,12 +87,14 @@ def score(word_list, lm):
     return lm.score(' '.join(word_list), bos=False, eos=False)
 
 
-def correction(sentence, lm, lm_vocab):
+def correction(sentence, lm=None, lm_vocab=None):
     """
     Get most probable spelling correction for a given sentence.
     :param sentence:
     :return:
     """
+    if not lm or not lm_vocab:
+        return sentence
     beam_width = 1024
     layer = [(0, [])]  # list of (score, 2-gram)-pairs
     for word in words(sentence):

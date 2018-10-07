@@ -107,6 +107,10 @@ class CSVBatchGenerator(BatchGenerator):
             else:
                 df = truncate_dataset(df, batch_size, num_minutes)
 
+        if 'wav_length' in df:
+            avg_audio_length = df['wav_length'].mean()
+            print(f'average audio length: {timedelta(seconds=avg_audio_length)}')
+
         self.wav_files = df['wav_filename'].tolist()
         self.transcripts = df['transcript'].tolist()
         self.wav_sizes = df['wav_filesize'].tolist()
@@ -142,14 +146,15 @@ def read_data_from_csv(csv_path, sort=True, create_word_list=False):
 
     print(f'Reading samples from {csv_path}...', end='')
     df = pd.read_csv(csv_path, sep=',', encoding='utf-8')
+    print(f'done! ({len(df.index)} samples', end='')
 
     total_audio_length = math.inf
 
     if 'wav_length' in df:
         total_audio_length = df['wav_length'].sum()
-        avg_audio_length = df['wav_length'].mean()
-        print(f'done! ({len(df.index)} samples, {timedelta(seconds=total_audio_length)})')
-        print(f'average audio length: {timedelta(seconds=avg_audio_length)}')
+        print(f', {timedelta(seconds=total_audio_length)})')
+    else:
+        print(')')
 
     if create_word_list:
         df['transcript'].to_csv(join('lm', 'df_all_word_list.csv'), header=False, index=False)

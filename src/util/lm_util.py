@@ -6,38 +6,42 @@ from heapq import heapify
 from os.path import abspath, exists
 
 import numpy as np
-from pattern3.metrics import levenshtein_similarity, levenshtein
+from pattern3.metrics import levenshtein
 
 from util.ctc_util import ALLOWED_CHARS
 
+# the LER is just the Levenshtein/edit distance
+ler = levenshtein
 
-def ler(ground_truth, prediction):
+
+def ler_norm(ground_truth, prediction):
     """
-    The LER is defined as the edit distance between two strings
-    The score is normalized to a value between 0 and 1
+    Calculates the normalized LER by dividing the LER by the length of the longer string. The result will be in [0,1]
     """
-    return 1 - levenshtein_similarity(ground_truth, prediction)
+    return levenshtein(ground_truth, prediction) / float(max(len(ground_truth), len(prediction), 1.0))
 
 
 def wer(ground_truth, prediction):
     """
     The WER is defined as the editing/Levenshtein distance on word level (not on character-level!).
-    The score is normalized to a value between 0 and 1.
     """
-    return ler(ground_truth.split(), prediction.split())
+    ground_truth = ground_truth.split()
+    prediction = prediction.split()
+    return levenshtein(ground_truth, prediction) / float(len(ground_truth))
 
 
 def wers(ground_truths, predictions):
-    assert len(ground_truths) > 0, f'ERROR assert len(ground_truth) > 0: looks like data is missing!'
+    assert len(ground_truths) > 0, f'ERROR: no ground truths provided!'
+    assert len(ground_truths) == len(predictions), f'ERROR: # of ground truths does not match # of predictions!'
     rates = [wer(ground_truth, prediction) for (ground_truth, prediction) in zip(ground_truths, predictions)]
     return rates, np.mean(rates)
 
 
 def lers(ground_truths, predictions):
-    assert len(ground_truths) > 0, f'ERROR assert len(ground_truth) > 0: looks like data is missing!'
-    assert len(ground_truths) == len(predictions), f'ERROR: not same number of ground truths and predictions!'
-    lers_raw = [levenshtein(ground_truth, prediction) for (ground_truth, prediction) in zip(ground_truths, predictions)]
-    lers_norm = [ler(ground_truth, prediction) for (ground_truth, prediction) in zip(ground_truths, predictions)]
+    assert len(ground_truths) > 0, f'ERROR: no ground truths provided!'
+    assert len(ground_truths) == len(predictions), f'ERROR: # of ground truths does not match # of predictions!'
+    lers_raw = [ler(ground_truth, prediction) for (ground_truth, prediction) in zip(ground_truths, predictions)]
+    lers_norm = [ler_norm(ground_truth, prediction) for (ground_truth, prediction) in zip(ground_truths, predictions)]
     return lers_norm, np.mean(lers_norm), lers_raw, np.mean(lers_raw)
 
 

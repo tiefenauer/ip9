@@ -107,13 +107,14 @@ class CSVBatchGenerator(BatchGenerator):
             else:
                 df = truncate_dataset(df, batch_size, num_minutes)
 
-        avg_audio_length = df['wav_length'].mean()
-        print(f'average audio length: {timedelta(seconds=avg_audio_length)}')
+        if 'wav_length' in df:
+            avg_audio_length = df['wav_length'].mean()
+            print(f'average audio length: {timedelta(seconds=avg_audio_length)}')
 
         self.wav_files = df['wav_filename'].tolist()
         self.transcripts = df['transcript'].tolist()
         self.wav_sizes = df['wav_filesize'].tolist()
-        self.wav_lengths = df['wav_length'].tolist()
+        self.wav_lengths = df['wav_length'].tolist() if 'wav_length' in df else []
 
         super().__init__(n=len(df.index), batch_size=batch_size)
         del df

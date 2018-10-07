@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import scipy.io.wavfile as wav
 from keras.preprocessing.sequence import pad_sequences
+from pydub.utils import mediainfo
 from python_speech_features import mfcc
 from sklearn.utils import shuffle
 
@@ -93,32 +94,19 @@ class CSVBatchGenerator(BatchGenerator):
 
     def __init__(self, csv_path, sort=False, n_batches=None, batch_size=16, num_minutes=None):
         df, total_audio_length = read_data_from_csv(csv_path=csv_path, sort=sort)
+        df['wav_filename'] = df['wav_filename'].map(lambda wav_file: join(dirname(abspath(csv_path)), wav_file))
+
         if n_batches:
             df = df.head(n_batches * batch_size)
-        elif num_minutes and 'wav_length' not in df:
-            print(f'limited minutes to {num_minutes} but CSV file at {csv_path} has no \'wav_length\' column!')
-            print(f'cannot trim to {num_minutes} minutest and will use all entries instead.')
         elif num_minutes:
             # truncate dataset to first {num_minutes} minutes of audio data
             if num_minutes * 60 > total_audio_length:
                 print(f"""WARNING: {num_minutes} minutes is longer than total length of the dataset ({timedelta(seconds=total_audio_length)})!
                 Training will be done on the whole dataset.""")
             else:
-                clip_ix = 0
-                batch_filled = False
-                while (sum(df['wav_length'][:clip_ix]) < num_minutes * 60  # total length must be required length
-                       and clip_ix < len(df.index)  # don't use more samples than available
-                       or clip_ix < batch_size):  # but use at least enough samples to fill a batch
-                    clip_ix += 1
-                    if sum(df['wav_length'][:clip_ix]) > num_minutes * 60 and clip_ix == batch_size:
-                        batch_filled = True
-                df = df.head(clip_ix)
-                audio_length = sum(df['wav_length'])
-                print(f'clipped to first {clip_ix} samples ({timedelta(seconds=audio_length)} minutes).')
-                if batch_filled:
-                    print(f'total length is larger to fill at least 1 batch')
+                df = truncate_dataset(df, batch_size, num_minutes)
 
-        self.wav_files = [join(dirname(abspath(csv_path)), wav_file) for wav_file in df['wav_filename']]
+        self.wav_files = df['wav_filename'].tolist()
         self.transcripts = df['transcript'].tolist()
         self.wav_sizes = df['wav_filesize'].tolist()
         self.wav_lengths = df['wav_length'].tolist() if 'wav_length' in df else []
@@ -166,3 +154,29 @@ def read_data_from_csv(csv_path, sort=True, create_word_list=False):
 def extract_mfcc(wav_file_path):
     fs, audio = wav.read(wav_file_path)
     return mfcc(audio, samplerate=fs, numcep=26)  # (num_timesteps x num_features)
+
+
+def truncate_dataset(df, batch_size, num_minutes):
+    clip_ix = 0
+    clipped_wav_length = 0.0
+    if 'wav_length' in df:
+        while (clipped_wav_length < num_minutes * 60  # total length must be required length
+               and clip_ix < len(df.index)  # don't use more samples than available
+               or clip_ix < batch_size):  # but use at least enough samples to fill a batch
+            clip_ix += 1
+            clipped_wav_length = sum(df['wav_length'][:clip_ix])
+    else:
+        print(f'length of WAV files not present in CSV file. Appending that information (this can take a while)...')
+        df['wav_length'] = pd.Series(index=df.index)
+        wav_lengths = []
+        while clipped_wav_length < num_minutes * 60:
+            wav_length = mediainfo(df.loc[clip_ix, 'wav_filename'])['duration']
+            wav_lengths.append(float(wav_length))
+            clipped_wav_length = sum(wav_lengths)
+            clip_ix += 1
+        df.loc[:clip_ix - 1, 'wav_length'] = wav_lengths
+
+    print(f'clipping to first {clip_ix} samples ({timedelta(seconds=clipped_wav_length)}).')
+    if clipped_wav_length > num_minutes * 60 and clip_ix == batch_size:
+        print(f'length of clipped dataset is larger than {num_minutes} to fill at least 1 batch')
+    return df.head(clip_ix)

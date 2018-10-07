@@ -1,3 +1,4 @@
+import math
 import sys
 from abc import abstractmethod
 from datetime import timedelta
@@ -125,6 +126,16 @@ class CSVBatchGenerator(BatchGenerator):
 
 
 def read_data_from_csv(csv_path, sort=True, create_word_list=False):
+    """
+    Read data from CSV into DataFrame.
+    :param csv_path: absolute path to CSV file
+    :param sort: whether to sort the files by file size
+    :param create_word_list: whether to create a list of unique words
+    :return:
+        df: pd.DataFrame containing the CSV data
+        total_audio_length: integer representing the total length of the audio by summing over the 'wav_length' column
+                            from the CSV. If such a column is not present, the value returned is math.inf
+    """
     if not isfile(csv_path):
         print(f'ERROR: CSV file {csv_path} does not exist!', file=sys.stderr)
         exit(0)
@@ -132,7 +143,7 @@ def read_data_from_csv(csv_path, sort=True, create_word_list=False):
     print(f'Reading samples from {csv_path}...', end='')
     df = pd.read_csv(csv_path, sep=',', encoding='utf-8')
 
-    total_audio_length = 0
+    total_audio_length = math.inf
 
     if 'wav_length' in df:
         total_audio_length = df['wav_length'].sum()

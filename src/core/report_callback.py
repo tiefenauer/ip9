@@ -16,8 +16,8 @@ from util.rnn_util import save_model
 
 class ReportCallback(callbacks.Callback):
     def __init__(self, data_valid, model, target_dir, num_epochs, num_minutes=None, save_progress=True,
-                 early_stopping=False, shuffle_data=True, force_output=False, decode_strategy='beamsearch',
-                 lm_path=None, vocab_path=None):
+                 early_stopping=False, shuffle_data=True, force_output=False,
+                 decode_strategies=None, lm_path=None, vocab_path=None):
         """
         Will calculate WER and LER at epoch end and print out infered transcriptions from validation set using the 
         current model and weights
@@ -28,7 +28,7 @@ class ReportCallback(callbacks.Callback):
         :param early_stopping: 
         :param shuffle_data: 
         :param force_output:
-        :param decode_strategy: decoder to use ('beamsearch' or 'bestpath')
+        :param decode_strategies: list of decoding to use ('beamsearch' or 'bestpath')
         """
         super().__init__()
         self.data_valid = data_valid
@@ -42,6 +42,7 @@ class ReportCallback(callbacks.Callback):
         self.force_output = force_output
         self.lm = None
         self.lm_vocab = None
+        self.decoders = {}
         if lm_path:
             if not vocab_path:
                 raise ValueError('ERROR: Path to vocabulary file must be supplied when supplying path to LM!')
@@ -50,7 +51,13 @@ class ReportCallback(callbacks.Callback):
         if not isdir(self.target_dir):
             makedirs(self.target_dir)
 
-        self.decoder = Decoder(model, decode_strategy)
+        if decode_strategies is None:
+            decode_strategies = ['bestpath', 'beamsearch']
+        else:
+            if not isinstance(decode_strategies, lst):
+                ValueError(f'ERROR: decoding_strategies must be a list but was set to {decode_strategies}')
+        for decode_strategy in decode_strategies:
+            self.decoders[decode_strategy] = Decoder(model, decode_strategy)
 
         # WER/LER history
         self.df_history = pd.DataFrame(index=np.arange(num_epochs), columns=['WER', 'LER', 'ler_raw'])
@@ -77,27 +84,31 @@ class ReportCallback(callbacks.Callback):
             batch_input = batch_inputs['the_input']
             batch_input_lengths = batch_inputs['input_length']
             ground_truths = batch_inputs['source_str']
-            predictions = self.decoder.decode(batch_input, batch_input_lengths)
 
-            for ground_truth, prediction in zip(ground_truths, predictions):
-                if self.lm and self.lm_vocab:
-                    using_lm = f'({self.decoder.decode_strategy} decoding, using LM)'
-                    pred_lm = correction(prediction, self.lm, self.lm_vocab)
-                else:
-                    using_lm = f'({self.decoder.decode_strategy} decoding, not using LM)'
-                    pred_lm = prediction
+            predictions = {}
+            for decode_strategy, decoder in self.decoders.items():
+                predictions[decode_strategy] = decoder.decode(batch_input, batch_input_lengths)
 
-                ler_pred = ler(ground_truth, prediction)
-                ler_lm = ler(ground_truth, pred_lm)
+            for decode_strategy, decoded_predictions in predictions.items():
+                for ground_truth, prediction in zip(ground_truths, decoded_predictions):
 
-                wer_pred = wer(ground_truth, prediction)
-                wer_lm = wer(ground_truth, pred_lm)
+                    if self.lm and self.lm_vocab:
+                        pred_lm = correction(prediction, self.lm, self.lm_vocab)
+                    else:
+                        pred_lm = prediction
 
-                if self.force_output or wer_pred < 0.4 or wer_lm < 0.4:
-                    validation_results.append((ground_truth, prediction, ler_pred, wer_pred, pred_lm, ler_lm, wer_lm))
+                    ler_pred = ler(ground_truth, prediction)
+                    ler_lm = ler(ground_truth, pred_lm)
 
-                originals.append(ground_truth)
-                results.append(pred_lm)
+                    wer_pred = wer(ground_truth, prediction)
+                    wer_lm = wer(ground_truth, pred_lm)
+
+                    if self.force_output or wer_pred < 0.4 or wer_lm < 0.4:
+                        validation_results.append(
+                            (ground_truth, prediction, ler_pred, wer_pred, pred_lm, ler_lm, wer_lm))
+
+                    originals.append(ground_truth)
+                    results.append(pred_lm)
 
         if validation_results:
             headers = ['Ground Truth', 'Prediction', 'LER', 'WER', 'Prediction (LM-corrected)', 'LER', 'WER']
@@ -105,7 +116,11 @@ class ReportCallback(callbacks.Callback):
         wer_values, wer_mean = wers(originals, results)
         ler_values, ler_mean, ler_raw, ler_raw_mean = lers(originals, results)
         print('--------------------------------------------------------')
-        print(f'Validation results after epoch {epoch+1}: WER & LER {using_lm}')
+        print(f'Validation results after epoch {epoch+1}: WER & LER')
+        print(f'Decoding strategies: {self.decoders.keys()}')
+        if self.lm and self.lm_vocab:
+            print(f'using LM at: {self.lm}')
+            print(f'using LM vocab at: {self.lm_vocab}')
         print('--------------------------------------------------------')
         print(f'WER average      : {wer_mean}')
         print(f'LER average      : {ler_mean}')

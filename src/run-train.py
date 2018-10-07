@@ -12,7 +12,6 @@ import sys
 from os import makedirs
 from os.path import join, abspath, isdir
 
-import tensorflow as tf
 from keras.callbacks import TensorBoard
 from keras.optimizers import SGD
 
@@ -35,8 +34,8 @@ parser.add_argument('--train_files', type=str, default='',
                     help='list of all train files, seperated by a comma if multiple')
 parser.add_argument('--valid_files', type=str, default='',
                     help='list of all validation files, seperate by a comma if multiple')
-parser.add_argument('--decoder', type=str, default='beamsearch',
-                    help='decoder to use (\'beamsearch\', \'bestpath\'). Default: beamsearch')
+parser.add_argument('--decoder', type=str, default=None,
+                    help='decoder to use (\'beamsearch\' or \'bestpath\') for validation. Default: None (both)')
 parser.add_argument('--lm', type=str,
                     help='path to KenLM binary file to use for validation')
 parser.add_argument('--lm_vocab', type=str,
@@ -97,6 +96,8 @@ def setup():
         args.train_files = abspath(join(test_path, "ldc93s1.csv"))
         args.valid_files = abspath(join(test_path, "ldc93s1.csv"))
 
+    args.decoder = args.decoder.split(',')
+
     create_keras_session(args.gpu)
 
     return target_dir
@@ -131,7 +132,7 @@ def train_model(model, target_dir, num_minutes=None):
         cb_list.append(tb_cb)
 
     report_cb = ReportCallback(data_valid, model, num_minutes=num_minutes, num_epochs=args.epochs,
-                               target_dir=target_dir, decode_strategy=args.decoder, lm_path=args.lm,
+                               target_dir=target_dir, decode_strategies=args.decoder, lm_path=args.lm,
                                vocab_path=args.lm_vocab)
     cb_list.append(report_cb)
 

@@ -45,6 +45,7 @@ class ReportCallback(callbacks.Callback):
         if lm_path:
             if not vocab_path:
                 raise ValueError('ERROR: Path to vocabulary file must be supplied when supplying path to LM!')
+            self.lm_path, self.vocab_path = lm_path, vocab_path
             self.lm, self.lm_vocab = load_lm(lm_path, vocab_path)
 
         if not isdir(self.target_dir):
@@ -106,8 +107,8 @@ class ReportCallback(callbacks.Callback):
         print('--------------------------------------------------------')
         print(f'Validation results after epoch {epoch+1}: WER & LER using best-path and beam search decoding')
         if self.lm and self.lm_vocab:
-            print(f'using LM at: {self.lm}')
-            print(f'using LM vocab at: {self.lm_vocab}')
+            print(f'using LM at: {self.lm_path}')
+            print(f'using LM vocab at: {self.vocab_path}')
         print('--------------------------------------------------------')
         print(f'best-path decoding:')
         print(f'  Ø WER      : {wer_mean_greedy}')

@@ -125,9 +125,9 @@ class ReportCallback(callbacks.Callback):
             pred_beam_lm = correction(pred_beam, self.lm, self.lm_vocab)
             result = {
                 'predictions': ['best path',
-                                'best path + LM-corrected',
+                                'best path + LM',
                                 'beam search',
-                                'beam search + LM-corrected'],
+                                'beam search + LM'],
                 ground_truth: [pred_greedy,
                                pred_greedy_lm,
                                pred_beam,

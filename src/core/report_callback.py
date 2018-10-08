@@ -82,10 +82,10 @@ class ReportCallback(callbacks.Callback):
             predictions_greedy = self.decoder_greedy.decode(batch_input, batch_input_lengths)
             predictions_beam = self.decoder_beam.decode(batch_input, batch_input_lengths)
 
-            validation_row = self.calculate_wer_ler(ground_truths, predictions_greedy, predictions_beam)
+            validation_rows = self.calculate_wer_ler(ground_truths, predictions_greedy, predictions_beam)
 
-            for row in validation_row:
-                if self.force_output or any([v < 0.6 for k in row.keys() for v in row[k] if k.startswith('WER')]):
+            for row in validation_rows:
+                if self.force_output or any([row[key] < 0.6 for key in row.keys() if key.startswith('WER')]):
                     for key in row.keys():
                         if key not in validation_results:
                             validation_results[key] = []

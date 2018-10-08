@@ -122,6 +122,8 @@ echo epochs       = "${epochs}"
 echo '-----------------------------------------------------'
 echo ' '
 
+cd ./src/
+
 python3 run-train.py \
         --run_id ${run_id} \
         --target_dir ${target_dir} \

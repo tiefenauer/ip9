@@ -122,6 +122,8 @@ if [[ ${gpu} = '' ]]; then
     echo "using GPU #${gpu} for all trainin runs!"
 fi
 
+cd ./src/
+
 # time dimension
 for minutes in 1 10 100 1000
 do
@@ -129,7 +131,7 @@ do
     for use_lm in true false
     do
         # decoder dimension
-        for decoder in 'beamsearch' 'bestpath' 'old'
+        for decoder in 'beamsearch' 'bestpath'
         do
             if [[${use_lm} == true]]; then
                 lm_str="withLM"

@@ -133,6 +133,8 @@ if [[ ${gpu} = '' ]]; then
     echo "using GPU #${gpu} for all training runs!"
 fi
 
+cd ./src/
+
 for minutes in 1 10 100 1000
 do
     run_id="${minutes}_min_${decoder}"

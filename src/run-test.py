@@ -62,12 +62,12 @@ def setup(args):
     return target_dir
 
 
-def test_model(model, test_files, test_batches, batch_size, decode_strategy, lm, vocab, target_dir):
+def test_model(model, test_files, test_batches, batch_size, greedy_decoding, lm, vocab, target_dir):
     data_test = CSVBatchGenerator(test_files, sort=False, n_batches=test_batches, batch_size=batch_size)
-    decoder = Decoder(model, decode_strategy)
+    decoder = Decoder(model, greedy_decoding)
     test_results = []
 
-    print(f'Testing model with samples from {test_files} using {decode_strategy} decoding')
+    print(f'Testing model with samples from {test_files} using {decoder.strategy} decoding')
     for _ in tqdm(range(len(data_test)), unit=' batches'):
         batch_inputs, _ = next(data_test)
         batch_input = batch_inputs['the_input']

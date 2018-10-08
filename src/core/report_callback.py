@@ -9,7 +9,7 @@ from keras import callbacks
 from tabulate import tabulate
 from tqdm import tqdm
 
-from core.decoder import Decoder
+from core.decoder import BeamSearchDecoder, BestPathDecoder
 from util.lm_util import ler, wer, load_lm, correction, lers, wers
 from util.rnn_util import save_model
 
@@ -51,8 +51,8 @@ class ReportCallback(callbacks.Callback):
         if not isdir(self.target_dir):
             makedirs(self.target_dir)
 
-        self.decoder_greedy = Decoder(model, 'bestpath')
-        self.decoder_beam = Decoder(model, 'beamsearch')
+        self.decoder_greedy = BestPathDecoder(model)
+        self.decoder_beam = BeamSearchDecoder(model)
 
         # WER/LER history
         self.df_history = pd.DataFrame(index=np.arange(num_epochs), columns=['WER', 'LER', 'ler_raw'])

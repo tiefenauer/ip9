@@ -83,21 +83,15 @@ class ReportCallback(callbacks.Callback):
             predictions_greedy = self.decoder_greedy.decode(batch_input, batch_input_lengths)
             predictions_beam = self.decoder_beam.decode(batch_input, batch_input_lengths)
 
-            validation_rows = self.calculate_wer_ler(ground_truths, predictions_greedy, predictions_beam)
+            results = self.calculate_wer_ler(ground_truths, predictions_greedy, predictions_beam)
 
-            for row in validation_rows:
-                if self.force_output or any([row[key] < 0.6 for key in row.keys() if key.startswith('WER')]):
-                    for key in row.keys():
-                        if key not in validation_results:
-                            validation_results[key] = []
-                        validation_results[key].append(row[key])
+            for result in results if self.force_output else filter(
+                    lambda result: any([wer_val < 0.6 for wer_val in result['WER']])):
+                print(tabulate(result, headers='keys', floatfmt='.4f'))
 
             originals = originals + ground_truths
             results_greedy = results_greedy + predictions_greedy
             results_beam = results_beam + predictions_beam
-
-        if validation_results:
-            print(tabulate(validation_results, headers="keys", floatfmt=".4f"))
 
         wers_greedy, wer_mean_greedy = wers(originals, results_greedy)
         wers_beam, wer_mean_beam = wers(originals, results_beam)
@@ -125,29 +119,32 @@ class ReportCallback(callbacks.Callback):
         K.set_learning_phase(1)
 
     def calculate_wer_ler(self, ground_truths, predictions_greedy, predictions_beam):
-        rows = []
+        results = []
 
         for ground_truth, pred_greedy, pred_beam in zip(ground_truths, predictions_greedy, predictions_beam):
             pred_greedy_lm = correction(pred_greedy, self.lm, self.lm_vocab)
             pred_beam_lm = correction(pred_beam, self.lm, self.lm_vocab)
-            row = {
-                'ground truth': ground_truth,
-                'prediction (best path)': pred_greedy,
-                'LER (best path)': ler(ground_truth, pred_greedy),
-                'WER (best path)': wer(ground_truth, pred_greedy),
-                'prediction (best path, LM-corrected)': pred_greedy_lm,
-                'LER (best path, LM-corrected)': ler(ground_truth, pred_greedy_lm),
-                'WER (best path, LM-corrected)': wer(ground_truth, pred_greedy_lm),
-                'prediction (beam search)': pred_beam,
-                'LER (beam search)': ler(ground_truth, pred_beam),
-                'WER (beam search)': wer(ground_truth, pred_beam),
-                'prediction (beam search, LM-corrected)': pred_beam_lm,
-                'LER (beam search, LM-corrected)': ler(ground_truth, pred_beam_lm),
-                'WER (beam search, LM-corrected)': wer(ground_truth, pred_beam_lm)
+            result = {
+                'ground_truth': ['prediction (best path)',
+                                 'prediction (best path, LM-corrected)',
+                                 'prediction (beam search)',
+                                 'prediction (beam search, LM-corrected)'],
+                ground_truth: [pred_greedy,
+                               pred_greedy_lm,
+                               pred_beam,
+                               pred_beam_lm],
+                'LER': [ler(ground_truth, pred_greedy),
+                        ler(ground_truth, pred_greedy_lm),
+                        ler(ground_truth, pred_beam),
+                        ler(ground_truth, pred_beam_lm)],
+                'WER': [wer(ground_truth, pred_greedy),
+                        wer(ground_truth, pred_greedy_lm),
+                        wer(ground_truth, pred_beam),
+                        wer(ground_truth, pred_beam_lm)]
             }
-            rows.append(row)
+            results.append(result)
 
-        return rows
+        return results
 
     def finish(self):
         self.df_history.index.name = 'epoch'

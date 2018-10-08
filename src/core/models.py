@@ -34,10 +34,10 @@ def deep_speech_lstm(n_features=26, n_fc=1024, n_recurrent=1024, n_labels=29):
     features = Input(name='the_input', shape=(None, n_features))
 
     # First 3 FC layers
-    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
-                        name='FC_1'))(features)
-    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
-                        name='FC_2'))(x)
+    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
+                        name='FC_1')(features)
+    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
+                        name='FC_2')(x)
     x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
                         name='FC_3')(x)
 

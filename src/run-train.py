@@ -18,7 +18,7 @@ from keras.optimizers import SGD
 from core.batch_generator import CSVBatchGenerator
 from core.models import *
 from core.report_callback import ReportCallback
-from util.log_util import create_args_str
+from util.log_util import create_args_str, str2bool
 from util.rnn_util import load_model_from_dir, create_keras_session
 
 #######################################################
@@ -55,6 +55,9 @@ parser.add_argument('--model_path', type=str, default='',
 parser.add_argument('--learning_rate', type=float, default=0.01, help='the learning rate used by the optimiser')
 parser.add_argument('--sort_samples', type=bool, default=True,
                     help='sort utterances by their length in the first epoch')
+parser.add_argument('--val_printouts', type=str2bool, nargs='?', const=True, default=False,
+                    help='whether to print out samples from the validation set that have a WER/LER < 0.5.'
+                         'While this is good for illustrative purposes, it will significantly slow down training.')
 parser.add_argument('--epochs', type=int, default=20, help='Number of epochs to train the model')
 parser.add_argument('--minutes', type=int, default=None,
                     help='Number of minutes of training data to use. Default: None (=all)')
@@ -131,9 +134,10 @@ def train_model(model, target_dir, num_minutes=None):
         tb_cb = TensorBoard(log_dir=join(target_dir, 'tensorboard'), write_graph=False, write_images=True)
         cb_list.append(tb_cb)
 
-    report_cb = ReportCallback(data_valid, model, num_minutes=num_minutes, num_epochs=args.epochs,
-                               target_dir=target_dir, lm_path=args.lm, vocab_path=args.lm_vocab)
-    cb_list.append(report_cb)
+    if args.val_printouts:
+        report_cb = ReportCallback(data_valid, model, num_minutes=num_minutes, num_epochs=args.epochs,
+                                   target_dir=target_dir, lm_path=args.lm, vocab_path=args.lm_vocab)
+        cb_list.append(report_cb)
 
     model.fit_generator(generator=data_train,
                         validation_data=data_valid,

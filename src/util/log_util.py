@@ -68,3 +68,12 @@ def get_commit():
 
 def create_args_str(args, keys=None):
     return ', '.join(f'{key}={value}' for key, value in args.__dict__.items() if keys == None or key in keys)
+
+
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')

@@ -129,35 +129,57 @@ def known_words(word_list, lm_vocab):
 def edits_1(word_str):
     """
     generates a list of all words with edit distance 1 for a given word
+    Note that generators must be used for performance reasons.
     :param word_str: single word as a string
-    :return: list of all possible words with edit distance 1
+    :return: generator for all possible words with edit distance 1
     """
-    # splits = ((word_str[:i], word_str[i:]) for i in range(len(word_str) + 1))  # all possible splits
-    #
-    # deletes = (L + R[1:] for L, R in splits if R)  # all words with one character removed
-    # transposes = (L + R[1] + R[0] + R[2:] for L, R in splits if len(R) > 1)  # all words with two swapped characters
-    # replaces = (L + c + R[1:] for L, R in splits if R for c in ALLOWED_CHARS)  # all words with one character replaced
-    # inserts = (L + c + R for L, R in splits for c in ALLOWED_CHARS)  # all words with one character inserted
     return itertools.chain(deletes(word_str), swaps(word_str), replaces(word_str), inserts(word_str))
 
 
 def splits(word_str):
+    """
+    generates all possible splits of a word (e.g. 'abc' -> ('', 'abc'), ('a', 'bc'), ('ab', 'c') ('abc', '') )
+    :param word_str: the word as string
+    :return: generator for all possible splits for the word
+    """
     return ((word_str[:i], word_str[i:]) for i in range(len(word_str) + 1))
 
 
 def deletes(word_str):
+    """
+    generates all possible variants of a word with 1 character deleted (e.g. 'abc' -> 'ab', 'ac', 'bc')
+    :param word_str: the word as string
+    :return: generator for all variants of the word where 1 character is deleted
+    """
     return (L + R[1:] for L, R in splits(word_str) if R)
 
 
 def swaps(word_str):
+    """
+    generates all possible variants of a word where 2 adjacent characters are swapped (e.g. 'abc' -> 'bac', 'acb'
+    :param word_str: the word as string
+    :return: generator for all variants of the word where 2 adjacent characters are swapped
+    """
     return (L + R[1] + R[0] + R[2:] for L, R in splits(word_str) if len(R) > 1)
 
 
 def replaces(word_str):
+    """
+    generates all possible variants of a word where 1 character is replaces
+    (e.g. 'abc' -> 'bbc', 'cbc', ..., 'aac', 'acc', ..., 'aba', 'abb', ... )
+    :param word_str: the word as string
+    :return: generator for all variants of the word where 1 character is replaced
+    """
     return (L + c + R[1:] for L, R in splits(word_str) if R for c in ALLOWED_CHARS)
 
 
 def inserts(words_str):
+    """
+    generates all possible variants of a word where 1 character is inserted. Identical elements may be present
+    (e.g. 'abc' -> 'aabc', 'babc', 'cabc', ..., 'aabc', 'abbc', 'acbc', ..., 'abac', 'abbc', 'abcc', ..., 'abca', 'abcb', 'abcc', ...
+    :param words_str: the word as string
+    :return: generator for all variants of the word where 1 character is inserted
+    """
     return (L + c + R for L, R in splits(words_str) for c in ALLOWED_CHARS)
 
 

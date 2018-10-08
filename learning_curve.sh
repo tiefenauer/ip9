@@ -7,7 +7,6 @@ where:
     -d|--destination <path>                  destination directory to store results
     -l|--lm                                  path to n-gram KenLM model (if possible binary)
     -a|--lm_vocab                            path to file containing the vocabulary of the LM specified by -lm. The file must contain the words used for training delimited by space (no newlines)
-    -x|--decoder <'beamsearch'|'bestpath'>   decoder to use (default: beamsearch)
     -t|--train_files <path>                  one or more comma-separated paths to CSV files containing the corpus files to use for training
     -v|--valid_files <path>                  one or more comma-separated paths to CSV files containing the corpus files to use for validation
     -g|--gpu <int>                           GPU to use
@@ -23,7 +22,6 @@ For each amount of training data a separate training run is started. A unique ru
 lc_run_id="learning_run_$(uuidgen)"
 lm=''
 lm_vocab=''
-decoder='beamsearch'
 train_files='/media/D1/readylingua-en/readylingua-en-train.csv'
 valid_files='/media/D1/readylingua-en/readylingua-en-dev.csv'
 target_dir='/home/daniel_tiefenauer/learning_curve_0'
@@ -117,7 +115,6 @@ target_dir      = ${target_dir}
 lc_result_dir   = ${lc_result_dir}
 lm              = ${lm}
 lm_vocab        = ${lm_vocab}
-decoder         = ${decoder}
 train_files     = ${train_files}
 valid_files     = ${valid_files}
 gpu             = ${gpu}
@@ -137,11 +134,11 @@ cd ./src/
 
 for minutes in 1 10 100 1000
 do
-    run_id="${minutes}_min_${decoder}"
+    run_id="${minutes}_min"
 
     echo "
     #################################################################################################
-     Training on $minutes minutes, decoding=$decoder
+     Training on $minutes minutes
      learning run id: $lc_run_id
      run id: $run_id
      target subdirectory: $lc_result_dir
@@ -152,7 +149,6 @@ do
         --run_id ${run_id} \
         --target_dir ${lc_result_dir} \
         --minutes ${minutes} \
-        --decoder ${decoder} \
         --lm ${lm} \
         --lm_vocab ${lm_vocab} \
         --gpu ${gpu} \

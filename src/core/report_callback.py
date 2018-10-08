@@ -68,7 +68,7 @@ class ReportCallback(callbacks.Callback):
             self.data_valid.shuffle_entries()
 
         print(f'validating epoch {epoch+1} using best-path and beam search decoding')
-        originals, results = [], []
+        originals, results_greedy, results_beam = [], [], []
         self.data_valid.cur_index = 0  # reset index
 
         validation_results = {}
@@ -91,24 +91,35 @@ class ReportCallback(callbacks.Callback):
                             validation_results[key] = []
                         validation_results[key].append(row[key])
 
+            originals = originals + ground_truths
+            results_greedy = results_greedy + predictions_greedy
+            results_beam = results_beam + predictions_beam
+
         if validation_results:
             print(tabulate(validation_results, headers="keys", floatfmt=".4f"))
 
-        wer_values, wer_mean = wers(originals, results)
-        ler_values, ler_mean, ler_raw, ler_raw_mean = lers(originals, results)
+        wers_greedy, wer_mean_greedy = wers(originals, results_greedy)
+        wers_beam, wer_mean_beam = wers(originals, results_beam)
+
+        lers_greedy, ler_mean_greedy, ler_raw_greedy, ler_raw_mean_greedy = lers(originals, results_greedy)
+        lers_beam, ler_mean_beam, ler_raw_beam, ler_raw_mean_beam = lers(originals, results_beam)
         print('--------------------------------------------------------')
-        print(f'Validation results after epoch {epoch+1}: WER & LER')
-        print(f'Decoding strategies: {self.decoders.keys()}')
+        print(f'Validation results after epoch {epoch+1}: WER & LER using best-path and beam search decoding')
         if self.lm and self.lm_vocab:
             print(f'using LM at: {self.lm}')
             print(f'using LM vocab at: {self.lm_vocab}')
         print('--------------------------------------------------------')
-        print(f'WER average      : {wer_mean}')
-        print(f'LER average      : {ler_mean}')
-        print(f'LER average (raw): {ler_raw_mean}')
+        print(f'best-path decoding:')
+        print(f'  Ø WER      : {wer_mean_greedy}')
+        print(f'  Ø LER      : {ler_mean_greedy}')
+        print(f'  Ø LER (raw): {ler_raw_mean_greedy}')
+        print(f'beam search decoding:')
+        print(f'  Ø WER      : {wer_mean_beam}')
+        print(f'  Ø LER      : {ler_mean_beam}')
+        print(f'  Ø LER (raw): {ler_raw_mean_beam}')
         print('--------------------------------------------------------')
 
-        self.df_history.loc[epoch] = [wer_mean, ler_mean, ler_raw_mean]
+        self.df_history.loc[epoch] = [wer_mean_greedy, ler_mean_greedy, ler_raw_mean_greedy]
 
         K.set_learning_phase(1)
 

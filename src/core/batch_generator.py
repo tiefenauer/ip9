@@ -152,7 +152,8 @@ def read_data_from_csv(csv_path, sort=True, create_word_list=False):
 
     if 'wav_length' in df:
         total_audio_length = df['wav_length'].sum()
-        print(f', {timedelta(seconds=total_audio_length)})')
+        avg_audio_length = df['wav_length'].mean()
+        print(f', {timedelta(seconds=total_audio_length)}, Ø audio length: {avg_audio_length})')
     else:
         print(')')
 

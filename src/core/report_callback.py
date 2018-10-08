@@ -72,8 +72,6 @@ class ReportCallback(callbacks.Callback):
         originals, results_greedy, results_beam = [], [], []
         self.data_valid.cur_index = 0  # reset index
 
-        validation_results = {}
-
         for _ in tqdm(range(len(self.data_valid))):
             batch_inputs, _ = next(self.data_valid)
             batch_input = batch_inputs['the_input']

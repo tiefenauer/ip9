@@ -75,58 +75,35 @@ class ReportCallback(callbacks.Callback):
         validation_results = {}
 
         for _ in tqdm(range(len(self.data_valid))):
-            print('1')
             batch_inputs, _ = next(self.data_valid)
-            print('2')
             batch_input = batch_inputs['the_input']
-            print('3')
             batch_input_lengths = batch_inputs['input_length']
-            print('4')
             ground_truths = batch_inputs['source_str']
-            print('5')
 
             predictions_greedy = self.decoder_greedy.decode(batch_input, batch_input_lengths)
-            print('6')
             predictions_beam = self.decoder_beam.decode(batch_input, batch_input_lengths)
-            print('7')
 
             validation_rows = self.calculate_wer_ler(ground_truths, predictions_greedy, predictions_beam)
-            print('8')
 
             for row in validation_rows:
-                print('9')
                 if self.force_output or any([row[key] < 0.6 for key in row.keys() if key.startswith('WER')]):
-                    print('10')
                     for key in row.keys():
-                        print('11')
                         if key not in validation_results:
-                            print('12')
                             validation_results[key] = []
-                        print('13')
                         validation_results[key].append(row[key])
 
-            print('14')
             originals = originals + ground_truths
-            print('15')
             results_greedy = results_greedy + predictions_greedy
-            print('16')
             results_beam = results_beam + predictions_beam
 
-        print('17')
         if validation_results:
-            print('18')
             print(tabulate(validation_results, headers="keys", floatfmt=".4f"))
 
-        print('19')
         wers_greedy, wer_mean_greedy = wers(originals, results_greedy)
-        print('20')
         wers_beam, wer_mean_beam = wers(originals, results_beam)
-        print('21')
 
         lers_greedy, ler_mean_greedy, ler_raw_greedy, ler_raw_mean_greedy = lers(originals, results_greedy)
-        print('22')
         lers_beam, ler_mean_beam, ler_raw_beam, ler_raw_mean_beam = lers(originals, results_beam)
-        print('23')
         print('--------------------------------------------------------')
         print(f'Validation results after epoch {epoch+1}: WER & LER using best-path and beam search decoding')
         if self.lm and self.lm_vocab:

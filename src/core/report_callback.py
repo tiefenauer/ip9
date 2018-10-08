@@ -86,7 +86,7 @@ class ReportCallback(callbacks.Callback):
             results = self.calculate_wer_ler(ground_truths, predictions_greedy, predictions_beam)
 
             for result in results if self.force_output else filter(
-                    lambda result: any([wer_val < 0.6 for wer_val in result['WER']])):
+                    lambda result: any([wer_val < 0.6 for wer_val in result['WER']]), results):
                 print(tabulate(result, headers='keys', floatfmt='.4f'))
 
             originals = originals + ground_truths

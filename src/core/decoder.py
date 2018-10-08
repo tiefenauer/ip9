@@ -17,17 +17,11 @@ class Decoder(object):
         self.decode_strategy = decode_strategy
 
     def decode(self, batch_input, batch_input_lenghts):
-        K.set_learning_phase(0)
-
         y_pred = self.test_func([batch_input])[0]
-
         if self.decode_strategy == 'old':
             predictions = decode_batch_old(self.test_func, batch_input)
         else:
             predictions = decode_batch_keras(y_pred, batch_input_lenghts, self.decode_strategy == 'bestpath')
-
-        K.set_learning_phase(1)
-
         return predictions
 
 

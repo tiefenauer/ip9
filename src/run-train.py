@@ -34,7 +34,7 @@ parser.add_argument('--train_files', type=str, default='',
                     help='list of all train files, seperated by a comma if multiple')
 parser.add_argument('--valid_files', type=str, default='',
                     help='list of all validation files, seperate by a comma if multiple')
-parser.add_argument('--decoder', type=str, default=None,
+parser.add_argument('--decoder', type=str, default='beamsearch,bestpath',
                     help='decoder to use (\'beamsearch\' or \'bestpath\') for validation. Default: None (both)')
 parser.add_argument('--lm', type=str,
                     help='path to KenLM binary file to use for validation')

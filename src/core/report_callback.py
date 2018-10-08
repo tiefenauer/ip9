@@ -67,7 +67,7 @@ class ReportCallback(callbacks.Callback):
             print("shuffling validation data")
             self.data_valid.shuffle_entries()
 
-        print(f'validating epoch {epoch+1} using {self.decoder.decode_strategy} decoding')
+        print(f'validating epoch {epoch+1} using best-path and beam search decoding')
         originals, results = [], []
         self.data_valid.cur_index = 0  # reset index
 

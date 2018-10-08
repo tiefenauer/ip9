@@ -10,7 +10,7 @@ from tabulate import tabulate
 from tqdm import tqdm
 
 from core.decoder import BeamSearchDecoder, BestPathDecoder
-from util.lm_util import ler, wer, load_lm, correction, lers, wers
+from util.lm_util import ler, wer, load_lm, correction, lers, wers, ler_norm
 from util.rnn_util import save_model
 
 
@@ -124,10 +124,10 @@ class ReportCallback(callbacks.Callback):
             pred_greedy_lm = correction(pred_greedy, self.lm, self.lm_vocab)
             pred_beam_lm = correction(pred_beam, self.lm, self.lm_vocab)
             result = {
-                'ground_truth': ['prediction (best path)',
-                                 'prediction (best path, LM-corrected)',
-                                 'prediction (beam search)',
-                                 'prediction (beam search, LM-corrected)'],
+                'predictions': ['best path',
+                                'best path + LM-corrected',
+                                'beam search',
+                                'beam search + LM-corrected'],
                 ground_truth: [pred_greedy,
                                pred_greedy_lm,
                                pred_beam,
@@ -136,6 +136,10 @@ class ReportCallback(callbacks.Callback):
                         ler(ground_truth, pred_greedy_lm),
                         ler(ground_truth, pred_beam),
                         ler(ground_truth, pred_beam_lm)],
+                'Ø LER': [ler_norm(ground_truths, pred_greedy),
+                          ler_norm(ground_truths, pred_greedy_lm),
+                          ler_norm(ground_truths, pred_beam),
+                          ler_norm(ground_truths, pred_beam_lm)],
                 'WER': [wer(ground_truth, pred_greedy),
                         wer(ground_truth, pred_greedy_lm),
                         wer(ground_truth, pred_beam),

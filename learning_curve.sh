@@ -13,7 +13,7 @@ where:
     -g|--gpu <int>                           GPU to use
     -b|--batch_size <int>                    batch size (default: 16)
     -e|--epochs <int>                        number of epochs to train (default: 30)
-    -b|--valid_batches <int>                 number of batches to use for validation (default: all)
+    -u|--valid_batches <int>                 number of batches to use for validation (default: all)
 
 Create data to plot a learning curve by running a simplified version of the DeepSpeech-BRNN. This script will call run-train.py with increasing amounts of training data (1 to 1000 minutes).
 For each amount of training data a separate training run is started. A unique run-id is assigned to each training run from which the value of each dimension can be derived.
@@ -91,7 +91,7 @@ case $key in
     shift
     shift
     ;;
-    -b|--valid_batches)
+    -u|--valid_batches)
     valid_batches="$2"
     shift
     shift

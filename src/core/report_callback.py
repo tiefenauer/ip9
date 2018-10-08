@@ -85,6 +85,7 @@ class ReportCallback(callbacks.Callback):
 
             for result in results if self.force_output else filter(
                     lambda result: any([wer_val < 0.6 for wer_val in result['WER']]), results):
+                print()
                 print(tabulate(result, headers='keys', floatfmt='.4f'))
 
             originals = originals + ground_truths

@@ -123,7 +123,6 @@ def known_words(word_list, lm_vocab):
     :param word_list: list of word-strings
     :return: set of unique words that appear in vocabulary
     """
-    # return set(w for w in word_list if w in lm_vocab)
     return set(filter(lambda word: word in lm_vocab, word_list))
 
 
@@ -133,14 +132,33 @@ def edits_1(word_str):
     :param word_str: single word as a string
     :return: list of all possible words with edit distance 1
     """
-    splits = ((word_str[:i], word_str[i:]) for i in range(len(word_str) + 1))  # all possible splits
+    # splits = ((word_str[:i], word_str[i:]) for i in range(len(word_str) + 1))  # all possible splits
+    #
+    # deletes = (L + R[1:] for L, R in splits if R)  # all words with one character removed
+    # transposes = (L + R[1] + R[0] + R[2:] for L, R in splits if len(R) > 1)  # all words with two swapped characters
+    # replaces = (L + c + R[1:] for L, R in splits if R for c in ALLOWED_CHARS)  # all words with one character replaced
+    # inserts = (L + c + R for L, R in splits for c in ALLOWED_CHARS)  # all words with one character inserted
+    return itertools.chain(deletes(word_str), swaps(word_str), replaces(word_str), inserts(word_str))
 
-    deletes = (L + R[1:] for L, R in splits if R)  # all words with one character removed
-    transposes = (L + R[1] + R[0] + R[2:] for L, R in splits if len(R) > 1)  # all words with two swapped characters
-    replaces = (L + c + R[1:] for L, R in splits if R for c in ALLOWED_CHARS)  # all words with one character replaced
-    inserts = (L + c + R for L, R in splits for c in ALLOWED_CHARS)  # all words with one character inserted
-    return itertools.chain(deletes, transposes, replaces, inserts)
-    # return set(deletes + transposes + replaces + inserts)
+
+def splits(word_str):
+    return ((word_str[:i], word_str[i:]) for i in range(len(word_str) + 1))
+
+
+def deletes(word_str):
+    return (L + R[1:] for L, R in splits(word_str) if R)
+
+
+def swaps(word_str):
+    return (L + R[1] + R[0] + R[2:] for L, R in splits(word_str) if len(R) > 1)
+
+
+def replaces(word_str):
+    return (L + c + R[1:] for L, R in splits(word_str) if R for c in ALLOWED_CHARS)
+
+
+def inserts(words_str):
+    return (L + c + R for L, R in splits(words_str) for c in ALLOWED_CHARS)
 
 
 def edits_2(word):

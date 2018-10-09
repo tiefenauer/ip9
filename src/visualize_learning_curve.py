@@ -13,9 +13,10 @@ import pandas as pd
 
 def main(args):
     source_dir, target_dir = setup(args)
-    df_loss, df_val_loss, df_ler, df_wer = collect_data(source_dir)
-    fig_loss, _ = plot_losses(df_loss, df_val_loss)
-    fig_ler_wer, _ = plot_ler_wer(df_ler, df_wer)
+    dfs_loss, dfs_ler_wer = collect_data(source_dir)
+
+    fig_loss, _ = plot_losses(dfs_loss)
+    fig_ler_wer, _ = plot_ler_wer(dfs_ler_wer)
 
     fig_loss.savefig(join(target_dir, 'losses.png'))
     fig_ler_wer.savefig(join(target_dir, 'wer_ler.png'))
@@ -23,36 +24,21 @@ def main(args):
     plt.show()
 
 
-def plot_losses(df_loss, df_val_loss):
-    dfs, titles = [], []
-    for key in df_loss.keys():
-        loss = df_loss[key]
-        val_loss = df_val_loss[key]
-        df = pd.concat([loss, val_loss], axis=1)
-        dfs.append(df)
-        titles.append(create_title(key))
-
+def plot_losses(dfs_loss):
     styles = [[color + style for style in ['--', '-']] for color in ['r', 'g', 'b', 'c']]
     legends = ['training', 'validation']
 
-    return plot_to_subplots(dfs, titles, styles, legends, 'epoch', 'CTC loss')
+    return plot_to_subplots(dfs_loss, styles, legends, 'CTC loss')
 
 
-def plot_ler_wer(df_ler, df_wer):
-    dfs, titles = [], []
-    for key in df_wer.keys():
-        wer_values = df_wer[key]
-        ler_values = df_ler[key]
-        df = pd.concat([ler_values, wer_values], axis=1)
-        dfs.append(df)
-        titles.append(create_title(key))
-
+def plot_ler_wer(dfs_ler_wer):
     styles = [[color + '-' for color in ['r', 'b']]] * 4
     legends = ['LER', 'WER']
-    return plot_to_subplots(dfs, titles, styles, legends, 'epoch', 'WER/LER')
+    return plot_to_subplots(dfs_ler_wer, styles, legends, 'WER/LER')
 
 
-def plot_to_subplots(dfs, titles, styles, legends, xlabel, ylabel):
+def plot_to_subplots(dfs, styles, legends, ylabel, xlabel='epochs',
+                     titles=['1 minute', '10 minutes', '100 minutes', '1,000 minutes']):
     fig, axes = plt.subplots(ncols=2, nrows=2, sharex=True, sharey=True, figsize=(14, 9))
 
     for df, ax, title, style in zip(dfs, axes.flatten(), titles, styles):
@@ -89,26 +75,31 @@ def setup(args):
 def collect_data(source_dir):
     df_loss, df_val_loss = collect_tensorboard_losses(source_dir)
     df_ler, df_wer = collect_ler_wer(source_dir)
-    df_loss.index += 1
-    df_loss.index.name = 'index'
-    df_val_loss.index += 1
-    df_ler.index += 1
-    df_wer.index += 1
-    return df_loss, df_val_loss, df_ler, df_wer
+
+    dfs_loss, dfs_ler_wer = [], []
+    for key in ['1_min', '10_min', '100_min', '1000_min']:
+        loss = df_loss[key]
+        val_loss = df_val_loss[key]
+        dfs_loss.append(pd.concat([loss, val_loss], axis=1))
+
+        wer_values = df_wer[key]
+        ler_values = df_ler[key]
+        dfs_ler_wer.append(pd.concat([ler_values, wer_values], axis=1))
+    return dfs_loss, dfs_ler_wer
 
 
 def collect_tensorboard_losses(source_dir):
     df_loss = pd.DataFrame(columns=['1_min', '10_min', '100_min', '1000_min'])
     df_val_loss = pd.DataFrame(columns=['1_min', '10_min', '100_min', '1000_min'])
 
-    # collect training losses
     for minutes, loss_csv in map_files_to_minutes(source_dir, 'run_', '-loss.csv').items():
         df_loss[f'{minutes}_min'] = pd.read_csv(loss_csv)['Value'].values
 
-    # collect validation losses and merge as second column to above DataFrames
     for minutes, loss_csv in map_files_to_minutes(source_dir, 'run_', '-val_loss.csv').items():
         df_val_loss[f'{minutes}_min'] = pd.read_csv(loss_csv)['Value'].values
 
+    df_loss.index += 1
+    df_val_loss.index += 1
     return df_loss, df_val_loss
 
 
@@ -121,6 +112,8 @@ def collect_ler_wer(source_dir):
             df_ler[f'{minutes}_min'] = df_ler_wer['LER'].values
             df_wer[f'{minutes}_min'] = df_ler_wer['WER'].values
 
+    df_ler.index += 1
+    df_wer.index += 1
     return df_ler, df_wer
 
 

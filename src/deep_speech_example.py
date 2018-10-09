@@ -7,6 +7,7 @@ import argparse
 import sys
 from timeit import default_timer as timer
 
+from deepspeech import Model, printVersions
 from deepspeech.model import Model
 
 from src.util.corpus_util import get_corpus

@@ -1,6 +1,8 @@
 \section{Training an \ac{RNN} for \ac{ASR}}\label{ds}
 As stated above, this project does not aim at training a state of the art \ac{STT} engine. Because the \ac{SW} algorithm used for local alignment is tolerant to a certain amount of errors in the transcripts, the \ac{RNN} need only be \textit{good enough} for the task at hand (\ac{FA}). If such a network can be trained under the given circumstances it could be used in the \ac{ASR} stage of the pipeline. The pipeline would then become become self-contained and would not ne dependent on a commercial solution that cannot eb tuned and whose inner workings are unknown. Furthermore such a \ac{RNN} would open up to recognizing languages for which there is not a third-party solution yet, such as Swiss German.
 
+Hier etwas über Transfer Learning (z.B. wie in https://arxiv.org/pdf/1706.00290.pdf) und warum es nicht eingesetzt wurde (CNN anstatt RNN, Zeitaufwand). Layer Freezen bringt ausserdem offenbar auch nix. \parencite{budget}
+
 \subsection{Exploiting the \textit{DeepSpeech} model}
 
 A \ac{NN} that had quite an impact on \ac{ASR} was \textit{DeepSpeech} \parencite{deepspeech} which reached recognition rates near-par to human performance, despite using a comparably simpler than traditional speech systems. Because the relation between audio signal and text was learned \ac{E2E} the network was also pretty robust to distortions like background noise or speaker variation. An open source implementation of a DeepSpeech model is available from Mozilla \footnote{\url{https://github.com/mozilla/DeepSpeech}}. Since this implementation uses a \ac{LM}, the quality of the model is measured as the percentage of misspelled or wrong words (called \ac{WER}) or as the edit distance (also called Levenshtein distance or \ac{LER}). A pre-trained model for inference of English transcript can be downloaded, which achieves a \ac{WER} of just 6.5\%, which is close to what a human is able to recognize \parencite{mozillajourney}.
@@ -22,7 +24,7 @@ An implementation of the \ac{RNN} used for \ac{STT} in the previous IP8 project 
 For this project, the previous model was closer examined to find out what works best and to help the model converge. After some changes to the previous model architecture for this project, a new model was obtained which was able to learn something meaningful, i.e. it started to infer transcripts that -- although still not perfect -- resembled the ground truth. This model is further referred to as \textit{new model}. Summarized, the following changes were made to the previous model architecture to constitute the new model:
 
 \begin{itemize}
-	\item \textbf{Optimizer}: The new model uses \ac{SGD} instead of Adam. Adam was used in the previous model because it was assumed to be generally superior to other other optimizers in most cases.
+	\item \textbf{Optimizer}: The new model uses \ac{SGD} instead of Adam. Adam was used in the previous model because it is the Optimizer used in the Mozilla implementation of \ac{DS}. However, this optimizer did not seem to work for the simplified model.
 	\item \textbf{RNN cell type}: While \ac{LSTM} cells were used for the recurrent layer in the previous model, this was changed back to a simple RNN layer without gates as they appear in \ac{GRU} or \ac{LSTM} cells in the new model. This also corresponded to the original \textit{DeepSpeech} model architecture, which did not use sophisticated gated cells in their recurrent layer for computational reasons.
 	\item \textbf{number of features}: While the use of \ac{MFCC} as features was examined in the previous model, the number of features was set to $13$, a value which is found often used in acoustic modelling. The Mozilla implementation of \textit{DeepSpeech} however doubled this number to $26$, which is also what is used in the new model. In spite of the increase in the number of features, this value is still much smaller than the $160$ filter banks used in the original \textit{DeepSpeech} model. The amount of training data is therefore still expected to be smaller than in the original model.
 \end{itemize}
@@ -30,7 +32,8 @@ For this project, the previous model was closer examined to find out what works 
 The final model used in this project was therefore a variant of the original \textit{DeepSpeech} model with the following simplifications:
 
 \begin{itemize}
-	\item \textbf{optional \ac{LM}}: While a key part in the original \textit{DeepSpeech} model, the inclusion of a  \ac{LM} is optional in the simplified architecture. This is on account of the fact that such a \ac{LM} needs to be trained first and to assess the influence of a trained \ac{LM} (see the following sections).
+	\item \textbf{\ac{Different application of LM}}: In the Mozilla implementation the use of a \ac{LM} is baked in with the training process, i.e. it is integrated in the decoding process. With The edit distance between prediction and ground truth is then included in the loss which is minimized. The simplified model also uses a \ac{LM}, but does not include it in the training process. Instead, the \ac{LM} is applied in some sort of post-processing to improve the quality of the decoded predictions.
+	\item \textbf{Different features}: MFCC with 26 filter banks instead of Spectrogram with 161 filterbanks, because that's what the Mozilla implementation uses
 	\item No convolution in first layer
 	\item LSTM instead of SimpleRNN
 	\item \textbf{smaller alphabet}: The Mozilla implementation uses an alphabet of 29 characters (${a,b,c,...,z, space, apostrophe, blank}$), which is also what is proposed in the \textit{DeepSpeech} paper. This is due to the fact that apostrophes are frequently found in English word tokens (like \textit{"don't"} or \textit{"isn't"}). For simplification and also because a model should be trainable for any language, this character was dropped from the alphabet used in this project and also removed from the transcripts of all training samples by the normalization process. It is expected that missing apostrophes can be fixed by post-processing the inferred transcript with a \ac{LM}.
@@ -106,7 +109,7 @@ A simpler variant that is used in this project is to infer the transcriptions fi
 
 \section{Plotting a learning curve}
 
-The total length of all transcribed speech segments in the \textit{LibriSpeech} corpus is roughly 47 days (1141 hours). Training on all these samples was not feasible within project time . However, we can get an estimation of the expected learning progress by plotting a \textit{learning curve}. This was done using transcribed audio segments from the \textit{LibriSpeech} corpus. Training was done on exponentially increasing amounts of training data (1, 10, 100 and 1000 minutes of transcribed audio). To assess the impact of using a \ac{LM}, the learning curve was plotted twice: Figure \ref{learning_curve_without_lm} shows the learning curve for \ac{WER} and \ac{LER} without using a \ac{LM}. Figure \ref{learning_curve_with_lm} shows the learning curve for training with a 4-gram \ac{LM}.
+The total length of all transcribed speech segments in the \textit{LibriSpeech} corpus is roughly 47 days (1,141 hours). Training on all these samples was not feasible within project time . However, we can get an estimation of the expected learning progress by plotting a \textit{learning curve}. This was done using transcribed audio segments from the \textit{LibriSpeech} corpus. Training was done on exponentially increasing amounts of training data (1, 10, 100 and 1000 minutes of transcribed audio). To assess the impact of using a \ac{LM}, the learning curve was plotted twice: Figure \ref{learning_curve_without_lm} shows the learning curve for \ac{WER} and \ac{LER} without using a \ac{LM}. Figure \ref{learning_curve_with_lm} shows the learning curve for training with a 4-gram \ac{LM}.
 
 \begin{figure}
 	\includegraphics[width=\linewidth]{./img/learning_curve_lm_beamsearch.png}
@@ -119,6 +122,22 @@ The total length of all transcribed speech segments in the \textit{LibriSpeech} 
 	\caption{Learning curve for training on 1/10/100/1000 minutes of transcribed audio from \textit{ReadyLingua} using a 2-gram \ac{LM} and Beam-Search decoding}
 	\label{learning_curve_with_lm}
 \end{figure}
+
+Hier etwas über
+
+- Batchgrösse (Qualität nimmt mit zunehmender batchgrösse ab!)
+- Padding der Trainingssequenzen
+- Sortierung der Trainingsdaten nach Länge (ist besser, da weniger blanks gepadded, schnellere Konversion)
+- ...
+
+Beispiel für Prediction, wo LER/WER durch LM verschlechtert wurde: (aus /home/daniel/_runs/lc_bestpath_rlen/1000_min_bestpath/test_results.csv)
+
+#: 546	
+ground truth: i want to wish you a very happy thanksgiving	
+prediction: oento wiceyouepery appy thangksive (LER=0.431818181818182, WER=1)
+prediction (LM-corrected): onto wiceyouepery app thangksive	(LER=0.454545454545455	WER=1)
+
+
 
 % To do:
 % - train on LibriSpeech data

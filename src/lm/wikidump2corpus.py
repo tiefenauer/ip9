@@ -10,7 +10,7 @@ import nltk
 from gensim.corpora import WikiCorpus
 from tqdm import tqdm
 
-from lm.lm_preprocessing import normalize_word
+from lm.lm_corpus_util import normalize_word
 
 
 def main(input_file, output_file):

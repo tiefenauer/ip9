@@ -10,10 +10,11 @@ from keras.optimizers import Adam
 from keras_preprocessing.image import Iterator
 from keras_preprocessing.sequence import pad_sequences
 
-from core.callbacks import ReportCallback
+from core.models import deep_speech_lstm
+from core.report_callback import ReportCallback
 from util.audio_util import shift
-from util.brnn_util import deep_speech_model, ctc_dummy_loss, decoder_dummy_loss, ler
 from util.corpus_util import get_corpus
+from util.rnn_util import decoder_dummy_loss, ler
 from util.rnn_util import encode
 
 target_dir = join(expanduser("~"), 'poc')
@@ -48,7 +49,7 @@ def main():
     session = tf.Session(config=config)
     K.set_session(session)
 
-    model = deep_speech_model(num_features=13)
+    model = deep_speech_lstm()
     model.summary()
 
     opt = Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-8, clipnorm=5)

@@ -33,7 +33,7 @@ order=4
 language='de'
 data_structure=trie
 top_words=500000
-target_dir='../lm'
+target_dir='./lm'
 remove_artifacts=false
 
 while getopts ':hs:' option; do
@@ -116,6 +116,7 @@ if [ ! -f "${corpus_file}" ] ; then
         echo "Cleaned articles are saved to ${cleaned_dir}"
         echo "This will take 2-3 hours. Have a walk or something..."
         mkdir -p ${cleaned_dir}
+        cd ./src/
         python3 ./WikiExtractor.py -c -b 25M -o ${cleaned_dir} ${target_file}
     fi
     echo "Uncompressing and preprocessing cleaned articles from $cleaned_dir"

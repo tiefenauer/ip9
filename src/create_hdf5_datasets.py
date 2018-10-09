@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 from tqdm import tqdm
 
-from constants import DEFAULT_CORPUS, DEFAULT_FEATURE_TYPE
+from constants import DEFAULT_CORPUS
 from util.corpus_util import get_corpus
 
 parser = argparse.ArgumentParser(description="""Precompute audio features and labels for speech segments""")

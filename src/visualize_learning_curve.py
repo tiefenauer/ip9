@@ -4,16 +4,56 @@ from glob import glob
 from os import listdir
 from os.path import exists, abspath, join, isdir
 
+import seaborn as sns
+
+sns.set()
 import matplotlib.pyplot as plt
 import pandas as pd
 
 
 def main(args):
     source_dir, target_dir = setup(args)
-    df = collect_data(source_dir)
-    df.loc['1_min'].plot(subplots=True)
+    df_loss, df_val_loss, df_ler, df_ler_wer = collect_data(source_dir)
+    fig_loss, _ = plot_losses(df_loss, df_val_loss)
+    plot_ler_wer(df_ler_wer)
     plt.show()
-    # visualize(df)
+    fig_loss.savefig(join(target_dir, 'losses.png'))
+
+
+def plot_losses(df_loss, df_val_loss):
+    fig, axes = plt.subplots(ncols=2, nrows=2, sharex=True, sharey=True, constrained_layout=True, figsize=(14, 9))
+
+    colors = ['r', 'g', 'b', 'c']
+    for i, (key, color) in enumerate(zip(df_loss.keys(), colors)):
+        ax = axes.flatten()[i]
+        loss = df_loss[key]
+        val_loss = df_val_loss[key]
+        df = pd.concat([loss, val_loss], axis=1)
+        df.columns = ['train_loss', 'val_loss']
+        df.plot(ax=ax, style=[color + style for style in ['--', '-']])
+
+        ax.set_title(create_title(key))
+        ax.set_xlabel('epochs')
+        ax.set_ylabel('CTC loss')
+        ax.legend(['training', 'validation'])
+
+    plt.tight_layout()
+
+    return fig, axes
+
+
+def create_title(key):
+    pattern = re.compile('(\d*)_min')
+    minutes = int(re.findall(pattern, key)[0])
+    unit = 'minutes' if minutes > 1 else 'minute'
+    return f'{minutes:,} {unit}'
+
+
+def plot_ler_wer(df):
+    ax = df.plot()
+    ax.set_title('LER and WER')
+    ax.set_xlabel('epochs')
+    ax.set_ylabel('LER/WER')
 
 
 def setup(args):
@@ -28,34 +68,41 @@ def setup(args):
 
 
 def collect_data(source_dir):
-    df_tensorboard = collect_tensorboard_losses(source_dir)
-    df_ler_wer = collect_ler_wer(source_dir)
-    return pd.concat([df_tensorboard, df_ler_wer], axis=1)
+    df_loss, df_val_loss = collect_tensorboard_losses(source_dir)
+    df_ler, df_wer = collect_ler_wer(source_dir)
+    df_loss.index += 1
+    df_loss.index.name = 'index'
+    df_val_loss.index += 1
+    df_ler.index += 1
+    df_wer.index += 1
+    return df_loss, df_val_loss, df_ler, df_ler
 
 
 def collect_tensorboard_losses(source_dir):
-    df = pd.DataFrame(index=['1_min', '10_min', '100_min', '1000_min'], columns=['train_loss', 'valid_loss'])
+    df_loss = pd.DataFrame(columns=['1_min', '10_min', '100_min', '1000_min'])
+    df_val_loss = pd.DataFrame(columns=['1_min', '10_min', '100_min', '1000_min'])
 
     # collect training losses
     for minutes, loss_csv in map_files_to_minutes(source_dir, 'run_', '-loss.csv').items():
-        df.loc[f'{minutes}_min', 'train_loss'] = pd.read_csv(loss_csv)['Value'].values
+        df_loss[f'{minutes}_min'] = pd.read_csv(loss_csv)['Value'].values
 
     # collect validation losses and merge as second column to above DataFrames
     for minutes, loss_csv in map_files_to_minutes(source_dir, 'run_', '-val_loss.csv').items():
-        df.loc[f'{minutes}_min', 'valid_loss'] = pd.read_csv(loss_csv)['Value'].values
+        df_val_loss[f'{minutes}_min'] = pd.read_csv(loss_csv)['Value'].values
 
-    return df
+    return df_loss, df_val_loss
 
 
 def collect_ler_wer(source_dir):
-    df = pd.DataFrame(index=['1_min', '10_min', '100_min', '1000_min'], columns=['LER', 'WER'])
+    df_ler = pd.DataFrame(columns=['1_min', '10_min', '100_min', '1000_min'])
+    df_wer = pd.DataFrame(columns=['1_min', '10_min', '100_min', '1000_min'])
     for subdir_name in get_immediate_subdirectories(source_dir):
         for minutes, ler_wer_csv in map_files_to_minutes(join(source_dir, subdir_name), 'model_', '.csv').items():
             df_ler_wer = pd.read_csv(ler_wer_csv)
-            df.loc[f'{minutes}_min', 'LER'] = df_ler_wer['LER'].values
-            df.loc[f'{minutes}_min', 'WER'] = df_ler_wer['WER'].values
+            df_ler[f'{minutes}_min'] = df_ler_wer['LER'].values
+            df_wer[f'{minutes}_min'] = df_ler_wer['WER'].values
 
-    return df
+    return df_ler, df_wer
 
 
 def map_files_to_minutes(root_dir, prefix, suffix):

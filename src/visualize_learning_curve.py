@@ -13,29 +13,55 @@ import pandas as pd
 
 def main(args):
     source_dir, target_dir = setup(args)
-    df_loss, df_val_loss, df_ler, df_ler_wer = collect_data(source_dir)
+    df_loss, df_val_loss, df_ler, df_wer = collect_data(source_dir)
     fig_loss, _ = plot_losses(df_loss, df_val_loss)
-    plot_ler_wer(df_ler_wer)
-    plt.show()
+    fig_ler_wer, _ = plot_ler_wer(df_ler, df_wer)
+
     fig_loss.savefig(join(target_dir, 'losses.png'))
+    fig_ler_wer.savefig(join(target_dir, 'wer_ler.png'))
+
+    plt.show()
 
 
 def plot_losses(df_loss, df_val_loss):
-    fig, axes = plt.subplots(ncols=2, nrows=2, sharex=True, sharey=True, constrained_layout=True, figsize=(14, 9))
-
-    colors = ['r', 'g', 'b', 'c']
-    for i, (key, color) in enumerate(zip(df_loss.keys(), colors)):
-        ax = axes.flatten()[i]
+    dfs, titles = [], []
+    for key in df_loss.keys():
         loss = df_loss[key]
         val_loss = df_val_loss[key]
         df = pd.concat([loss, val_loss], axis=1)
-        df.columns = ['train_loss', 'val_loss']
-        df.plot(ax=ax, style=[color + style for style in ['--', '-']])
+        dfs.append(df)
+        titles.append(create_title(key))
 
-        ax.set_title(create_title(key))
-        ax.set_xlabel('epochs')
-        ax.set_ylabel('CTC loss')
-        ax.legend(['training', 'validation'])
+    styles = [[color + style for style in ['--', '-']] for color in ['r', 'g', 'b', 'c']]
+    legends = ['training', 'validation']
+
+    return plot_to_subplots(dfs, titles, styles, legends, 'epoch', 'CTC loss')
+
+
+def plot_ler_wer(df_ler, df_wer):
+    dfs, titles = [], []
+    for key in df_wer.keys():
+        wer_values = df_wer[key]
+        ler_values = df_ler[key]
+        df = pd.concat([ler_values, wer_values], axis=1)
+        dfs.append(df)
+        titles.append(create_title(key))
+
+    styles = [[color + '-' for color in ['r', 'b']]] * 4
+    legends = ['LER', 'WER']
+    return plot_to_subplots(dfs, titles, styles, legends, 'epoch', 'WER/LER')
+
+
+def plot_to_subplots(dfs, titles, styles, legends, xlabel, ylabel):
+    fig, axes = plt.subplots(ncols=2, nrows=2, sharex=True, sharey=True, figsize=(14, 9))
+
+    for df, ax, title, style in zip(dfs, axes.flatten(), titles, styles):
+        df.plot(ax=ax, style=style)
+
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.legend(legends)
 
     plt.tight_layout()
 
@@ -47,13 +73,6 @@ def create_title(key):
     minutes = int(re.findall(pattern, key)[0])
     unit = 'minutes' if minutes > 1 else 'minute'
     return f'{minutes:,} {unit}'
-
-
-def plot_ler_wer(df):
-    ax = df.plot()
-    ax.set_title('LER and WER')
-    ax.set_xlabel('epochs')
-    ax.set_ylabel('LER/WER')
 
 
 def setup(args):
@@ -75,7 +94,7 @@ def collect_data(source_dir):
     df_val_loss.index += 1
     df_ler.index += 1
     df_wer.index += 1
-    return df_loss, df_val_loss, df_ler, df_ler
+    return df_loss, df_val_loss, df_ler, df_wer
 
 
 def collect_tensorboard_losses(source_dir):
@@ -114,12 +133,6 @@ def map_files_to_minutes(root_dir, prefix, suffix):
 
 def get_immediate_subdirectories(root_dir):
     return [name for name in listdir(root_dir) if isdir(join(root_dir, name))]
-
-
-def visualize(df):
-    fig, ax = plt.subplots(1, 1, figsize=(16, 9))
-    ax_wer = plot_dataframe(y=df.loc['1_min', 'WER'], metric='WER', title='WER for 1 min', ax=ax)
-    plt.show()
 
 
 def plot_dataframe(y, metric, title, ax=None, label=None):

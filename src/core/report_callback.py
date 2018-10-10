@@ -84,9 +84,10 @@ class ReportCallback(callbacks.Callback):
             ground_truths = batch_inputs['source_str']
 
             preds_greedy = self.decoder_greedy.decode(batch_input, batch_input_lengths)
-            preds_greedy_lm = correction(preds_greedy, self.lm, self.lm_vocab)
             preds_beam = self.decoder_beam.decode(batch_input, batch_input_lengths)
-            preds_beam_lm = correction(preds_beam, self.lm, self.lm_vocab)
+
+            preds_greedy_lm = [correction(pred_greedy, self.lm, self.lm_vocab) for pred_greedy in preds_greedy]
+            preds_beam_lm = [correction(pred_beam, self.lm, self.lm_vocab) for pred_beam in preds_beam]
 
             results = self.calculate_wer_ler(ground_truths, preds_greedy, preds_beam, preds_greedy_lm, preds_beam_lm)
 
@@ -136,30 +137,32 @@ class ReportCallback(callbacks.Callback):
 
         K.set_learning_phase(1)
 
-    def calculate_wer_ler(self, ground_truths, pred_greedy, pred_beam, pred_greedy_lm, pred_beam_lm):
+    def calculate_wer_ler(self, ground_truths, preds_greedy, preds_beam, preds_greedy_lm, preds_beam_lm):
         results = []
 
-        for ground_truth, pred_greedy, pred_beam in zip(ground_truths, pred_greedy, pred_beam):
+        for ground_truth, pred_greedy, pred_beam, pred_greedy_lm, pred_beam_lm in zip(ground_truths,
+                                                                                      preds_greedy, preds_beam,
+                                                                                      preds_greedy_lm, preds_beam_lm):
             result = {
                 'predictions': ['best path',
-                                'best path + LM',
                                 'beam search',
+                                'best path + LM',
                                 'beam search + LM'],
                 ground_truth: [pred_greedy,
-                               pred_greedy_lm,
                                pred_beam,
+                               pred_greedy_lm,
                                pred_beam_lm],
                 'LER': [ler(ground_truth, pred_greedy),
-                        ler(ground_truth, pred_greedy_lm),
                         ler(ground_truth, pred_beam),
+                        ler(ground_truth, pred_greedy_lm),
                         ler(ground_truth, pred_beam_lm)],
-                'Ø LER': [ler_norm(ground_truth, pred_greedy),
-                          ler_norm(ground_truth, pred_greedy_lm),
-                          ler_norm(ground_truth, pred_beam),
-                          ler_norm(ground_truth, pred_beam_lm)],
+                'LER (normalized)': [ler_norm(ground_truth, pred_greedy),
+                                     ler_norm(ground_truth, pred_beam),
+                                     ler_norm(ground_truth, pred_greedy_lm),
+                                     ler_norm(ground_truth, pred_beam_lm)],
                 'WER': [wer(ground_truth, pred_greedy),
-                        wer(ground_truth, pred_greedy_lm),
                         wer(ground_truth, pred_beam),
+                        wer(ground_truth, pred_greedy_lm),
                         wer(ground_truth, pred_beam_lm)]
             }
             results.append(result)

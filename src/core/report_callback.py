@@ -89,7 +89,7 @@ class ReportCallback(callbacks.Callback):
             preds_greedy_lm = [correction(pred_greedy, self.lm, self.lm_vocab) for pred_greedy in preds_greedy]
             preds_beam_lm = [correction(pred_beam, self.lm, self.lm_vocab) for pred_beam in preds_beam]
 
-            results = self.calculate_wer_ler(ground_truths, preds_greedy, preds_beam, preds_greedy_lm, preds_beam_lm)
+            results = calculate_wer_ler(ground_truths, preds_greedy, preds_beam, preds_greedy_lm, preds_beam_lm)
 
             for result in results if self.force_output else filter(
                     lambda result: any([wer_val < 0.6 for wer_val in result['WER']]), results):
@@ -136,38 +136,6 @@ class ReportCallback(callbacks.Callback):
                                       ]
 
         K.set_learning_phase(1)
-
-    def calculate_wer_ler(self, ground_truths, preds_greedy, preds_beam, preds_greedy_lm, preds_beam_lm):
-        results = []
-
-        for ground_truth, pred_greedy, pred_beam, pred_greedy_lm, pred_beam_lm in zip(ground_truths,
-                                                                                      preds_greedy, preds_beam,
-                                                                                      preds_greedy_lm, preds_beam_lm):
-            result = {
-                'predictions': ['best path',
-                                'beam search',
-                                'best path + LM',
-                                'beam search + LM'],
-                ground_truth: [pred_greedy,
-                               pred_beam,
-                               pred_greedy_lm,
-                               pred_beam_lm],
-                'LER': [ler(ground_truth, pred_greedy),
-                        ler(ground_truth, pred_beam),
-                        ler(ground_truth, pred_greedy_lm),
-                        ler(ground_truth, pred_beam_lm)],
-                'LER (normalized)': [ler_norm(ground_truth, pred_greedy),
-                                     ler_norm(ground_truth, pred_beam),
-                                     ler_norm(ground_truth, pred_greedy_lm),
-                                     ler_norm(ground_truth, pred_beam_lm)],
-                'WER': [wer(ground_truth, pred_greedy),
-                        wer(ground_truth, pred_beam),
-                        wer(ground_truth, pred_greedy_lm),
-                        wer(ground_truth, pred_beam_lm)]
-            }
-            results.append(result)
-
-        return results
 
     def finish(self):
         self.df_history.index.name = 'epoch'
@@ -227,3 +195,36 @@ def is_last_value_smallest(values):
     :return:
     """
     return len(values) > 2 and values[-1] < np.min(values[:-1])
+
+
+def calculate_wer_ler(ground_truths, preds_greedy, preds_beam, preds_greedy_lm, preds_beam_lm):
+    results = []
+
+    for ground_truth, pred_greedy, pred_beam, pred_greedy_lm, pred_beam_lm in zip(ground_truths,
+                                                                                  preds_greedy, preds_beam,
+                                                                                  preds_greedy_lm, preds_beam_lm):
+        result = {
+            'predictions': ['best path',
+                            'beam search',
+                            'best path + LM',
+                            'beam search + LM'],
+            ground_truth: [pred_greedy,
+                           pred_beam,
+                           pred_greedy_lm,
+                           pred_beam_lm],
+            'LER': [ler(ground_truth, pred_greedy),
+                    ler(ground_truth, pred_beam),
+                    ler(ground_truth, pred_greedy_lm),
+                    ler(ground_truth, pred_beam_lm)],
+            'LER (normalized)': [ler_norm(ground_truth, pred_greedy),
+                                 ler_norm(ground_truth, pred_beam),
+                                 ler_norm(ground_truth, pred_greedy_lm),
+                                 ler_norm(ground_truth, pred_beam_lm)],
+            'WER': [wer(ground_truth, pred_greedy),
+                    wer(ground_truth, pred_beam),
+                    wer(ground_truth, pred_greedy_lm),
+                    wer(ground_truth, pred_beam_lm)]
+        }
+        results.append(result)
+
+    return results

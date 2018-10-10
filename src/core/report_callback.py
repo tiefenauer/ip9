@@ -167,11 +167,19 @@ class ReportCallback(callbacks.Callback):
 
     def new_benchmark(self):
         """
-        We have a new benchmark if the last value in a sequence of values is the smallest
+        We have a new benchmark if the last value in a sequence of metrics is the smallest
         """
-        wers = self.df_history['WER'].dropna().values
-        lers = self.df_history['LER'].dropna().values
-        return is_last_value_smallest(wers) or is_last_value_smallest(lers)
+        metrics = [
+            self.df_history['WER_greedy'].dropna().values,  # WER (best-path)
+            self.df_history['LER_greedy'].dropna().values,  # LER (best-path)
+            self.df_history['WER_beam'].dropna().values,  # WER (beam search)
+            self.df_history['LER_beam'].dropna().values,  # LER (beam search)
+            self.df_history['WER_greedy_lm'].dropna().values,  # WER (best-path + LM)
+            self.df_history['LER_greedy_lm'].dropna().values,  # LER (best-path + LM)
+            self.df_history['WER_beam_lm'].dropna().values,  # WER (beam search + LM)
+            self.df_history['LER_beam_lm'].dropna().values,  # LER (beam search + LM)
+        ]
+        return any(is_last_value_smallest(metric) for metric in metrics)
 
     def stop_early(self):
         """

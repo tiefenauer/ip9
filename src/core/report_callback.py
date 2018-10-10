@@ -55,7 +55,12 @@ class ReportCallback(callbacks.Callback):
         self.decoder_beam = BeamSearchDecoder(model)
 
         # WER/LER history
-        self.df_history = pd.DataFrame(index=np.arange(num_epochs), columns=['WER', 'LER', 'ler_raw'])
+        self.df_history = pd.DataFrame(index=np.arange(num_epochs),
+                                       columns=['WER_greedy', 'LER_greedy', 'ler_raw_greedy',
+                                                'WER_beam', 'LER_beam', 'ler_raw_beam',
+                                                'WER_greedy_lm', 'LER_greedy_lm', 'ler_raw_greedy_lm',
+                                                'WER_beam_lm', 'LER_beam_lm', 'ler_raw_beam_lm'
+                                                ])
 
         # base name for files that will be written to target directory
         self.base_name = 'model' + (f'_{self.num_minutes}_min' if self.num_minutes else '')
@@ -69,7 +74,7 @@ class ReportCallback(callbacks.Callback):
             self.data_valid.shuffle_entries()
 
         print(f'validating epoch {epoch+1} using best-path and beam search decoding')
-        originals, results_greedy, results_beam = [], [], []
+        originals, res_greedy, res_beam, res_greedy_lm, res_beam_lm = [], [], [], [], []
         self.data_valid.cur_index = 0  # reset index
 
         for _ in tqdm(range(len(self.data_valid))):
@@ -78,10 +83,12 @@ class ReportCallback(callbacks.Callback):
             batch_input_lengths = batch_inputs['input_length']
             ground_truths = batch_inputs['source_str']
 
-            predictions_greedy = self.decoder_greedy.decode(batch_input, batch_input_lengths)
-            predictions_beam = self.decoder_beam.decode(batch_input, batch_input_lengths)
+            preds_greedy = self.decoder_greedy.decode(batch_input, batch_input_lengths)
+            preds_greedy_lm = correction(preds_greedy, self.lm, self.lm_vocab)
+            preds_beam = self.decoder_beam.decode(batch_input, batch_input_lengths)
+            preds_beam_lm = correction(preds_beam, self.lm, self.lm_vocab)
 
-            results = self.calculate_wer_ler(ground_truths, predictions_greedy, predictions_beam)
+            results = self.calculate_wer_ler(ground_truths, preds_greedy, preds_beam, preds_greedy_lm, preds_beam_lm)
 
             for result in results if self.force_output else filter(
                     lambda result: any([wer_val < 0.6 for wer_val in result['WER']]), results):
@@ -89,40 +96,50 @@ class ReportCallback(callbacks.Callback):
                 print(tabulate(result, headers='keys', floatfmt='.4f'))
 
             originals = originals + ground_truths
-            results_greedy = results_greedy + predictions_greedy
-            results_beam = results_beam + predictions_beam
+            res_greedy = res_greedy + preds_greedy
+            res_beam = res_beam + preds_beam
+            res_greedy_lm = res_greedy_lm + preds_greedy_lm
+            res_beam_lm = res_beam_lm + preds_beam_lm
 
-        wers_greedy, wer_mean_greedy = wers(originals, results_greedy)
-        wers_beam, wer_mean_beam = wers(originals, results_beam)
+        wers_greedy, wer_mean_greedy = wers(originals, res_greedy)
+        wers_greedy_lm, wer_mean_greedy_lm = wers(originals, res_greedy_lm)
+        wers_beam, wer_mean_beam = wers(originals, res_beam)
+        wers_beam_lm, wer_mean_beam_lm = wers(originals, res_beam_lm)
 
-        lers_greedy, ler_mean_greedy, ler_raw_greedy, ler_raw_mean_greedy = lers(originals, results_greedy)
-        lers_beam, ler_mean_beam, ler_raw_beam, ler_raw_mean_beam = lers(originals, results_beam)
+        lers_greedy, ler_mean_greedy, ler_raw_greedy, ler_raw_mean_greedy = lers(originals, res_greedy)
+        lers_greedy_lm, ler_mean_greedy_lm, ler_raw_greedy_lm, ler_raw_mean_greedy_lm = lers(originals, res_greedy_lm)
+        lers_beam, ler_mean_beam, ler_raw_beam, ler_raw_mean_beam = lers(originals, res_beam)
+        lers_beam_lm, ler_mean_beam_lm, ler_raw_beam_lm, ler_raw_mean_beam_lm = lers(originals, res_beam_lm)
+
+        table = [
+            ['best-path', wer_mean_greedy, ler_mean_greedy, ler_raw_mean_greedy],
+            ['beam search', wer_mean_beam, ler_mean_beam, ler_raw_mean_beam],
+            ['best-path (with LM)', wer_mean_greedy_lm, ler_mean_greedy_lm, ler_raw_mean_greedy_lm],
+            ['beam_search (with LM)', wer_mean_beam_lm, ler_mean_beam_lm, ler_raw_mean_beam_lm],
+        ]
+        headers = ['decoding strategy', 'WER', 'LER', 'LER (raw)']
+
         print('--------------------------------------------------------')
         print(f'Validation results after epoch {epoch+1}: WER & LER using best-path and beam search decoding')
         if self.lm and self.lm_vocab:
             print(f'using LM at: {self.lm_path}')
             print(f'using LM vocab at: {self.vocab_path}')
         print('--------------------------------------------------------')
-        print(f'best-path decoding:')
-        print(f'  Ø WER      : {wer_mean_greedy}')
-        print(f'  Ø LER      : {ler_mean_greedy}')
-        print(f'  Ø LER (raw): {ler_raw_mean_greedy}')
-        print(f'beam search decoding:')
-        print(f'  Ø WER      : {wer_mean_beam}')
-        print(f'  Ø LER      : {ler_mean_beam}')
-        print(f'  Ø LER (raw): {ler_raw_mean_beam}')
+        print(tabulate(table, headers=headers))
         print('--------------------------------------------------------')
 
-        self.df_history.loc[epoch] = [wer_mean_greedy, ler_mean_greedy, ler_raw_mean_greedy]
+        self.df_history.loc[epoch] = [wer_mean_greedy, ler_mean_greedy, ler_raw_mean_greedy,
+                                      wer_mean_beam, ler_mean_beam, ler_raw_mean_beam,
+                                      wer_mean_greedy_lm, ler_mean_greedy_lm, ler_raw_mean_greedy_lm,
+                                      wer_mean_beam_lm, ler_mean_beam_lm, ler_raw_mean_beam_lm
+                                      ]
 
         K.set_learning_phase(1)
 
-    def calculate_wer_ler(self, ground_truths, predictions_greedy, predictions_beam):
+    def calculate_wer_ler(self, ground_truths, pred_greedy, pred_beam, pred_greedy_lm, pred_beam_lm):
         results = []
 
-        for ground_truth, pred_greedy, pred_beam in zip(ground_truths, predictions_greedy, predictions_beam):
-            pred_greedy_lm = correction(pred_greedy, self.lm, self.lm_vocab)
-            pred_beam_lm = correction(pred_beam, self.lm, self.lm_vocab)
+        for ground_truth, pred_greedy, pred_beam in zip(ground_truths, pred_greedy, pred_beam):
             result = {
                 'predictions': ['best path',
                                 'best path + LM',

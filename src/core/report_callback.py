@@ -115,8 +115,8 @@ class ReportCallback(callbacks.Callback):
         table = [
             ['best-path', wer_mean_greedy, ler_mean_greedy, ler_raw_mean_greedy],
             ['beam search', wer_mean_beam, ler_mean_beam, ler_raw_mean_beam],
-            ['best-path (with LM)', wer_mean_greedy_lm, ler_mean_greedy_lm, ler_raw_mean_greedy_lm],
-            ['beam_search (with LM)', wer_mean_beam_lm, ler_mean_beam_lm, ler_raw_mean_beam_lm],
+            ['best-path + LM', wer_mean_greedy_lm, ler_mean_greedy_lm, ler_raw_mean_greedy_lm],
+            ['beam search + LM', wer_mean_beam_lm, ler_mean_beam_lm, ler_raw_mean_beam_lm],
         ]
         headers = ['decoding strategy', 'WER', 'LER', 'LER (raw)']
 

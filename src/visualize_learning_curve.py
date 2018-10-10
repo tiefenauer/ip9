@@ -13,46 +13,62 @@ import pandas as pd
 
 def main(args):
     source_dir, target_dir = setup(args)
-    dfs_loss, dfs_ler_wer = collect_data(source_dir)
+    df_losses, df_metrics = collect_data(source_dir)
 
-    fig_loss, _ = plot_losses(dfs_loss)
-    fig_ler_wer, _ = plot_ler_wer(dfs_ler_wer)
+    fig_loss, _ = plot_losses(df_losses)
+    fig_best, fig_beam, _, _ = plot_metrics(df_metrics)
 
     fig_loss.savefig(join(target_dir, 'losses.png'))
-    fig_ler_wer.savefig(join(target_dir, 'wer_ler.png'))
+    fig_best.savefig(join(target_dir, 'wer_ler_best.png'))
+    fig_beam.savefig(join(target_dir, 'wer_ler_beam.png'))
 
     plt.show()
 
 
-def plot_losses(dfs_loss):
-    styles = [[color + style for style in ['--', '-']] for color in ['r', 'g', 'b', 'c']]
-    legends = ['training', 'validation']
-    return plot_to_subplots(dfs_loss, styles, legends, 'CTC loss')
+def plot_losses(df_losses):
+    fig, axes = plt.subplots(ncols=2, nrows=2, sharex=True, sharey=True, figsize=(14, 9))
+    plot_to_subplots(df_losses['CTC_train'], axes, ['r--'] * 4)
+    plot_to_subplots(df_losses['CTC_val'], axes, ['r-'] * 4)
+
+    [ax.legend(['training', 'validation']) for ax in axes.flatten()]
+    [ax.set_xlabel('epochs') for ax in axes.flatten()]
+    [ax.set_ylabel('CTC loss') for ax in axes.flatten()]
+
+    fig.tight_layout()
+    return fig, axes
 
 
-def plot_ler_wer(dfs_ler_wer):
-    styles = [[color + '-' for color in ['r', 'b']]] * 4
-    legends = ['LER', 'WER']
-    return plot_to_subplots(dfs_ler_wer, styles, legends, 'WER/LER')
+def plot_metrics(df_metrics):
+    fig_best, axes_best = plot_metrics_for_decoding(df_metrics, 'best')
+    fig_beam, axes_beam = plot_metrics_for_decoding(df_metrics, 'beam')
+    return fig_best, fig_beam, axes_best, axes_beam
 
 
-def plot_to_subplots(dfs, styles, legends, ylabel, xlabel='epochs', titles=None):
-    if titles is None:
-        titles = ['1 minute', '10 minutes', '100 minutes', '1,000 minutes']
+def plot_metrics_for_decoding(df_metrics, decoding_strategy):
+    df_wer = df_metrics['WER'][decoding_strategy]['lm_n']
+    df_wer_lm = df_metrics['WER'][decoding_strategy]['lm_y']
+    df_ler = df_metrics['LER'][decoding_strategy]['lm_n']
+    df_ler_lm = df_metrics['LER'][decoding_strategy]['lm_y']
 
     fig, axes = plt.subplots(ncols=2, nrows=2, sharex=True, sharey=True, figsize=(14, 9))
 
-    for df, ax, title, style in zip(dfs, axes.flatten(), titles, styles):
-        df.plot(ax=ax, style=style)
+    plot_to_subplots(df_wer, axes, ['r--'] * 4)
+    plot_to_subplots(df_wer_lm, axes, ['r-'] * 4)
+    plot_to_subplots(df_ler, axes, ['b--'] * 4)
+    plot_to_subplots(df_ler_lm, axes, ['b-'] * 4)
 
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.legend(legends)
+    [ax.legend(['WER', ' WER + LM', 'LER', ' LER + LM']) for ax in axes.flatten()]
+    [ax.set_xlabel('epoch') for ax in axes.flatten()]
+    [ax.set_ylabel('WER/LER') for ax in axes.flatten()]
 
-    plt.tight_layout()
-
+    fig.tight_layout()
     return fig, axes
+
+
+def plot_to_subplots(df, axes, styles):
+    for key, ax, style in zip(['1_min', '10_min', '100_min', '1000_min'], axes.flatten(), styles):
+        df[key].plot(ax=ax, style=style)
+        ax.set_title(key.replace('_', ' '))
 
 
 def setup(args):
@@ -66,43 +82,56 @@ def setup(args):
     return source_dir, target_dir
 
 
-def collect_data(source_dir, columns=None):
-    if columns is None:
-        columns = ['1_min', '10_min', '100_min', '1000_min']
-    df_loss, df_val_loss = collect_tensorboard_losses(source_dir, columns)
-    df_ler, df_wer = collect_ler_wer(source_dir, columns)
-
-    dfs_loss = [pd.concat([df_loss[key], df_val_loss[key]], axis=1) for key in columns]
-    dfs_ler_wer = [pd.concat([df_ler[key], df_wer[key]], axis=1) for key in columns]
-    return dfs_loss, dfs_ler_wer
+def collect_data(source_dir):
+    df_losses = collect_losses(source_dir)
+    df_metrics = collect_ler_wer(source_dir)
+    return df_losses, df_metrics
 
 
-def collect_tensorboard_losses(source_dir, columns):
-    df_loss = read_tensorflow_loss(source_dir, '-loss.csv', columns)
-    df_val_loss = read_tensorflow_loss(source_dir, '-val_loss.csv', columns)
-    return df_loss, df_val_loss
+def collect_losses(source_dir):
+    columns = [
+        ['CTC_train', 'CTC_val'],
+        ['1_min', '10_min', '100_min', '1000_min']
+    ]
+
+    df_losses = pd.DataFrame(columns=pd.MultiIndex.from_product(columns))
+
+    for minutes, loss_csv in map_files_to_minutes(source_dir, 'run_', '-loss.csv').items():
+        df_losses['CTC_train', f'{minutes}_min'] = pd.read_csv(loss_csv)['Value']
+    for minutes, loss_csv in map_files_to_minutes(source_dir, 'run_', '-val_loss.csv').items():
+        df_losses['CTC_val', f'{minutes}_min'] = pd.read_csv(loss_csv)['Value']
+
+    df_losses.index += 1
+    return df_losses
 
 
-def read_tensorflow_loss(source_dir, postfix, columns):
-    df = pd.DataFrame(columns=columns)
-    for minutes, loss_csv in map_files_to_minutes(source_dir, 'run_', postfix).items():
-        df[f'{minutes}_min'] = pd.read_csv(loss_csv)['Value'].values
-    df.index += 1
-    return df
+def collect_ler_wer(source_dir):
+    columns = [
+        ['WER', 'LER', 'LER_raw'],
+        ['best', 'beam'],
+        ['lm_n', 'lm_y'],
+        ['1_min', '10_min', '100_min', '1000_min']
+    ]
 
-
-def collect_ler_wer(source_dir, columns):
-    df_ler = pd.DataFrame(columns=columns)
-    df_wer = pd.DataFrame(columns=columns)
+    df_ler_wer = pd.DataFrame(columns=pd.MultiIndex.from_product(columns))
     for subdir_name in get_immediate_subdirectories(source_dir):
         for minutes, ler_wer_csv in map_files_to_minutes(join(source_dir, subdir_name), 'model_', '.csv').items():
-            df_ler_wer = pd.read_csv(ler_wer_csv)
-            df_ler[f'{minutes}_min'] = df_ler_wer['LER'].values
-            df_wer[f'{minutes}_min'] = df_ler_wer['WER'].values
+            df = pd.read_csv(ler_wer_csv)
+            df_ler_wer['WER', 'best', 'lm_n', f'{minutes}_min'] = df['WER_greedy']
+            df_ler_wer['WER', 'best', 'lm_y', f'{minutes}_min'] = df['WER_greedy_lm']
+            df_ler_wer['WER', 'beam', 'lm_n', f'{minutes}_min'] = df['WER_beam']
+            df_ler_wer['WER', 'beam', 'lm_y', f'{minutes}_min'] = df['WER_beam_lm']
+            df_ler_wer['LER', 'best', 'lm_n', f'{minutes}_min'] = df['LER_greedy']
+            df_ler_wer['LER', 'best', 'lm_y', f'{minutes}_min'] = df['LER_greedy_lm']
+            df_ler_wer['LER', 'beam', 'lm_n', f'{minutes}_min'] = df['LER_beam']
+            df_ler_wer['LER', 'beam', 'lm_y', f'{minutes}_min'] = df['LER_beam_lm']
+            df_ler_wer['LER_raw', 'best', 'lm_n', f'{minutes}_min'] = df['ler_raw_greedy']
+            df_ler_wer['LER_raw', 'best', 'lm_y', f'{minutes}_min'] = df['ler_raw_greedy_lm']
+            df_ler_wer['LER_raw', 'beam', 'lm_n', f'{minutes}_min'] = df['ler_raw_beam']
+            df_ler_wer['LER_raw', 'beam', 'lm_y', f'{minutes}_min'] = df['ler_raw_beam_lm']
 
-    df_ler.index += 1
-    df_wer.index += 1
-    return df_ler, df_wer
+    df_ler_wer.index += 1
+    return df_ler_wer
 
 
 def map_files_to_minutes(root_dir, prefix, suffix):

@@ -183,14 +183,14 @@ class ReportCallback(callbacks.Callback):
 
     def stop_early(self):
         """
-        stop early if last WER is bigger than all 4 previous WERs
+        stop early if last beam search LER (before LM-correction) is bigger than all 4 previous values
         """
-        wers = self.df_history['WER']
-        if len(wers) <= 4:
+        lers_beam = self.df_history['LER_beam']
+        if len(lers_beam) <= 4:
             return False
 
-        last = wers[-1]
-        rest = wers[-5:-1]
+        last = lers_beam[-1]
+        rest = lers_beam[-5:-1]
         print(f'{last} vs {rest}')
 
         return all(val <= last for val in rest)

@@ -109,36 +109,76 @@ A simpler variant that is used in this project is to infer the transcriptions fi
 
 \section{Plotting a learning curve}
 
-The total length of all transcribed speech segments in the \textit{LibriSpeech} corpus is roughly 47 days (1,141 hours). Training on all these samples was not feasible within project time . However, we can get an estimation of the expected learning progress by plotting a \textit{learning curve}. This was done using transcribed audio segments from the \textit{LibriSpeech} corpus. Training was done on exponentially increasing amounts of training data (1, 10, 100 and 1000 minutes of transcribed audio). To assess the impact of using a \ac{LM}, the learning curve was plotted twice: Figure \ref{learning_curve_without_lm} shows the learning curve for \ac{WER} and \ac{LER} without using a \ac{LM}. Figure \ref{learning_curve_with_lm} shows the learning curve for training with a 4-gram \ac{LM}.
+The following three corpora were available for training from the previous IP8 project:
+
+\begin{itemize}
+	\item \textbf{\ac{LS}}: This corpus was created in the IP8 project from raw data from OpenSLR\footnote{\url{http://www.openslr.org/12/}}. Samples were extracted by exploiting metadata from the corpus. The corpus consists of a number of audio files containing  recordings from different speakers. Each recording contained several aligned samples. A binary index file contained the mapping to the audio file as well as the temporal information for each sample. The raw data was already divided into training-, validation- and test-set, respecting a similar distribution over the sets. This corpus was not changed for this project.
+	\item \textbf{\ac{RL}}: This corpus was created from raw data provided by \textit{ReadyLingua}. Since the raw data contained recordings in several languages, separate subsets were created for each language. The corpus format is equal to the \ac{LS} corpus described above.
+\end{itemize}
+
+The following corpus was considered additionally for this project:
+
+\begin{itemize}
+	\item \textbf{\ac{CV}}\footnote{\url{https://voice.mozilla.org/en/data}}: This corpus is built and maintained by the Mozilla Foundation. There are datasets for various languages. The English version of the corpus was used by Mozilla's own \textit{DeepSpeech} implementation and is also used in this project. It contains recordings of different contributors from all over the world. The datasets are publicly available and come already divided into training-, validation- and test-set. Each set consists of an individual audio file per sample and a CSV file containing the transcriptions for each sample.
+\end{itemize}
+
+Table \ref{corpora_stats} shows some statistics about the corpora described above.
+
+\begin{table}[!htbp]
+	\centering
+	\begin{tabular}{|l|r|r|r|}
+		\hline
+		\thead{Corpus} & \thead{total audio length} & \thead{avg sample length} & \thead{\# samples} \\
+		\hline
+		LibriSpeech & $44 days, 16:51:03$ & $12.3202$ & $313,491$ \\ 
+		ReadyLingua (English samples) & $4:18:51$ & $3.3538$ & $4,631$ \\ 
+		CommonVoice & $9 days, 15:30:05$ & $4.3118$ & $193,284$ \\ 
+		\hline
+	\end{tabular}
+	\caption{Statistics about corpora that were available for training}
+	\label{corpora_stats}
+\end{table}
+
+The model in the IP8 project was supposed to be trained on the \textit{LibriSpeech} corpus, because this corpus was much larger than the \ac{RL} corpus. It became clear however that training on all samples from this corpus was not feasible within project time because training time would have taken more than two months. It also turned out in the course of this project that the \ac{LS} corpus was probably less useful than initially assumed because the average sample length was much longer than the samples in the \ac{RL} corpus. Therefore, the newly added \ac{CV} corpus was used as main corpus for training because it was both much larger than the \ac{RL} corpus (although not as large as the \ac{LS} corpus) while providing samples with similar average length at the same time.
+
+Although the training time on all samples of the \ac{CV} corpus is still too long for the available project time, we can still get an estimate of the learning progress by plotting a \textit{learning curve}. For this, training was done on exponentially increasing amounts of training data (1, 10, 100 and 1,000 minutes of transcribed audio). Training was done observing the behavior of the \ac{CTC}-loss for training and validation. Additionally, the progress of the \ac{WER}/\ac{LER}-metrics were observed along the dimensions:
+
+\begin{itemize}
+	\item \textbf{Decoder dimension}: Since the \ac{CTC} paper proposes two different decoding strategies (\textit{best-path} and \textit{beam search}) \cite{ctc_paper}, progress of the \ac{WER} and \ac{LER} was measured separately for both strategies.
+	\item \textbf{LM dimension}: Since spelling correction \ac{LM} as described above does not necessarily lead to a more accurate transcript, the \ac{WER} and \ac{LER} metrics were measured both with and without using the \ac{LM} .
+\end{itemize}
+
+Figure \ref{lc_loss_cv} shows the learning curve for the \ac{CTC}-loss\ac{WER} and \ac{LER} without using a \ac{LM}. Figure \ref{lc_metrics_cv} shows the learning curve for training with a 4-gram \ac{LM}. To assess the impact of both the decoder- and the \ac{LM} dimension, the plot contains two curves.
+: 
 
 \begin{figure}
-	\includegraphics[width=\linewidth]{./img/learning_curve_lm_beamsearch.png}
-	\caption{Learning curve for training on 1/10/100/1000 minutes of transcribed audio from \textit{ReadyLingua} using a 2-gram \ac{LM} and Beam-Search decoding}
-	\label{learning_curve_without_lm}
+	\includegraphics[width=\linewidth]{./img/lc_loss_cv.png}
+	\caption{Learning curve for the CTC-loss while training on 1/10/100/1000 minutes of transcribed audio from the \ac{CV} corpus using the $5$-gram \ac{LM} provided by the Mozilla implementation of \textit{DeepSpeech}}
+	\label{lc_loss_cv}
 \end{figure}
 
 \begin{figure}
-	\includegraphics[width=\linewidth]{./img/learning_curve_lm_beamsearch.png}
-	\caption{Learning curve for training on 1/10/100/1000 minutes of transcribed audio from \textit{ReadyLingua} using a 2-gram \ac{LM} and Beam-Search decoding}
-	\label{learning_curve_with_lm}
+	\includegraphics[width=\linewidth]{./img/lc_metrics_cv.png}
+	\caption{Learning curve for the \ac{WER} and \ac{LER} metric while training on 1/10/100/1000 minutes of transcribed audio from the \ac{CV} corpus with and without spelling correction with a \ac{LM}. For the lines where spelling was corrected, the $5$-gram \ac{LM} provided by the Mozilla implementation of \textit{DeepSpeech} was used.}
+	\label{lc_metrics_cv}
 \end{figure}
 
-Hier etwas über
-
-- Batchgrösse (Qualität nimmt mit zunehmender batchgrösse ab!)
-- Padding der Trainingssequenzen
-- Sortierung der Trainingsdaten nach Länge (ist besser, da weniger blanks gepadded, schnellere Konversion)
-- ...
-
-Beispiel für Prediction, wo LER/WER durch LM verschlechtert wurde: (aus /home/daniel/_runs/lc_bestpath_rlen/1000_min_bestpath/test_results.csv)
-
-#: 546	
-ground truth: i want to wish you a very happy thanksgiving	
-prediction: oento wiceyouepery appy thangksive (LER=0.431818181818182, WER=1)
-prediction (LM-corrected): onto wiceyouepery app thangksive	(LER=0.454545454545455	WER=1)
-
-
-
+%Hier etwas über
+%
+%- Batchgrösse (Qualität nimmt mit zunehmender batchgrösse ab!)
+%- Padding der Trainingssequenzen
+%- Sortierung der Trainingsdaten nach Länge (ist besser, da weniger blanks gepadded, schnellere Konversion)
+%- ...
+%
+%Beispiel für Prediction, wo LER/WER durch LM verschlechtert wurde: (aus /home/daniel/_runs/lc_bestpath_rlen/1000_min_bestpath/test_results.csv)
+%
+%#: 546	
+%ground truth: i want to wish you a very happy thanksgiving	
+%prediction: oento wiceyouepery appy thangksive (LER=0.431818181818182, WER=1)
+%prediction (LM-corrected): onto wiceyouepery app thangksive	(LER=0.454545454545455	WER=1)
+%
+%
+%
 % To do:
 % - train on LibriSpeech data
 % - train using Best-Path

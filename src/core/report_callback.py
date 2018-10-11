@@ -10,7 +10,8 @@ from tabulate import tabulate
 from tqdm import tqdm
 
 from core.decoder import BeamSearchDecoder, BestPathDecoder
-from util.lm_util import ler, wer, load_lm, correction, lers, wers, ler_norm
+from util.asr_util import infer_batch
+from util.lm_util import ler, wer, load_lm, lers, wers, ler_norm
 from util.rnn_util import save_model
 
 
@@ -79,15 +80,11 @@ class ReportCallback(callbacks.Callback):
 
         for _ in tqdm(range(len(self.data_valid))):
             batch_inputs, _ = next(self.data_valid)
-            batch_input = batch_inputs['the_input']
-            batch_input_lengths = batch_inputs['input_length']
-            ground_truths = batch_inputs['source_str']
-
-            preds_greedy = self.decoder_greedy.decode(batch_input, batch_input_lengths)
-            preds_beam = self.decoder_beam.decode(batch_input, batch_input_lengths)
-
-            preds_greedy_lm = [correction(pred_greedy, self.lm, self.lm_vocab) for pred_greedy in preds_greedy]
-            preds_beam_lm = [correction(pred_beam, self.lm, self.lm_vocab) for pred_beam in preds_beam]
+            ground_truths, preds_greedy, preds_greedy_lm, preds_beam, preds_beam_lm = infer_batch(batch_inputs,
+                                                                                                  self.decoder_greedy,
+                                                                                                  self.decoder_beam,
+                                                                                                  self.lm,
+                                                                                                  self.lm_vocab)
 
             results = calculate_wer_ler(ground_truths, preds_greedy, preds_beam, preds_greedy_lm, preds_beam_lm)
 
@@ -206,33 +203,35 @@ def is_last_value_smallest(values):
 
 
 def calculate_wer_ler(ground_truths, preds_greedy, preds_beam, preds_greedy_lm, preds_beam_lm):
-    results = []
+    index = pd.MultiIndex.from_product([['best-path', 'beam search'], ['lm_n', 'lm_y']],
+                                       names=['decoding strategy', 'LM correction'])
 
+    results = []
     for ground_truth, pred_greedy, pred_beam, pred_greedy_lm, pred_beam_lm in zip(ground_truths,
                                                                                   preds_greedy, preds_beam,
                                                                                   preds_greedy_lm, preds_beam_lm):
-        result = {
-            'predictions': ['best path',
-                            'beam search',
-                            'best path + LM',
-                            'beam search + LM'],
-            ground_truth: [pred_greedy,
-                           pred_beam,
-                           pred_greedy_lm,
-                           pred_beam_lm],
-            'LER': [ler(ground_truth, pred_greedy),
-                    ler(ground_truth, pred_beam),
-                    ler(ground_truth, pred_greedy_lm),
-                    ler(ground_truth, pred_beam_lm)],
-            'LER (normalized)': [ler_norm(ground_truth, pred_greedy),
-                                 ler_norm(ground_truth, pred_beam),
-                                 ler_norm(ground_truth, pred_greedy_lm),
-                                 ler_norm(ground_truth, pred_beam_lm)],
-            'WER': [wer(ground_truth, pred_greedy),
-                    wer(ground_truth, pred_beam),
-                    wer(ground_truth, pred_greedy_lm),
-                    wer(ground_truth, pred_beam_lm)]
-        }
+        result = pd.DataFrame(index=index, columns=['ground truth', 'prediction', 'WER', 'LER', 'LER_raw'])
+        result['ground truth'] = ground_truth
+        result.loc['best-path', 'lm_n']['prediction'] = pred_greedy
+        result.loc['best-path', 'lm_y']['prediction'] = pred_greedy_lm
+        result.loc['beam search', 'lm_n']['prediction'] = pred_beam
+        result.loc['beam search', 'lm_y']['prediction'] = pred_beam_lm
+
+        result.loc['best-path', 'lm_n']['LER'] = ler_norm(ground_truth, pred_greedy)
+        result.loc['best-path', 'lm_y']['LER'] = ler_norm(ground_truth, pred_greedy_lm)
+        result.loc['beam search', 'lm_n']['LER'] = ler_norm(ground_truth, pred_beam)
+        result.loc['beam search', 'lm_y']['LER'] = ler_norm(ground_truth, pred_beam_lm)
+
+        result.loc['best-path', 'lm_n']['WER'] = wer(ground_truth, pred_greedy)
+        result.loc['best-path', 'lm_y']['WER'] = wer(ground_truth, pred_greedy_lm)
+        result.loc['beam search', 'lm_n']['WER'] = wer(ground_truth, pred_beam)
+        result.loc['beam search', 'lm_y']['WER'] = wer(ground_truth, pred_beam_lm)
+
+        result.loc['best-path', 'lm_n']['LER_raw'] = ler(ground_truth, pred_greedy)
+        result.loc['best-path', 'lm_y']['LER_raw'] = ler(ground_truth, pred_greedy_lm)
+        result.loc['beam search', 'lm_n']['LER_raw'] = ler(ground_truth, pred_beam)
+        result.loc['beam search', 'lm_y']['LER_raw'] = ler(ground_truth, pred_beam_lm)
+
         results.append(result)
 
     return results

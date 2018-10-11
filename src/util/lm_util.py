@@ -33,16 +33,19 @@ def wer(ground_truth, prediction):
 def wers(ground_truths, predictions):
     assert len(ground_truths) > 0, f'ERROR: no ground truths provided!'
     assert len(ground_truths) == len(predictions), f'ERROR: # of ground truths does not match # of predictions!'
-    rates = [wer(ground_truth, prediction) for (ground_truth, prediction) in zip(ground_truths, predictions)]
-    return rates, np.mean(rates)
+    return np.array([wer(ground_truth, pred) for (ground_truth, pred) in zip(ground_truths, predictions)])
 
 
 def lers(ground_truths, predictions):
     assert len(ground_truths) > 0, f'ERROR: no ground truths provided!'
     assert len(ground_truths) == len(predictions), f'ERROR: # of ground truths does not match # of predictions!'
-    lers_raw = [ler(ground_truth, prediction) for (ground_truth, prediction) in zip(ground_truths, predictions)]
-    lers_norm = [ler_norm(ground_truth, prediction) for (ground_truth, prediction) in zip(ground_truths, predictions)]
-    return lers_norm, np.mean(lers_norm), lers_raw, np.mean(lers_raw)
+    return np.array([ler(ground_truth, pred) for (ground_truth, pred) in zip(ground_truths, predictions)])
+
+
+def lers_norm(ground_truths, predictions):
+    assert len(ground_truths) > 0, f'ERROR: no ground truths provided!'
+    assert len(ground_truths) == len(predictions), f'ERROR: # of ground truths does not match # of predictions!'
+    return np.array([ler_norm(ground_truth, pred) for (ground_truth, pred) in zip(ground_truths, predictions)])
 
 
 def load_lm(lm_path, vocab_path):

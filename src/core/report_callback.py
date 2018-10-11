@@ -1,3 +1,4 @@
+import itertools
 import sys
 from os import makedirs
 from os.path import isdir, join
@@ -6,12 +7,12 @@ import keras.backend as K
 import numpy as np
 import pandas as pd
 from keras import callbacks
-from tabulate import tabulate
 from tqdm import tqdm
 
 from core.decoder import BeamSearchDecoder, BestPathDecoder
-from util.asr_util import infer_batch
-from util.lm_util import ler, wer, load_lm, lers, wers, ler_norm
+from util.asr_util import infer_batch, calculate_metrics, calculate_metrics_mean
+from util.lm_util import load_lm
+from util.log_util import print_dataframe
 from util.rnn_util import save_model
 
 
@@ -57,12 +58,11 @@ class ReportCallback(callbacks.Callback):
 
         # WER/LER history
         self.df_history = pd.DataFrame(index=np.arange(num_epochs),
-                                       columns=['WER_greedy', 'LER_greedy', 'ler_raw_greedy',
-                                                'WER_beam', 'LER_beam', 'ler_raw_beam',
-                                                'WER_greedy_lm', 'LER_greedy_lm', 'ler_raw_greedy_lm',
-                                                'WER_beam_lm', 'LER_beam_lm', 'ler_raw_beam_lm'
-                                                ])
-
+                                       columns=pd.MultiIndex.from_product([
+                                           ['Ø WER', 'Ø LER', 'Ø LER (raw)'],
+                                           ['greedy', 'beam'],
+                                           ['lm_n', 'lm_y']
+                                       ]))
         # base name for files that will be written to target directory
         self.base_name = 'model' + (f'_{self.num_minutes}_min' if self.num_minutes else '')
         print(f'base name for result files: {self.base_name}')
@@ -75,47 +75,21 @@ class ReportCallback(callbacks.Callback):
             self.data_valid.shuffle_entries()
 
         print(f'validating epoch {epoch+1} using best-path and beam search decoding')
-        originals, res_greedy, res_beam, res_greedy_lm, res_beam_lm = [], [], [], [], []
+        inferences = []
         self.data_valid.cur_index = 0  # reset index
 
         for _ in tqdm(range(len(self.data_valid))):
             batch_inputs, _ = next(self.data_valid)
-            ground_truths, preds_greedy, preds_greedy_lm, preds_beam, preds_beam_lm = infer_batch(batch_inputs,
-                                                                                                  self.decoder_greedy,
-                                                                                                  self.decoder_beam,
-                                                                                                  self.lm,
-                                                                                                  self.lm_vocab)
+            batch_inferences = infer_batch(batch_inputs, self.decoder_greedy, self.decoder_beam, self.lm, self.lm_vocab)
+            inferences.append(batch_inferences)
 
-            results = calculate_wer_ler(ground_truths, preds_greedy, preds_beam, preds_greedy_lm, preds_beam_lm)
+            batch_metrics = calculate_metrics(batch_inferences)
+            good_results = batch_metrics[batch_metrics['WER'] < 0.6]
 
-            for result in results if self.force_output else filter(
-                    lambda result: any([wer_val < 0.6 for wer_val in result['WER']]), results):
-                print()
-                print(tabulate(result, headers='keys', floatfmt='.4f'))
+            if self.force_output or not good_results.empty:
+                print_dataframe(good_results)
 
-            originals = originals + ground_truths
-            res_greedy = res_greedy + preds_greedy
-            res_beam = res_beam + preds_beam
-            res_greedy_lm = res_greedy_lm + preds_greedy_lm
-            res_beam_lm = res_beam_lm + preds_beam_lm
-
-        wers_greedy, wer_mean_greedy = wers(originals, res_greedy)
-        wers_greedy_lm, wer_mean_greedy_lm = wers(originals, res_greedy_lm)
-        wers_beam, wer_mean_beam = wers(originals, res_beam)
-        wers_beam_lm, wer_mean_beam_lm = wers(originals, res_beam_lm)
-
-        lers_greedy, ler_mean_greedy, ler_raw_greedy, ler_raw_mean_greedy = lers(originals, res_greedy)
-        lers_greedy_lm, ler_mean_greedy_lm, ler_raw_greedy_lm, ler_raw_mean_greedy_lm = lers(originals, res_greedy_lm)
-        lers_beam, ler_mean_beam, ler_raw_beam, ler_raw_mean_beam = lers(originals, res_beam)
-        lers_beam_lm, ler_mean_beam_lm, ler_raw_beam_lm, ler_raw_mean_beam_lm = lers(originals, res_beam_lm)
-
-        table = [
-            ['best-path', wer_mean_greedy, ler_mean_greedy, ler_raw_mean_greedy],
-            ['beam search', wer_mean_beam, ler_mean_beam, ler_raw_mean_beam],
-            ['best-path + LM', wer_mean_greedy_lm, ler_mean_greedy_lm, ler_raw_mean_greedy_lm],
-            ['beam search + LM', wer_mean_beam_lm, ler_mean_beam_lm, ler_raw_mean_beam_lm],
-        ]
-        headers = ['decoding strategy', 'WER', 'LER', 'LER (raw)']
+        mean_metrics = calculate_metrics_mean(pd.concat(inferences, sort=False))
 
         print('--------------------------------------------------------')
         print(f'Validation results after epoch {epoch+1}: WER & LER using best-path and beam search decoding')
@@ -123,14 +97,26 @@ class ReportCallback(callbacks.Callback):
             print(f'using LM at: {self.lm_path}')
             print(f'using LM vocab at: {self.vocab_path}')
         print('--------------------------------------------------------')
-        print(tabulate(table, headers=headers))
+        print_dataframe(mean_metrics)
         print('--------------------------------------------------------')
 
-        self.df_history.loc[epoch] = [wer_mean_greedy, ler_mean_greedy, ler_raw_mean_greedy,
-                                      wer_mean_beam, ler_mean_beam, ler_raw_mean_beam,
-                                      wer_mean_greedy_lm, ler_mean_greedy_lm, ler_raw_mean_greedy_lm,
-                                      wer_mean_beam_lm, ler_mean_beam_lm, ler_raw_mean_beam_lm
-                                      ]
+        for m, d, l in itertools.product(['Ø WER', 'Ø LER', 'Ø LER (raw)'], ['greedy', 'beam'], ['lm_n', 'lm_y']):
+            self.df_history.loc[epoch][m, d, l] = mean_metrics.loc[d, l][m]
+
+        # self.df_history.loc[epoch]['Ø WER', 'greedy', 'lm_n'] = mean_metrics.loc['greedy', 'lm_n']['Ø WER']
+        # self.df_history.loc[epoch]['Ø WER', 'greedy', 'lm_y'] = mean_metrics.loc['greedy', 'lm_y']['Ø WER']
+        # self.df_history.loc[epoch]['Ø WER', 'beam', 'lm_n'] = mean_metrics.loc['beam', 'lm_n']['Ø WER']
+        # self.df_history.loc[epoch]['Ø WER', 'beam', 'lm_y'] = mean_metrics.loc['beam', 'lm_y']['Ø WER']
+        #
+        # self.df_history.loc[epoch]['Ø LER', 'greedy', 'lm_n'] = mean_metrics.loc['greedy', 'lm_n']['Ø LER']
+        # self.df_history.loc[epoch]['Ø LER', 'greedy', 'lm_y'] = mean_metrics.loc['greedy', 'lm_y']['Ø LER']
+        # self.df_history.loc[epoch]['Ø LER', 'beam', 'lm_n'] = mean_metrics.loc['beam', 'lm_n']['Ø LER']
+        # self.df_history.loc[epoch]['Ø LER', 'beam', 'lm_y'] = mean_metrics.loc['beam', 'lm_y']['Ø LER']
+        #
+        # self.df_history.loc[epoch]['Ø LER (raw)', 'greedy', 'lm_n'] = mean_metrics.loc['greedy', 'lm_n']['Ø LER (raw)']
+        # self.df_history.loc[epoch]['Ø LER (raw)', 'greedy', 'lm_y'] = mean_metrics.loc['greedy', 'lm_y']['Ø LER (raw)']
+        # self.df_history.loc[epoch]['Ø LER (raw)', 'beam', 'lm_n'] = mean_metrics.loc['beam', 'lm_n']['Ø LER (raw)']
+        # self.df_history.loc[epoch]['Ø LER (raw)', 'beam', 'lm_y'] = mean_metrics.loc['beam', 'lm_y']['Ø LER (raw)']
 
         K.set_learning_phase(1)
 
@@ -167,14 +153,14 @@ class ReportCallback(callbacks.Callback):
         We have a new benchmark if the last value in a sequence of metrics is the smallest
         """
         metrics = [
-            self.df_history['WER_greedy'].dropna().values,  # WER (best-path)
-            self.df_history['LER_greedy'].dropna().values,  # LER (best-path)
-            self.df_history['WER_beam'].dropna().values,  # WER (beam search)
-            self.df_history['LER_beam'].dropna().values,  # LER (beam search)
-            self.df_history['WER_greedy_lm'].dropna().values,  # WER (best-path + LM)
-            self.df_history['LER_greedy_lm'].dropna().values,  # LER (best-path + LM)
-            self.df_history['WER_beam_lm'].dropna().values,  # WER (beam search + LM)
-            self.df_history['LER_beam_lm'].dropna().values,  # LER (beam search + LM)
+            self.df_history['Ø WER', 'greedy', 'lm_n'].dropna().values,  # WER (best-path)
+            self.df_history['Ø WER', 'greedy', 'lm_y'].dropna().values,  # WER (best-path + LM)
+            self.df_history['Ø WER', 'beam', 'lm_n'].dropna().values,  # WER (beam search)
+            self.df_history['Ø WER', 'beam', 'lm_y'].dropna().values,  # WER (beam search + LM)
+            self.df_history['Ø LER', 'greedy', 'lm_n'].dropna().values,  # LER (best-path)
+            self.df_history['Ø LER', 'greedy', 'lm_y'].dropna().values,  # LER (best-path + LM)
+            self.df_history['Ø LER', 'beam', 'lm_n'].dropna().values,  # LER (beam search)
+            self.df_history['Ø LER', 'beam', 'lm_y'].dropna().values,  # LER (beam search + LM)
         ]
         return any(is_last_value_smallest(metric) for metric in metrics)
 
@@ -182,7 +168,7 @@ class ReportCallback(callbacks.Callback):
         """
         stop early if last beam search LER (before LM-correction) is bigger than all 4 previous values
         """
-        lers_beam = self.df_history['LER_beam']
+        lers_beam = self.df_history['Ø LER', 'beam', 'lm_n']
         if len(lers_beam) <= 4:
             return False
 
@@ -200,38 +186,3 @@ def is_last_value_smallest(values):
     :return:
     """
     return len(values) > 2 and values[-1] < np.min(values[:-1])
-
-
-def calculate_wer_ler(ground_truths, preds_greedy, preds_beam, preds_greedy_lm, preds_beam_lm):
-    index = pd.MultiIndex.from_product([['best-path', 'beam search'], ['lm_n', 'lm_y']],
-                                       names=['decoding strategy', 'LM correction'])
-
-    results = []
-    for ground_truth, pred_greedy, pred_beam, pred_greedy_lm, pred_beam_lm in zip(ground_truths,
-                                                                                  preds_greedy, preds_beam,
-                                                                                  preds_greedy_lm, preds_beam_lm):
-        result = pd.DataFrame(index=index, columns=['ground truth', 'prediction', 'WER', 'LER', 'LER_raw'])
-        result['ground truth'] = ground_truth
-        result.loc['best-path', 'lm_n']['prediction'] = pred_greedy
-        result.loc['best-path', 'lm_y']['prediction'] = pred_greedy_lm
-        result.loc['beam search', 'lm_n']['prediction'] = pred_beam
-        result.loc['beam search', 'lm_y']['prediction'] = pred_beam_lm
-
-        result.loc['best-path', 'lm_n']['LER'] = ler_norm(ground_truth, pred_greedy)
-        result.loc['best-path', 'lm_y']['LER'] = ler_norm(ground_truth, pred_greedy_lm)
-        result.loc['beam search', 'lm_n']['LER'] = ler_norm(ground_truth, pred_beam)
-        result.loc['beam search', 'lm_y']['LER'] = ler_norm(ground_truth, pred_beam_lm)
-
-        result.loc['best-path', 'lm_n']['WER'] = wer(ground_truth, pred_greedy)
-        result.loc['best-path', 'lm_y']['WER'] = wer(ground_truth, pred_greedy_lm)
-        result.loc['beam search', 'lm_n']['WER'] = wer(ground_truth, pred_beam)
-        result.loc['beam search', 'lm_y']['WER'] = wer(ground_truth, pred_beam_lm)
-
-        result.loc['best-path', 'lm_n']['LER_raw'] = ler(ground_truth, pred_greedy)
-        result.loc['best-path', 'lm_y']['LER_raw'] = ler(ground_truth, pred_greedy_lm)
-        result.loc['beam search', 'lm_n']['LER_raw'] = ler(ground_truth, pred_beam)
-        result.loc['beam search', 'lm_y']['LER_raw'] = ler(ground_truth, pred_beam_lm)
-
-        results.append(result)
-
-    return results

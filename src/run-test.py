@@ -7,6 +7,7 @@ from keras.optimizers import SGD
 
 from core.batch_generator import CSVBatchGenerator
 from core.report_callback import *
+from util.asr_util import calculate_metrics
 from util.log_util import create_args_str
 from util.rnn_util import load_model_from_dir, create_keras_session
 
@@ -69,24 +70,21 @@ def test_model(model, test_files, test_batches, batch_size, lm, lm_vocab, target
     results = []
     for _ in tqdm(range(len(data_test)), unit=' batches'):
         batch_inputs, _ = next(data_test)
-        ground_truths, preds_greedy, preds_greedy_lm, preds_beam, preds_beam_lm = infer_batch(batch_inputs,
-                                                                                              decoder_greedy,
-                                                                                              decoder_beam,
-                                                                                              lm, lm_vocab)
-        results += calculate_wer_ler(ground_truths, preds_greedy, preds_beam, preds_greedy_lm, preds_beam_lm)
+        inferences = infer_batch(batch_inputs, decoder_greedy, decoder_beam, lm, lm_vocab)
+        results += calculate_metrics(inferences)
 
     df_results = pd.concat(results).sort_values(by='LER')
 
-    df_means = pd.DataFrame(index=pd.MultiIndex.from_product([['Ø LER', 'Ø WER'], ['best-path', 'beam search']]),
+    df_means = pd.DataFrame(index=pd.MultiIndex.from_product([['Ø LER', 'Ø WER'], ['greedy', 'beam']]),
                             columns=['without LM', 'with LM'])
-    df_means.loc['Ø LER', 'best-path']['without LM'] = df_results.loc['best-path', 'lm_n']['LER'].mean()
-    df_means.loc['Ø LER', 'best-path']['with LM'] = df_results.loc['beam search', 'lm_y']['LER'].mean()
-    df_means.loc['Ø LER', 'beam search']['without LM'] = df_results.loc['best-path', 'lm_n']['LER'].mean()
-    df_means.loc['Ø LER', 'beam search']['with LM'] = df_results.loc['beam search', 'lm_y']['LER'].mean()
-    df_means.loc['Ø WER', 'best-path']['without LM'] = df_results.loc['best-path', 'lm_n']['WER'].mean()
-    df_means.loc['Ø WER', 'best-path']['with LM'] = df_results.loc['beam search', 'lm_y']['WER'].mean()
-    df_means.loc['Ø WER', 'beam search']['without LM'] = df_results.loc['best-path', 'lm_n']['WER'].mean()
-    df_means.loc['Ø WER', 'beam search']['with LM'] = df_results.loc['beam search', 'lm_y']['WER'].mean()
+    df_means.loc['Ø LER', 'greedy']['without LM'] = df_results.loc['greedy', 'lm_n']['LER'].mean()
+    df_means.loc['Ø LER', 'greedy']['with LM'] = df_results.loc['beam', 'lm_y']['LER'].mean()
+    df_means.loc['Ø LER', 'beam']['without LM'] = df_results.loc['greedy', 'lm_n']['LER'].mean()
+    df_means.loc['Ø LER', 'beam']['with LM'] = df_results.loc['beam', 'lm_y']['LER'].mean()
+    df_means.loc['Ø WER', 'greedy']['without LM'] = df_results.loc['greedy', 'lm_n']['WER'].mean()
+    df_means.loc['Ø WER', 'greedy']['with LM'] = df_results.loc['beam', 'lm_y']['WER'].mean()
+    df_means.loc['Ø WER', 'beam']['without LM'] = df_results.loc['greedy', 'lm_n']['WER'].mean()
+    df_means.loc['Ø WER', 'beam']['with LM'] = df_results.loc['beam', 'lm_y']['WER'].mean()
 
     csv_path = join(target_dir, 'test_report.csv')
     txt_path = join(target_dir, 'test_report.txt')

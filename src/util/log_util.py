@@ -7,6 +7,7 @@ from datetime import datetime
 from os import makedirs
 from os.path import exists, dirname
 
+import pandas as pd
 import pygit2
 import streamtologger
 
@@ -68,3 +69,9 @@ def get_commit():
 
 def create_args_str(args, keys=None):
     return ', '.join(f'{key}={value}' for key, value in args.__dict__.items() if keys == None or key in keys)
+
+
+def print_dataframe(df):
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None,
+                           'display.width', 1000, 'display.max_colwidth', -1):
+        print(df)

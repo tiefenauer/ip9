@@ -62,13 +62,10 @@ def setup(args):
 
 def test_model(model, test_files, test_batches, batch_size, lm, lm_vocab, target_dir):
     data_test = CSVBatchGenerator(test_files, sort=False, n_batches=test_batches, batch_size=batch_size)
-    decoder_greedy = BestPathDecoder(model)
-    decoder_beam = BeamSearchDecoder(model)
 
-    print(f'Testing model with samples from {test_files} using {decoder_greedy.strategy} decoding')
-    df_inferences, df_metrics = infer_batches(data_test, decoder_greedy, decoder_beam, lm, lm_vocab)
-    df_metrics.sort_values(by='LER', inplace=True)
-    df_metrics_means = calculate_metrics_mean(df_metrics)
+    print(f'Testing model with samples from {test_files}')
+    df_inferences = infer_batches(data_test, BestPathDecoder(model), BeamSearchDecoder(model), lm, lm_vocab)
+    df_metrics_means = calculate_metrics_mean(df_inferences)
 
     csv_path = join(target_dir, 'test_report.csv')
     txt_path = join(target_dir, 'test_report.txt')

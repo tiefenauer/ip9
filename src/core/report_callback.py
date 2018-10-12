@@ -74,15 +74,16 @@ class ReportCallback(callbacks.Callback):
             self.data_valid.shuffle_entries()
 
         print(f'validating epoch {epoch+1} using best-path and beam search decoding')
-        df_inferences, df_metrics = infer_batches(self.data_valid, self.decoder_greedy, self.decoder_beam, self.lm,
-                                                  self.lm_vocab)
+        df_inferences = infer_batches(self.data_valid, self.decoder_greedy, self.decoder_beam, self.lm, self.lm_vocab)
 
-        good_results = df_metrics[df_metrics['WER'] < 0.6]
+        mask = (df_inferences.loc[:, (slice(None), slice(None), 'WER')] < 0.6).any(axis=1)
+        good_inferences = df_inferences[mask]
 
-        if self.force_output or not good_results.empty:
-            print_dataframe(good_results)
+        if self.force_output or not good_inferences.empty:
+            print(f'inferences with WER y 0.6 (any decoding strategy, with or without LM correction):')
+            print_dataframe(good_inferences)
 
-        mean_metrics = calculate_metrics_mean(df_metrics)
+        mean_metrics = calculate_metrics_mean(df_inferences)
 
         print('--------------------------------------------------------')
         print(f'Validation results after epoch {epoch+1}: WER & LER using best-path and beam search decoding')

@@ -145,7 +145,7 @@ class ReportCallback(callbacks.Callback):
         """
         stop early if last beam search LER (before LM-correction) is bigger than all 4 previous values
         """
-        lers_beam = self.df_history['Ø LER', 'beam', 'lm_n']
+        lers_beam = self.df_history['LER', 'beam', 'lm_n']
         if len(lers_beam) <= 4:
             return False
 

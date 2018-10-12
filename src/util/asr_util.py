@@ -92,6 +92,4 @@ def calculate_metrics_mean(df_inferences):
     for decoding_strategy, lm_used, metric in itertools.product(decoding_strategies, lm_uses, metrics):
         df.loc[decoding_strategy, lm_used][metric] = df_inferences[decoding_strategy, lm_used, metric].mean()
 
-    df.columns = ['Ø WER', 'Ø LER', 'Ø LER (raw)']
-
     return df

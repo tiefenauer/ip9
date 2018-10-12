@@ -7,10 +7,9 @@ import keras.backend as K
 import numpy as np
 import pandas as pd
 from keras import callbacks
-from tqdm import tqdm
 
 from core.decoder import BeamSearchDecoder, BestPathDecoder
-from util.asr_util import infer_batch, calculate_metrics, calculate_metrics_mean
+from util.asr_util import calculate_metrics_mean, infer_batches
 from util.lm_util import load_lm
 from util.log_util import print_dataframe
 from util.rnn_util import save_model
@@ -75,16 +74,9 @@ class ReportCallback(callbacks.Callback):
             self.data_valid.shuffle_entries()
 
         print(f'validating epoch {epoch+1} using best-path and beam search decoding')
-        inferences = []
-        self.data_valid.cur_index = 0  # reset index
+        df_inferences, df_metrics = infer_batches(self.data_valid, self.decoder_greedy, self.decoder_beam, self.lm,
+                                                  self.lm_vocab)
 
-        for _ in tqdm(range(len(self.data_valid))):
-            batch_inputs, _ = next(self.data_valid)
-            batch_inferences = infer_batch(batch_inputs, self.decoder_greedy, self.decoder_beam, self.lm, self.lm_vocab)
-            inferences.append(batch_inferences)
-
-        df_inferences = pd.concat(inferences, sort=False)
-        df_metrics = calculate_metrics(df_inferences)
         good_results = df_metrics[df_metrics['WER'] < 0.6]
 
         if self.force_output or not good_results.empty:

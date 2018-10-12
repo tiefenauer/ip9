@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 from keras import backend as K
 from python_speech_features import mfcc
+from tqdm import tqdm
 
-from util.lm_util import correction, ler_norm, wer, ler, wers, lers, lers_norm
+from util.lm_util import correction, ler_norm, wer, ler
 from util.rnn_util import decode
 
 
@@ -22,6 +23,19 @@ def infer_transcription(model, audio, rate):
     K.clear_session()
 
     return decoded_str[0]
+
+
+def infer_batches(batch_generator, decoder_greedy, decoder_beam, lm, lm_vocab):
+    batch_generator.cur_index = 0  # reset index
+    inferences = []
+    for _ in tqdm(range(len(batch_generator))):
+        batch_inputs, _ = next(batch_generator)
+        batch_inferences = infer_batch(batch_inputs, decoder_greedy, decoder_beam, lm, lm_vocab)
+        inferences.append(batch_inferences)
+
+    df_inferences = pd.concat(inferences, sort=False)
+    df_metrics = calculate_metrics(df_inferences)
+    return df_inferences, df_metrics
 
 
 def infer_batch(batch_inputs, decoder_greedy, decoder_beam, lm=None, lm_vocab=None):

@@ -7,7 +7,6 @@ from keras.optimizers import SGD
 
 from core.batch_generator import CSVBatchGenerator
 from core.report_callback import *
-from util.asr_util import calculate_metrics
 from util.log_util import create_args_str
 from util.rnn_util import load_model_from_dir, create_keras_session
 
@@ -67,43 +66,24 @@ def test_model(model, test_files, test_batches, batch_size, lm, lm_vocab, target
     decoder_beam = BeamSearchDecoder(model)
 
     print(f'Testing model with samples from {test_files} using {decoder_greedy.strategy} decoding')
-    results = []
-    for _ in tqdm(range(len(data_test)), unit=' batches'):
-        batch_inputs, _ = next(data_test)
-        inferences = infer_batch(batch_inputs, decoder_greedy, decoder_beam, lm, lm_vocab)
-        results += calculate_metrics(inferences)
-
-    df_results = pd.concat(results).sort_values(by='LER')
-
-    df_means = pd.DataFrame(index=pd.MultiIndex.from_product([['Ø LER', 'Ø WER'], ['greedy', 'beam']]),
-                            columns=['without LM', 'with LM'])
-    df_means.loc['Ø LER', 'greedy']['without LM'] = df_results.loc['greedy', 'lm_n']['LER'].mean()
-    df_means.loc['Ø LER', 'greedy']['with LM'] = df_results.loc['beam', 'lm_y']['LER'].mean()
-    df_means.loc['Ø LER', 'beam']['without LM'] = df_results.loc['greedy', 'lm_n']['LER'].mean()
-    df_means.loc['Ø LER', 'beam']['with LM'] = df_results.loc['beam', 'lm_y']['LER'].mean()
-    df_means.loc['Ø WER', 'greedy']['without LM'] = df_results.loc['greedy', 'lm_n']['WER'].mean()
-    df_means.loc['Ø WER', 'greedy']['with LM'] = df_results.loc['beam', 'lm_y']['WER'].mean()
-    df_means.loc['Ø WER', 'beam']['without LM'] = df_results.loc['greedy', 'lm_n']['WER'].mean()
-    df_means.loc['Ø WER', 'beam']['with LM'] = df_results.loc['beam', 'lm_y']['WER'].mean()
+    df_inferences, df_metrics = infer_batches(data_test, decoder_greedy, decoder_beam, lm, lm_vocab)
+    df_metrics.sort_values(by='LER', inplace=True)
+    df_metrics_means = calculate_metrics_mean(df_metrics)
 
     csv_path = join(target_dir, 'test_report.csv')
     txt_path = join(target_dir, 'test_report.txt')
 
-    with pd.option_context('display.max_rows', None,
-                           'display.max_columns', None,
-                           'display.width', 1000,
-                           'display.max_colwidth', -1), \
-         open(txt_path, 'w') as f:
-        print(df_results)
-        print(df_means)
+    with open(txt_path, 'w') as f:
+        print_dataframe(df_inferences)
+        print_dataframe(df_metrics_means)
 
-        df_results.to_csv(csv_path)
+        df_inferences.to_csv(csv_path)
         f.write(f"""
         Report from {datetime.now()}\n
         inferred samples from {test_files} ({test_batches} batches)\n
         inferred transcript saved to {csv_path}\n
         mean metrics:\n\n
-        {str(df_means)})""")
+        {str(df_metrics_means)})""")
 
     print(f'Testing done! Resutls saved to {csv_path}. LER/WER stats saved to {txt_path}')
 

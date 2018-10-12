@@ -83,13 +83,14 @@ class ReportCallback(callbacks.Callback):
             batch_inferences = infer_batch(batch_inputs, self.decoder_greedy, self.decoder_beam, self.lm, self.lm_vocab)
             inferences.append(batch_inferences)
 
-            batch_metrics = calculate_metrics(batch_inferences)
-            good_results = batch_metrics[batch_metrics['WER'] < 0.6]
+        df_inferences = pd.concat(inferences, sort=False)
+        df_metrics = calculate_metrics(df_inferences)
+        good_results = df_metrics[df_metrics['WER'] < 0.6]
 
-            if self.force_output or not good_results.empty:
-                print_dataframe(good_results)
+        if self.force_output or not good_results.empty:
+            print_dataframe(good_results)
 
-        mean_metrics = calculate_metrics_mean(pd.concat(inferences, sort=False))
+        mean_metrics = calculate_metrics_mean(df_metrics)
 
         print('--------------------------------------------------------')
         print(f'Validation results after epoch {epoch+1}: WER & LER using best-path and beam search decoding')
@@ -102,21 +103,6 @@ class ReportCallback(callbacks.Callback):
 
         for m, d, l in itertools.product(['Ø WER', 'Ø LER', 'Ø LER (raw)'], ['greedy', 'beam'], ['lm_n', 'lm_y']):
             self.df_history.loc[epoch][m, d, l] = mean_metrics.loc[d, l][m]
-
-        # self.df_history.loc[epoch]['Ø WER', 'greedy', 'lm_n'] = mean_metrics.loc['greedy', 'lm_n']['Ø WER']
-        # self.df_history.loc[epoch]['Ø WER', 'greedy', 'lm_y'] = mean_metrics.loc['greedy', 'lm_y']['Ø WER']
-        # self.df_history.loc[epoch]['Ø WER', 'beam', 'lm_n'] = mean_metrics.loc['beam', 'lm_n']['Ø WER']
-        # self.df_history.loc[epoch]['Ø WER', 'beam', 'lm_y'] = mean_metrics.loc['beam', 'lm_y']['Ø WER']
-        #
-        # self.df_history.loc[epoch]['Ø LER', 'greedy', 'lm_n'] = mean_metrics.loc['greedy', 'lm_n']['Ø LER']
-        # self.df_history.loc[epoch]['Ø LER', 'greedy', 'lm_y'] = mean_metrics.loc['greedy', 'lm_y']['Ø LER']
-        # self.df_history.loc[epoch]['Ø LER', 'beam', 'lm_n'] = mean_metrics.loc['beam', 'lm_n']['Ø LER']
-        # self.df_history.loc[epoch]['Ø LER', 'beam', 'lm_y'] = mean_metrics.loc['beam', 'lm_y']['Ø LER']
-        #
-        # self.df_history.loc[epoch]['Ø LER (raw)', 'greedy', 'lm_n'] = mean_metrics.loc['greedy', 'lm_n']['Ø LER (raw)']
-        # self.df_history.loc[epoch]['Ø LER (raw)', 'greedy', 'lm_y'] = mean_metrics.loc['greedy', 'lm_y']['Ø LER (raw)']
-        # self.df_history.loc[epoch]['Ø LER (raw)', 'beam', 'lm_n'] = mean_metrics.loc['beam', 'lm_n']['Ø LER (raw)']
-        # self.df_history.loc[epoch]['Ø LER (raw)', 'beam', 'lm_y'] = mean_metrics.loc['beam', 'lm_y']['Ø LER (raw)']
 
         K.set_learning_phase(1)
 

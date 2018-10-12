@@ -40,56 +40,56 @@ def infer_batch(batch_inputs, decoder_greedy, decoder_beam, lm=None, lm_vocab=No
                          })
 
 
-def calculate_metrics(inferences):
+def calculate_metrics(df_inferences):
     results = []
-    for ix, (ground_truth, pred_greedy, pred_greedy_lm, pred_beam, pred_beam_lm) in inferences.iterrows():
+    for ix, (ground_truth, pred_greedy, pred_greedy_lm, pred_beam, pred_beam_lm) in df_inferences.iterrows():
         index = pd.MultiIndex.from_product([['greedy', 'beam'], ['lm_n', 'lm_y']],
                                            names=['decoding strategy', 'LM correction'])
-        result = pd.DataFrame(index=index, columns=['ground truth', 'prediction', 'WER', 'LER', 'LER_raw'])
-        result['ground truth'] = ground_truth
-        result.loc['greedy', 'lm_n']['prediction'] = pred_greedy
-        result.loc['greedy', 'lm_y']['prediction'] = pred_greedy_lm
-        result.loc['beam', 'lm_n']['prediction'] = pred_beam
-        result.loc['beam', 'lm_y']['prediction'] = pred_beam_lm
+        df_result = pd.DataFrame(index=index, columns=['ground truth', 'prediction', 'WER', 'LER', 'LER_raw'])
+        df_result['ground truth'] = ground_truth
+        df_result.loc['greedy', 'lm_n']['prediction'] = pred_greedy
+        df_result.loc['greedy', 'lm_y']['prediction'] = pred_greedy_lm
+        df_result.loc['beam', 'lm_n']['prediction'] = pred_beam
+        df_result.loc['beam', 'lm_y']['prediction'] = pred_beam_lm
 
-        result.loc['greedy', 'lm_n']['LER'] = ler_norm(ground_truth, pred_greedy)
-        result.loc['greedy', 'lm_y']['LER'] = ler_norm(ground_truth, pred_greedy_lm)
-        result.loc['beam', 'lm_n']['LER'] = ler_norm(ground_truth, pred_beam)
-        result.loc['beam', 'lm_y']['LER'] = ler_norm(ground_truth, pred_beam_lm)
+        df_result.loc['greedy', 'lm_n']['LER'] = ler_norm(ground_truth, pred_greedy)
+        df_result.loc['greedy', 'lm_y']['LER'] = ler_norm(ground_truth, pred_greedy_lm)
+        df_result.loc['beam', 'lm_n']['LER'] = ler_norm(ground_truth, pred_beam)
+        df_result.loc['beam', 'lm_y']['LER'] = ler_norm(ground_truth, pred_beam_lm)
 
-        result.loc['greedy', 'lm_n']['WER'] = wer(ground_truth, pred_greedy)
-        result.loc['greedy', 'lm_y']['WER'] = wer(ground_truth, pred_greedy_lm)
-        result.loc['beam', 'lm_n']['WER'] = wer(ground_truth, pred_beam)
-        result.loc['beam', 'lm_y']['WER'] = wer(ground_truth, pred_beam_lm)
+        df_result.loc['greedy', 'lm_n']['WER'] = wer(ground_truth, pred_greedy)
+        df_result.loc['greedy', 'lm_y']['WER'] = wer(ground_truth, pred_greedy_lm)
+        df_result.loc['beam', 'lm_n']['WER'] = wer(ground_truth, pred_beam)
+        df_result.loc['beam', 'lm_y']['WER'] = wer(ground_truth, pred_beam_lm)
 
-        result.loc['greedy', 'lm_n']['LER_raw'] = ler(ground_truth, pred_greedy)
-        result.loc['greedy', 'lm_y']['LER_raw'] = ler(ground_truth, pred_greedy_lm)
-        result.loc['beam', 'lm_n']['LER_raw'] = ler(ground_truth, pred_beam)
-        result.loc['beam', 'lm_y']['LER_raw'] = ler(ground_truth, pred_beam_lm)
+        df_result.loc['greedy', 'lm_n']['LER_raw'] = ler(ground_truth, pred_greedy)
+        df_result.loc['greedy', 'lm_y']['LER_raw'] = ler(ground_truth, pred_greedy_lm)
+        df_result.loc['beam', 'lm_n']['LER_raw'] = ler(ground_truth, pred_beam)
+        df_result.loc['beam', 'lm_y']['LER_raw'] = ler(ground_truth, pred_beam_lm)
 
-        results.append(result)
+        results.append(df_result)
 
     return pd.concat(results)
 
 
-def calculate_metrics_mean(inferences):
+def calculate_metrics_mean(df_metrics):
     index = pd.MultiIndex.from_product([['greedy', 'beam'], ['lm_n', 'lm_y']],
                                        names=['decoding strategy', 'LM correction'])
 
     df = pd.DataFrame(index=index, columns=['Ø WER', 'Ø LER', 'Ø LER (raw)'])
-    df.loc['greedy', 'lm_n']['Ø WER'] = wers(inferences['ground truth'], inferences['greedy']).mean()
-    df.loc['greedy', 'lm_y']['Ø WER'] = wers(inferences['ground truth'], inferences['greedy+LM']).mean()
-    df.loc['beam', 'lm_n']['Ø WER'] = wers(inferences['ground truth'], inferences['beam']).mean()
-    df.loc['beam', 'lm_y']['Ø WER'] = wers(inferences['ground truth'], inferences['beam+LM']).mean()
+    df.loc['greedy', 'lm_n']['Ø WER'] = df_metrics.loc['greedy', 'lm_n']['WER'].mean()
+    df.loc['greedy', 'lm_y']['Ø WER'] = df_metrics.loc['greedy', 'lm_y']['WER'].mean()
+    df.loc['beam', 'lm_n']['Ø WER'] = df_metrics.loc['beam', 'lm_n']['WER'].mean()
+    df.loc['beam', 'lm_y']['Ø WER'] = df_metrics.loc['beam', 'lm_y']['WER'].mean()
 
-    df.loc['greedy', 'lm_n']['Ø LER'] = lers_norm(inferences['ground truth'], inferences['greedy']).mean()
-    df.loc['greedy', 'lm_y']['Ø LER'] = lers_norm(inferences['ground truth'], inferences['greedy+LM']).mean()
-    df.loc['beam', 'lm_n']['Ø LER'] = lers_norm(inferences['ground truth'], inferences['beam']).mean()
-    df.loc['beam', 'lm_y']['Ø LER'] = lers_norm(inferences['ground truth'], inferences['beam+LM']).mean()
+    df.loc['greedy', 'lm_n']['Ø LER'] = df_metrics.loc['greedy', 'lm_n']['LER'].mean()
+    df.loc['greedy', 'lm_y']['Ø LER'] = df_metrics.loc['greedy', 'lm_y']['LER'].mean()
+    df.loc['beam', 'lm_n']['Ø LER'] = df_metrics.loc['beam', 'lm_n']['LER'].mean()
+    df.loc['beam', 'lm_y']['Ø LER'] = df_metrics.loc['beam', 'lm_y']['LER'].mean()
 
-    df.loc['greedy', 'lm_n']['Ø LER (raw)'] = lers(inferences['ground truth'], inferences['greedy']).mean()
-    df.loc['greedy', 'lm_y']['Ø LER (raw)'] = lers(inferences['ground truth'], inferences['greedy+LM']).mean()
-    df.loc['beam', 'lm_n']['Ø LER (raw)'] = lers(inferences['ground truth'], inferences['beam']).mean()
-    df.loc['beam', 'lm_y']['Ø LER (raw)'] = lers(inferences['ground truth'], inferences['beam+LM']).mean()
+    df.loc['greedy', 'lm_n']['Ø LER (raw)'] = df_metrics.loc['greedy', 'lm_n']['LER_raw'].mean()
+    df.loc['greedy', 'lm_y']['Ø LER (raw)'] = df_metrics.loc['greedy', 'lm_y']['LER_raw'].mean()
+    df.loc['beam', 'lm_n']['Ø LER (raw)'] = df_metrics.loc['beam', 'lm_n']['LER_raw'].mean()
+    df.loc['beam', 'lm_y']['Ø LER (raw)'] = df_metrics.loc['beam', 'lm_y']['LER_raw'].mean()
 
     return df

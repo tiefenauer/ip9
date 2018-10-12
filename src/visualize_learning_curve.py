@@ -1,10 +1,13 @@
 import argparse
+import itertools
 import re
 from glob import glob
 from os import listdir
 from os.path import exists, abspath, join, isdir
 
 import seaborn as sns
+
+from util.asr_util import metrics, decoding_strategies, lm_uses
 
 sns.set()
 import matplotlib.pyplot as plt
@@ -39,16 +42,16 @@ def plot_losses(df_losses):
 
 
 def plot_metrics(df_metrics):
-    fig_best, axes_best = plot_metrics_for_decoding(df_metrics, 'best')
-    fig_beam, axes_beam = plot_metrics_for_decoding(df_metrics, 'beam')
+    fig_best, axes_best = plot_metric(df_metrics, 'greedy')
+    fig_beam, axes_beam = plot_metric(df_metrics, 'beam')
     return fig_best, fig_beam, axes_best, axes_beam
 
 
-def plot_metrics_for_decoding(df_metrics, decoding_strategy):
-    df_wer = df_metrics['WER'][decoding_strategy]['lm_n']
-    df_wer_lm = df_metrics['WER'][decoding_strategy]['lm_y']
-    df_ler = df_metrics['LER'][decoding_strategy]['lm_n']
-    df_ler_lm = df_metrics['LER'][decoding_strategy]['lm_y']
+def plot_metric(df_metrics, decoding_strategy):
+    df_wer = df_metrics['WER', decoding_strategy, 'lm_n']
+    df_wer_lm = df_metrics['WER', decoding_strategy, 'lm_y']
+    df_ler = df_metrics['LER', decoding_strategy, 'lm_n']
+    df_ler_lm = df_metrics['LER', decoding_strategy, 'lm_y']
 
     fig, axes = plt.subplots(ncols=2, nrows=2, sharex=True, sharey=True, figsize=(14, 9))
 
@@ -84,7 +87,7 @@ def setup(args):
 
 def collect_data(source_dir):
     df_losses = collect_losses(source_dir)
-    df_metrics = collect_ler_wer(source_dir)
+    df_metrics = collect_metrics(source_dir)
     return df_losses, df_metrics
 
 
@@ -105,31 +108,20 @@ def collect_losses(source_dir):
     return df_losses
 
 
-def collect_ler_wer(source_dir):
-    columns = [
-        ['WER', 'LER', 'LER_raw'],
-        ['best', 'beam'],
-        ['lm_n', 'lm_y'],
+def collect_metrics(source_dir):
+    columns = pd.MultiIndex.from_product([
+        metrics,
+        decoding_strategies,
+        lm_uses,
         ['1_min', '10_min', '100_min', '1000_min']
-    ]
+    ])
 
-    df_ler_wer = pd.DataFrame(columns=pd.MultiIndex.from_product(columns))
+    df_ler_wer = pd.DataFrame(columns=columns)
     for subdir_name in get_immediate_subdirectories(source_dir):
         for minutes, ler_wer_csv in map_files_to_minutes(join(source_dir, subdir_name), 'model_', '.csv').items():
-            df = pd.read_csv(ler_wer_csv)
-            df_ler_wer['WER', 'best', 'lm_n', f'{minutes}_min'] = df['WER_greedy']
-            df_ler_wer['WER', 'best', 'lm_y', f'{minutes}_min'] = df['WER_greedy_lm']
-            df_ler_wer['WER', 'beam', 'lm_n', f'{minutes}_min'] = df['WER_beam']
-            df_ler_wer['WER', 'beam', 'lm_y', f'{minutes}_min'] = df['WER_beam_lm']
-            df_ler_wer['LER', 'best', 'lm_n', f'{minutes}_min'] = df['LER_greedy']
-            df_ler_wer['LER', 'best', 'lm_y', f'{minutes}_min'] = df['LER_greedy_lm']
-            df_ler_wer['LER', 'beam', 'lm_n', f'{minutes}_min'] = df['LER_beam']
-            df_ler_wer['LER', 'beam', 'lm_y', f'{minutes}_min'] = df['LER_beam_lm']
-            df_ler_wer['LER_raw', 'best', 'lm_n', f'{minutes}_min'] = df['ler_raw_greedy']
-            df_ler_wer['LER_raw', 'best', 'lm_y', f'{minutes}_min'] = df['ler_raw_greedy_lm']
-            df_ler_wer['LER_raw', 'beam', 'lm_n', f'{minutes}_min'] = df['ler_raw_beam']
-            df_ler_wer['LER_raw', 'beam', 'lm_y', f'{minutes}_min'] = df['ler_raw_beam_lm']
-
+            df = pd.read_csv(ler_wer_csv, header=[0, 1, 2], index_col=0)
+            for m, d, l in itertools.product(metrics, decoding_strategies, lm_uses):
+                df_ler_wer[m, d, l, f'{minutes}_min'] = df[m, d, l]
     df_ler_wer.index += 1
     return df_ler_wer
 

@@ -9,7 +9,7 @@ import pandas as pd
 from keras import callbacks
 
 from core.decoder import BeamSearchDecoder, BestPathDecoder
-from util.asr_util import calculate_metrics_mean, infer_batches
+from util.asr_util import calculate_metrics_mean, infer_batches, lm_uses, decoding_strategies, metrics
 from util.lm_util import load_lm
 from util.log_util import print_dataframe
 from util.rnn_util import save_model
@@ -56,12 +56,10 @@ class ReportCallback(callbacks.Callback):
         self.decoder_beam = BeamSearchDecoder(model)
 
         # WER/LER history
+        columns = pd.MultiIndex.from_product([metrics, decoding_strategies, lm_uses],
+                                             names=['metric', 'decoding strategy', 'LM correction'])
         self.df_history = pd.DataFrame(index=np.arange(num_epochs),
-                                       columns=pd.MultiIndex.from_product([
-                                           ['Ø WER', 'Ø LER', 'Ø LER (raw)'],
-                                           ['greedy', 'beam'],
-                                           ['lm_n', 'lm_y']
-                                       ]))
+                                       columns=columns)
         # base name for files that will be written to target directory
         self.base_name = 'model' + (f'_{self.num_minutes}_min' if self.num_minutes else '')
         print(f'base name for result files: {self.base_name}')
@@ -94,7 +92,7 @@ class ReportCallback(callbacks.Callback):
         print_dataframe(mean_metrics)
         print('--------------------------------------------------------')
 
-        for m, d, l in itertools.product(['Ø WER', 'Ø LER', 'Ø LER (raw)'], ['greedy', 'beam'], ['lm_n', 'lm_y']):
+        for m, d, l in itertools.product(metrics, decoding_strategies, lm_uses):
             self.df_history.loc[epoch][m, d, l] = mean_metrics.loc[d, l][m]
 
         K.set_learning_phase(1)
@@ -132,14 +130,14 @@ class ReportCallback(callbacks.Callback):
         We have a new benchmark if the last value in a sequence of metrics is the smallest
         """
         metrics = [
-            self.df_history['Ø WER', 'greedy', 'lm_n'].dropna().values,  # WER (best-path)
-            self.df_history['Ø WER', 'greedy', 'lm_y'].dropna().values,  # WER (best-path + LM)
-            self.df_history['Ø WER', 'beam', 'lm_n'].dropna().values,  # WER (beam search)
-            self.df_history['Ø WER', 'beam', 'lm_y'].dropna().values,  # WER (beam search + LM)
-            self.df_history['Ø LER', 'greedy', 'lm_n'].dropna().values,  # LER (best-path)
-            self.df_history['Ø LER', 'greedy', 'lm_y'].dropna().values,  # LER (best-path + LM)
-            self.df_history['Ø LER', 'beam', 'lm_n'].dropna().values,  # LER (beam search)
-            self.df_history['Ø LER', 'beam', 'lm_y'].dropna().values,  # LER (beam search + LM)
+            self.df_history['WER', 'greedy', 'lm_n'].dropna().values,  # WER (best-path)
+            self.df_history['WER', 'greedy', 'lm_y'].dropna().values,  # WER (best-path + LM)
+            self.df_history['WER', 'beam', 'lm_n'].dropna().values,  # WER (beam search)
+            self.df_history['WER', 'beam', 'lm_y'].dropna().values,  # WER (beam search + LM)
+            self.df_history['LER', 'greedy', 'lm_n'].dropna().values,  # LER (best-path)
+            self.df_history['LER', 'greedy', 'lm_y'].dropna().values,  # LER (best-path + LM)
+            self.df_history['LER', 'beam', 'lm_n'].dropna().values,  # LER (beam search)
+            self.df_history['LER', 'beam', 'lm_y'].dropna().values,  # LER (beam search + LM)
         ]
         return any(is_last_value_smallest(metric) for metric in metrics)
 

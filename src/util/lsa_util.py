@@ -105,3 +105,81 @@ def traceback(H, b, b_='', old_i=0):
 
     b_ = b[j - 1] + infix + b_
     return traceback(H[0:i, 0:j], b, b_, i)
+
+
+def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5):
+    """
+    Needle-Wunsch algorithm for global sequence alignemnt.
+    From https://github.com/alevchuk/pairwise-alignment-in-python/blob/master/alignment.py (with changes)
+    :param str_1:
+    :param str_2:
+    :param match_score:
+    :param mismatch_score:
+    :param gap_score:
+    :return:
+    """
+
+    def match_score(a, b):
+        if a == b:
+            return 10
+        if a == '-' or b == '-':
+            return -5
+        return -5
+
+    m, n = len(str_1) + 1, len(str_2) + 1
+
+    # Generate DP table and traceback path pointer matrix
+    scores = np.zeros((m, n))
+    scores[:, 0] = np.arange(m) * gap_score
+    scores[0, :] = np.arange(n) * gap_score
+
+    for i, j in itertools.product(range(1, m), range(1, n)):
+        match = scores[i - 1][j - 1] + match_score(str_1[i - 1], str_2[j - 1])
+        delete = scores[i - 1][j] + gap_score
+        insert = scores[i][j - 1] + gap_score
+        scores[i][j] = max(match, delete, insert)
+
+    # Traceback and compute the alignment
+    source_str, target_str = '', ''
+    i, j = m - 1, n - 1  # start from the bottom right cell
+    while i > 0 and j > 0:  # end toching the top or the left edge
+        score_current = scores[i][j]
+        score_diagonal = scores[i - 1][j - 1]
+        score_up = scores[i][j - 1]
+        score_left = scores[i - 1][j]
+
+        if score_current == score_diagonal + match_score(str_1[i - 1], str_2[j - 1]):
+            source_str += str_1[i - 1]
+            target_str += str_2[j - 1]
+            i -= 1
+            j -= 1
+        elif score_current == score_left + gap_score:
+            source_str += str_1[i - 1]
+            target_str += '-'
+            i -= 1
+        elif score_current == score_up + gap_score:
+            source_str += '-'
+            target_str += str_2[j - 1]
+            j -= 1
+
+    # Finish tracing up to the top left cell
+    while i > 0:
+        source_str += str_1[i - 1]
+        target_str += '-'
+        i -= 1
+    while j > 0:
+        source_str += '-'
+        target_str += str_2[j - 1]
+        j -= 1
+
+    source_str = ''.join(reversed(source_str))
+    target_str = ''.join(reversed(target_str))
+    alignment_str = ''.join(a if a == b else ' ' for a, b in zip(source_str, target_str))
+    score = sum(match_score(a, b) for a, b in zip(source_str, target_str))
+    match = float(100) * sum(1 if a == b else 0 for a, b in zip(source_str, target_str)) / len(target_str)
+
+    print(f'Match: {match:3.3f}%')
+    print(f'Score: {score}', )
+    print(f'Source   : {source_str}')
+    print(f'Alignment: {alignment_str}')
+    print(f'Target   : {target_str}')

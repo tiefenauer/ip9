@@ -39,6 +39,10 @@ def align(voice_segments, transcript, printout=False):
     return alignments
 
 
+def align_globally(full_transcript, partial_transcripts):
+    return needle_wunsch(full_transcript, '#'.join(partial_transcripts))
+
+
 def smith_waterman(a, b, match_score=3, gap_cost=2):
     """
     Find some variant b' of b in a
@@ -109,10 +113,11 @@ def traceback(H, b, b_='', old_i=0):
 
 def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5):
     """
-    Needle-Wunsch algorithm for global sequence alignemnt.
-    From https://github.com/alevchuk/pairwise-alignment-in-python/blob/master/alignment.py (with changes)
-    :param str_1:
-    :param str_2:
+    Needle-Wunsch algorithm for global sequence alignemnt. Performs a global alignment to match a string with a
+    reference string.
+    Code (with changes) from https://github.com/alevchuk/pairwise-alignment-in-python/blob/master/alignment.py
+    :param str_1: the reference string
+    :param str_2: the string to align with the reference string
     :param match_score:
     :param mismatch_score:
     :param gap_score:
@@ -126,6 +131,7 @@ def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5)
             return -5
         return -5
 
+    # reference string on axis 0, other string on axis 1
     m, n = len(str_1) + 1, len(str_2) + 1
 
     # Generate DP table and traceback path pointer matrix
@@ -139,47 +145,55 @@ def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5)
         insert = scores[i][j - 1] + gap_score
         scores[i][j] = max(match, delete, insert)
 
-    # Traceback and compute the alignment
+    alignments = []
+    alignment_end = None
+    orig_end = None
     source_str, target_str = '', ''
-    i, j = m - 1, n - 1  # start from the bottom right cell
-    while i > 0 and j > 0:  # end toching the top or the left edge
+
+    # Traceback: start from the bottom right cell
+    i, j = m - 1, n - 1
+    while i > 0 and j > 0:
+        if str_2[j - 1] == '#':
+            alignments.insert(0, {'start': i, 'end': orig_end, 'text': str_2[j:alignment_end]})
+            alignment_end = j
+            orig_end = i
+
         score_current = scores[i][j]
         score_diagonal = scores[i - 1][j - 1]
         score_up = scores[i][j - 1]
         score_left = scores[i - 1][j]
 
         if score_current == score_diagonal + match_score(str_1[i - 1], str_2[j - 1]):
-            source_str += str_1[i - 1]
-            target_str += str_2[j - 1]
+            source_str = str_1[i - 1] + source_str
+            target_str = str_2[j - 1] + target_str
             i -= 1
             j -= 1
         elif score_current == score_left + gap_score:
-            source_str += str_1[i - 1]
-            target_str += '-'
+            source_str = str_1[i - 1] + source_str
+            target_str = '-' + target_str
             i -= 1
         elif score_current == score_up + gap_score:
-            source_str += '-'
-            target_str += str_2[j - 1]
+            source_str = '-' + source_str
+            target_str = str_2[j - 1] + target_str
             j -= 1
 
     # Finish tracing up to the top left cell
     while i > 0:
-        source_str += str_1[i - 1]
-        target_str += '-'
+        source_str = str_1[i - 1] + source_str
+        target_str = '-' + target_str
         i -= 1
     while j > 0:
-        source_str += '-'
-        target_str += str_2[j - 1]
+        source_str = '-' + source_str
+        target_str = str_2[j - 1] + target_str
         j -= 1
 
-    source_str = ''.join(reversed(source_str))
-    target_str = ''.join(reversed(target_str))
     alignment_str = ''.join(a if a == b else ' ' for a, b in zip(source_str, target_str))
     score = sum(match_score(a, b) for a, b in zip(source_str, target_str))
     match = float(100) * sum(1 if a == b else 0 for a, b in zip(source_str, target_str)) / len(target_str)
 
-    print(f'Match: {match:3.3f}%')
-    print(f'Score: {score}', )
-    print(f'Source   : {source_str}')
-    print(f'Alignment: {alignment_str}')
-    print(f'Target   : {target_str}')
+    # print(f'Match: {match:3.3f}%')
+    # print(f'Score: {score}', )
+    # print(f'Source   : {source_str}')
+    # print(f'Alignment: {alignment_str}')
+    # print(f'Target   : {target_str}')
+    return alignments

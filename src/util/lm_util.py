@@ -66,19 +66,10 @@ def load_lm(lm_path, vocab_path):
         lm = kenlm.Model(lm_abs_path)
         print(f'done! Loaded {lm.order}-gram model.')
         print(f'loading LM vocab from {lm_vocab_abs_path}...', end='')
-        vocab = set(words(vocab_f.read()))
+        vocab = set(vocab_f.read().split())
         print(f'done! Loaded {len(vocab)} words.')
         LM_MODELS[lm_path] = (lm, vocab)
     return lm, vocab
-
-
-def words(text):
-    """
-    splits a text into a list of words
-    :param text: a text-string
-    :return: list of word-strings
-    """
-    return re.findall(r'\w+', text.lower())
 
 
 def score(word_list, lm):
@@ -100,7 +91,7 @@ def correction(sentence, lm=None, lm_vocab=None):
         return sentence
     beam_width = 1024
     layer = [(0, [])]  # list of (score, 2-gram)-pairs
-    for word in words(sentence):
+    for word in sentence.split():
         layer = [(-score(node + [word_c], lm), node + [word_c]) for word_c in candidate_words(word, lm_vocab) for
                  sc, node in layer]
         heapify(layer)

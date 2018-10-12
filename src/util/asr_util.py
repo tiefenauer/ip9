@@ -58,31 +58,31 @@ def infer_batch(batch_inputs, decoder_greedy, decoder_beam, lm=None, lm_vocab=No
     columns = pd.MultiIndex.from_product([decoding_strategies, lm_uses, ['prediction'] + metrics],
                                          names=['decoding strategy', 'LM correction', 'predictions'])
 
-    df_batch_results = pd.DataFrame(index=ground_truths, columns=columns)
+    df = pd.DataFrame(index=ground_truths, columns=columns)
     for ground_truth, pred_greedy, pred_greedy_lm, pred_beam, pred_beam_lm in zip(ground_truths,
                                                                                   preds_greedy, preds_greedy_lm,
                                                                                   preds_beam, preds_beam_lm):
-        df_batch_results.loc[ground_truth]['greedy', 'lm_n', 'prediction'] = pred_greedy
-        df_batch_results.loc[ground_truth]['greedy', 'lm_n', 'WER'] = wer(ground_truth, pred_greedy)
-        df_batch_results.loc[ground_truth]['greedy', 'lm_n', 'LER'] = ler_norm(ground_truth, pred_greedy)
-        df_batch_results.loc[ground_truth]['greedy', 'lm_n', 'LER_raw'] = ler(ground_truth, pred_greedy)
+        df.loc[ground_truth, ('greedy', 'lm_n', 'prediction')] = pred_greedy
+        df.loc[ground_truth, ('greedy', 'lm_n', 'WER')] = wer(ground_truth, pred_greedy)
+        df.loc[ground_truth, ('greedy', 'lm_n', 'LER')] = ler_norm(ground_truth, pred_greedy)
+        df.loc[ground_truth, ('greedy', 'lm_n', 'LER_raw')] = ler(ground_truth, pred_greedy)
 
-        df_batch_results.loc[ground_truth]['greedy', 'lm_y', 'prediction'] = pred_greedy_lm
-        df_batch_results.loc[ground_truth]['greedy', 'lm_y', 'WER'] = wer(ground_truth, pred_greedy_lm)
-        df_batch_results.loc[ground_truth]['greedy', 'lm_y', 'LER'] = ler_norm(ground_truth, pred_greedy_lm)
-        df_batch_results.loc[ground_truth]['greedy', 'lm_y', 'LER_raw'] = ler(ground_truth, pred_greedy_lm)
+        df.loc[ground_truth, ('greedy', 'lm_y', 'prediction')] = pred_greedy_lm
+        df.loc[ground_truth, ('greedy', 'lm_y', 'WER')] = wer(ground_truth, pred_greedy_lm)
+        df.loc[ground_truth, ('greedy', 'lm_y', 'LER')] = ler_norm(ground_truth, pred_greedy_lm)
+        df.loc[ground_truth, ('greedy', 'lm_y', 'LER_raw')] = ler(ground_truth, pred_greedy_lm)
 
-        df_batch_results.loc[ground_truth]['beam', 'lm_n', 'prediction'] = pred_beam
-        df_batch_results.loc[ground_truth]['beam', 'lm_n', 'WER'] = wer(ground_truth, pred_beam)
-        df_batch_results.loc[ground_truth]['beam', 'lm_n', 'LER'] = ler_norm(ground_truth, pred_beam)
-        df_batch_results.loc[ground_truth]['beam', 'lm_n', 'LER_raw'] = ler(ground_truth, pred_beam)
+        df.loc[ground_truth, ('beam', 'lm_n', 'prediction')] = pred_beam
+        df.loc[ground_truth, ('beam', 'lm_n', 'WER')] = wer(ground_truth, pred_beam)
+        df.loc[ground_truth, ('beam', 'lm_n', 'LER')] = ler_norm(ground_truth, pred_beam)
+        df.loc[ground_truth, ('beam', 'lm_n', 'LER_raw')] = ler(ground_truth, pred_beam)
 
-        df_batch_results.loc[ground_truth]['beam', 'lm_y', 'prediction'] = pred_beam_lm
-        df_batch_results.loc[ground_truth]['beam', 'lm_y', 'WER'] = wer(ground_truth, pred_beam_lm)
-        df_batch_results.loc[ground_truth]['beam', 'lm_y', 'LER'] = ler_norm(ground_truth, pred_beam_lm)
-        df_batch_results.loc[ground_truth]['beam', 'lm_y', 'LER_raw'] = ler(ground_truth, pred_beam_lm)
+        df.loc[ground_truth, ('beam', 'lm_y', 'prediction')] = pred_beam_lm
+        df.loc[ground_truth, ('beam', 'lm_y', 'WER')] = wer(ground_truth, pred_beam_lm)
+        df.loc[ground_truth, ('beam', 'lm_y', 'LER')] = ler_norm(ground_truth, pred_beam_lm)
+        df.loc[ground_truth, ('beam', 'lm_y', 'LER_raw')] = ler(ground_truth, pred_beam_lm)
 
-    return df_batch_results
+    return df
 
 
 def calculate_metrics_mean(df_inferences):

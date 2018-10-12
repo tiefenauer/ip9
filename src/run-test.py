@@ -42,7 +42,7 @@ def main():
     model.summary()
 
     lm, vocab = None, None
-    if args.lm and args.lm_vocab:
+    if args.lm:
         lm, vocab = load_lm(args.lm, args.lm_vocab)
 
     test_model(model, args.test_files, args.test_batches, args.batch_size, lm, vocab, target_dir)

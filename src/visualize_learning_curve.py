@@ -22,8 +22,8 @@ def main(args):
     fig_best, fig_beam, _, _ = plot_metrics(df_metrics)
 
     fig_loss.savefig(join(target_dir, 'losses.png'))
-    fig_best.savefig(join(target_dir, 'wer_ler_best.png'))
-    fig_beam.savefig(join(target_dir, 'wer_ler_beam.png'))
+    fig_best.savefig(join(target_dir, 'metrics_greedy.png'))
+    fig_beam.savefig(join(target_dir, 'metrics_beam.png'))
 
     plt.show()
 

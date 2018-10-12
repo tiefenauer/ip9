@@ -1,20 +1,18 @@
 """
 Contains various helper functions to create/train a BRNN
 """
+import string
 from genericpath import exists
 from os import makedirs
 from os.path import join
 
+import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from keras.engine.saving import model_from_json, load_model
 from keras.utils import get_custom_objects
 
 from core.models import clipped_relu, ctc
-import string
-from abc import ABC
-
-import numpy as np
 
 # 29 target classes
 # <space> = 0, a=1, b=2, ..., z=26, '=27, _ (padding token) = 28
@@ -52,7 +50,6 @@ def decode(tokens):
 
 def decode_token(ind):
     return '' if ind in [-1, len(CHAR_TOKENS)] else CHAR_TOKENS[ind]
-
 
 
 def save_model(model, target_dir):

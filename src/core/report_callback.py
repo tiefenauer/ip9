@@ -58,8 +58,7 @@ class ReportCallback(callbacks.Callback):
         # WER/LER history
         columns = pd.MultiIndex.from_product([metrics, decoding_strategies, lm_uses],
                                              names=['metric', 'decoding strategy', 'LM correction'])
-        self.df_history = pd.DataFrame(index=np.arange(num_epochs),
-                                       columns=columns)
+        self.df_history = pd.DataFrame(index=np.arange(num_epochs), columns=columns)
         # base name for files that will be written to target directory
         self.base_name = 'model' + (f'_{self.num_minutes}_min' if self.num_minutes else '')
         print(f'base name for result files: {self.base_name}')

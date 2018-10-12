@@ -1,9 +1,8 @@
 # this file is an adaptation from the work at mozilla deepspeech github.com/mozilla/DeepSpeech
 import itertools
 import kenlm
-import re
 from heapq import heapify
-from os.path import abspath, exists
+from os.path import abspath, exists, join, dirname, splitext
 
 import numpy as np
 from pattern3.metrics import levenshtein
@@ -55,11 +54,17 @@ def load_lm(lm_path, vocab_path):
         return LM_MODELS[lm_path]
 
     lm_abs_path = abspath(lm_path)
-    lm_vocab_abs_path = abspath(vocab_path)
     if not exists(lm_abs_path):
         raise ValueError(f'ERROR: LM not found at {lm_abs_path}')
-    if not exists(lm_vocab_abs_path):
-        raise ValueError(f'ERROR: LM vocabulary not found at {lm_vocab_abs_path}')
+
+    if vocab_path:
+        lm_vocab_abs_path = abspath(vocab_path)
+        if not exists(lm_vocab_abs_path):
+            raise ValueError(f'ERROR: LM vocabulary not found at {lm_vocab_abs_path}')
+    else:
+        lm_vocab_abs_path = abspath(join(dirname(lm_abs_path), splitext(lm_abs_path)[0] + '.vocab'))
+        if not exists(lm_vocab_abs_path):
+            raise ValueError(f'ERROR: LM vocabulary not set and no vocabulary found at {lm_vocab_abs_path}')
 
     with open(lm_vocab_abs_path) as vocab_f:
         print(f'loading LM from {lm_abs_path}...', end='')

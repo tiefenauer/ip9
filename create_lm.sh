@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # set -xe
-usage="$(basename "$0") [-h] [-o <int>] [-l {'en'|'de'|'fr'|'it'|...}] [-d {'probing'|'trie'}] [-t <string> ] [-w <int>] [-r remove_artifacts] -- Create n-gram Language Model on ~2.2M Wikipedia articles using KenLM.
+usage="$(basename "$0") [-h|--help] [-o|--order <int>] [-l|--language {'en'|'de'|'fr'|'it'|...}] [-d|--data_structure {'probing'|'trie'}] [-w|--max_words <int>] [-t|--target_dir <string> ] [-r|--remove_artifacts remove_artifacts]
+
+Create n-gram Language Model on ~2.2M Wikipedia articles using KenLM.
 where:
     -h  show this help text
     -o  set the order of the model, i.e. the n in n-gram (default: 4)
@@ -36,34 +38,52 @@ top_words=500000
 target_dir='./lm'
 remove_artifacts=false
 
-while getopts ':hs:' option; do
-  case "$option" in
-    h) echo "$usage"
-       exit
-       ;;
-    o) order=$OPTARG
-       ;;
-    l) language=$OPTARG
-       ;;
-    d) data_structure=$OPTARG
-       ;;
-    w) top_words=$OPTARG
-       ;;
-    t) target_dir=$OPTARG
-       ;;
-    r) remove_artifacts=true
-       ;;
-    :) printf "missing argument for -%s\n" "$OPTARG" >&2
-       echo "$usage" >&2
-       exit 1
-       ;;
-   \?) printf "illegal option: -%s\n" "$OPTARG" >&2
-       echo "$usage" >&2
-       exit 1
-       ;;
-  esac
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    -h|--help)
+    echo ${usage}
+    shift
+    exit
+    ;;
+    -o|--order)
+    order="$2"
+    shift
+    shift
+    ;;
+    -l|--language)
+    language="$2"
+    shift
+    shift
+    ;;
+    -d|--data_structure)
+    data_structure="$2"
+    shift
+    shift
+    ;;
+    -w|--max_words)
+    top_words="$2"
+    shift
+    shift
+    ;;
+    -t|--target_dir)
+    target_dir="$2"
+    shift
+    shift
+    ;;
+    -r|--remove_artifacts)
+    remove_artifacts=true
+    shift
+    ;;
+    *)    # unknown option
+    POSITIONAL+=("$1") # save it in an array for later
+    shift
+    ;;
+esac
 done
-shift $((OPTIND - 1))
+set -- "${POSITIONAL[@]}" # restore positional parameters
 
 # #################################
 # Paths and filenames

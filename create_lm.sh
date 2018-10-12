@@ -131,13 +131,13 @@ fi
 # Use WikExtractor (see https://github.com/attardi/wikiextractor for details)
 # #################################
 if [ ! -f "${corpus_file}" ] ; then
+    cd ./src/
     if [ ! -d $cleaned_dir ] ; then
         echo "Extracting/cleaning text from Wikipedia data base dump at ${target_file} using WikiExtractor."
         echo "Cleaned articles are saved to ${cleaned_dir}"
         echo "This will take 2-3 hours. Have a walk or something..."
         mkdir -p ${cleaned_dir}
-        cd ./src/
-        python3 ./WikiExtractor.py -c -b 25M -o ${cleaned_dir} ${target_file}
+        python3 ./lm/WikiExtractor.py -c -b 25M -o ${cleaned_dir} ${target_file}
     fi
     echo "Uncompressing and preprocessing cleaned articles from $cleaned_dir"
     echo "All articles will be written to $corpus_file (1 sentence per line, without dot at the end)."
@@ -148,7 +148,7 @@ if [ ! -f "${corpus_file}" ] ; then
             | pv \
             | tee >(    sed 's/<[^>]*>//g' \
                       | sed 's|["'\''„“‚‘]||g' \
-                      | python3 ./create_corpus.py ${language} > ${corpus_file} \
+                      | python3 ./lm/create_corpus.py ${language} > ${corpus_file} \
                    ) \
             | grep -e "<doc" \
             | wc -l)

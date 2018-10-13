@@ -31,7 +31,7 @@ gpu=''
 batch_size='16'
 epochs='30'
 valid_batches='0'
-dropouts=false
+dropouts=''
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]

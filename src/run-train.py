@@ -41,7 +41,7 @@ parser.add_argument('--lm', type=str,
 parser.add_argument('--lm_vocab', type=str,
                     help='path to text file containing vocabulary used to train KenLM model. The vocabulary must'
                          'be words separated by a single whitespace without newlines')
-parser.add_argument('--dropouts', type=bool, action='store_true',
+parser.add_argument('--dropouts', action='store_true',
                     help='whether to use dropouts (default: False)')
 parser.add_argument('--tensorboard', type=bool, default=True, help='True/False to use tensorboard')
 parser.add_argument('--memcheck', type=bool, default=False, help='print out memory details for each epoch')

@@ -33,7 +33,7 @@ batch_size='16'
 epochs='30'
 valid_batches='0'
 dropouts=''
-optimizer='adam'
+optimizer='sgd'
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]

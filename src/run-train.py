@@ -43,8 +43,8 @@ parser.add_argument('--lm_vocab', type=str,
                          'be words separated by a single whitespace without newlines')
 parser.add_argument('--dropouts', action='store_true',
                     help='whether to use dropouts (default: False)')
-parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='adam',
-                    help='(optional) optimizer to use. Default=Adam')
+parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='sgd',
+                    help='(optional) optimizer to use. Default=SGD')
 parser.add_argument('--tensorboard', type=bool, default=True, help='True/False to use tensorboard')
 parser.add_argument('--memcheck', type=bool, default=False, help='print out memory details for each epoch')
 parser.add_argument('--train_batches', type=int, default=0,

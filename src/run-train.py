@@ -13,7 +13,7 @@ from os import makedirs
 from os.path import join, abspath, isdir
 
 from keras.callbacks import TensorBoard
-from keras.optimizers import SGD
+from keras.optimizers import SGD, Adam
 
 from core.batch_generator import CSVBatchGenerator
 from core.models import *
@@ -43,6 +43,8 @@ parser.add_argument('--lm_vocab', type=str,
                          'be words separated by a single whitespace without newlines')
 parser.add_argument('--dropouts', action='store_true',
                     help='whether to use dropouts (default: False)')
+parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='adam',
+                    help='(optional) optimizer to use. Default=Adam')
 parser.add_argument('--tensorboard', type=bool, default=True, help='True/False to use tensorboard')
 parser.add_argument('--memcheck', type=bool, default=False, help='print out memory details for each epoch')
 parser.add_argument('--train_batches', type=int, default=0,
@@ -74,7 +76,11 @@ def main():
     print(f'all output will be written to {target_dir}')
     print()
 
-    opt = SGD(lr=args.learning_rate, decay=1e-6, momentum=0.9, nesterov=True, clipnorm=5)
+    print(f'creating {args.optimizer.upper()} optimizer for model')
+    if args.optimizer == 'adam':
+        opt = SGD(lr=args.learning_rate, decay=1e-6, momentum=0.9, nesterov=True, clipnorm=5)
+    else:
+        opt = Adam(lr=args.learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-8, clipnorm=5)
     model = create_model(target_dir, opt, args.dropouts)
 
     train_model(model, target_dir, args.minutes)
@@ -113,10 +119,11 @@ def create_model(target_dir, opt, dropouts):
             exit(0)
         model = load_model_from_dir(target_dir, opt)
     else:
-        print('Creating new model')
         if dropouts:
+            print('Creating new model with dropouts')
             model = deep_speech_dropout(n_features=26, n_fc=args.fc_size, n_recurrent=args.rnn_size, n_labels=29)
         else:
+            print('Creating new model without dropouts')
             model = deep_speech_lstm(n_features=26, n_fc=args.fc_size, n_recurrent=args.rnn_size, n_labels=29)
         model.compile(optimizer=opt, loss=ctc)
 

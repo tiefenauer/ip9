@@ -77,7 +77,7 @@ class ReportCallback(callbacks.Callback):
         good_inferences = df_inferences[mask]
 
         if self.force_output or not good_inferences.empty:
-            print(f'inferences with WER y 0.6 (any decoding strategy, with or without LM correction):')
+            print(f'inferences with WER < 0.6 (any decoding strategy, with or without LM correction):')
             print_dataframe(good_inferences)
 
         mean_metrics = calculate_metrics_mean(df_inferences)

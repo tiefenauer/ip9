@@ -76,6 +76,5 @@ def print_dataframe(df):
                            'display.max_columns', None,
                            'display.width', 1000,
                            'colheader_justify', 'left',
-                           'precision', 3,
                            'display.max_colwidth', -1):
         print(df)

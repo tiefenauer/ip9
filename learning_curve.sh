@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # set -xe
-usage="$(basename "$0") [-h|--help] [-r|--run_id <string>] [-d|--destination <path>] [-t|--train_files <path>] [-v|--valid_files <path>] [-g|--gpu] [-b|--batch_size <int>] [-e|--epochs <int>] [-x|--decoder <string>] [-l|--lm <path>] [-a|--lm_vocab <path>] [-p|--dropouts]
+usage="$(basename "$0") [-h|--help] [-r|--run_id <string>] [-d|--destination <path>] [-t|--train_files <path>] [-v|--valid_files <path>] [-g|--gpu] [-b|--batch_size <int>] [-e|--epochs <int>] [-l|--lm <path>] [-a|--lm_vocab <path>] [-p|--dropouts] [-o|--optimizer <string>]
 where:
     -h|--help                                show this help text
     -r|--run_id <string>                     run-id to use (used to resume training)
@@ -15,6 +15,7 @@ where:
     -e|--epochs <int>                        number of epochs to train (default: 30)
     -u|--valid_batches <int>                 number of batches to use for validation (default: all)
     -p|--dropouts                            whether to use dropouts
+    -o|--optimizer                           optimizer to use ('adam' or 'sgd'). (default: 'adam')
 
 Create data to plot a learning curve by running a simplified version of the DeepSpeech-BRNN. This script will call run-train.py with increasing amounts of training data (1 to 1000 minutes).
 For each amount of training data a separate training run is started. A unique run-id is assigned to each training run from which the value of each dimension can be derived.
@@ -32,6 +33,7 @@ batch_size='16'
 epochs='30'
 valid_batches='0'
 dropouts=''
+optimizer='adam'
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -102,6 +104,10 @@ case $key in
     dropouts='--dropouts'
     shift
     ;;
+    -o|--optimizer)
+    optimizer="$2"
+    shift
+    ;;
     *)    # unknown option
     POSITIONAL+=("$1") # save it in an array for later
     shift
@@ -129,6 +135,7 @@ batch_size      = ${batch_size}
 epochs          = ${epochs}
 valid_batches   = ${valid_batches}
 dropouts        = ${dropouts}
+optimizer       = ${optimizer}
 -----------------------------------------------------
 " | tee ${lc_result_dir%/}/${lc_run_id}.log
 
@@ -160,6 +167,7 @@ do
         --lm ${lm} \
         --lm_vocab ${lm_vocab} \
         ${dropouts} \
+        --optimizer ${optimizer} \
         --gpu ${gpu} \
         --batch_size ${batch_size} \
         --epochs ${epochs} \

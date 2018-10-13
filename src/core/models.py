@@ -43,7 +43,7 @@ def deep_speech_lstm(n_features=26, n_fc=1024, n_recurrent=1024, n_labels=29):
 
     # recurrent layer: BiDirectional LSTM
     x = Bidirectional(
-        LSTM(n_recurrent, activation=clipped_relu, return_sequences=True, kernel_initializer='he_normal'),
+        LSTM(n_recurrent, activation=clipped_relu, return_sequences=True, kernel_initializer='glorot_uniform'),
         merge_mode='sum', name='BRNN')(x)
 
     # output layer

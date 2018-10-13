@@ -129,7 +129,6 @@ def create_model(target_dir, opt, dropouts):
 
     model.summary()
 
-    K.set_learning_phase(1)
     return model
 
 

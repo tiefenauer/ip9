@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # set -xe
-usage="$(basename "$0") [-h|--help] [-r|--run_id <string>] [-d|--destination <path>] [-t|--train_files <path>] [-v|--valid_files <path>] [-g|--gpu] [-b|--batch_size <int>] [-e|--epochs <int>] [-x|--decoder <string>] [-l|--lm <path>] [-a|--lm_vocab <path>]
+usage="$(basename "$0") [-h|--help] [-r|--run_id <string>] [-d|--destination <path>] [-t|--train_files <path>] [-v|--valid_files <path>] [-g|--gpu] [-b|--batch_size <int>] [-e|--epochs <int>] [-x|--decoder <string>] [-l|--lm <path>] [-a|--lm_vocab <path>] [-p|--dropouts]
 where:
     -h|--help                                show this help text
     -r|--run_id <string>                     run-id to use (used to resume training)
@@ -14,6 +14,7 @@ where:
     -b|--batch_size <int>                    batch size (default: 16)
     -e|--epochs <int>                        number of epochs to train (default: 30)
     -u|--valid_batches <int>                 number of batches to use for validation (default: all)
+    -p|--dropouts                            whether to use dropouts
 
 Create data to plot a learning curve by running a simplified version of the DeepSpeech-BRNN. This script will call run-train.py with increasing amounts of training data (1 to 1000 minutes).
 For each amount of training data a separate training run is started. A unique run-id is assigned to each training run from which the value of each dimension can be derived.
@@ -30,6 +31,7 @@ gpu=''
 batch_size='16'
 epochs='30'
 valid_batches='0'
+dropouts=false
 
 POSITIONAL=()
 while [[ $# -gt 0 ]]
@@ -96,6 +98,10 @@ case $key in
     shift
     shift
     ;;
+    -p|--dropout)
+    dropouts='--dropouts'
+    shift
+    ;;
     *)    # unknown option
     POSITIONAL+=("$1") # save it in an array for later
     shift
@@ -122,6 +128,7 @@ gpu             = ${gpu}
 batch_size      = ${batch_size}
 epochs          = ${epochs}
 valid_batches   = ${valid_batches}
+dropouts        = ${dropouts}
 -----------------------------------------------------
 " | tee ${lc_result_dir%/}/${lc_run_id}.log
 
@@ -152,6 +159,7 @@ do
         --minutes ${minutes} \
         --lm ${lm} \
         --lm_vocab ${lm_vocab} \
+        ${dropouts} \
         --gpu ${gpu} \
         --batch_size ${batch_size} \
         --epochs ${epochs} \

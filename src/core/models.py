@@ -43,7 +43,7 @@ def deep_speech_lstm(n_features=26, n_fc=1024, n_recurrent=1024, n_labels=29):
 
     # recurrent layer: BiDirectional LSTM
     x = Bidirectional(
-        LSTM(n_recurrent, activation=clipped_relu, return_sequences=True, kernel_initializer='glorot_uniform'),
+        LSTM(n_recurrent, activation=clipped_relu, return_sequences=True, kernel_initializer='he_normal'),
         merge_mode='sum', name='BRNN')(x)
 
     # output layer
@@ -64,26 +64,26 @@ def deep_speech_lstm(n_features=26, n_fc=1024, n_recurrent=1024, n_labels=29):
     return model
 
 
-def deep_speech_dropout(n_features=26, n_fc=2048, n_recurrent=512, n_labels=29):
+def deep_speech_dropout(n_features=26, n_fc=1024, n_recurrent=1024, n_labels=29):
     """
     Simplified DeepSpeech model with LSTM-cells in recurrent layer. Like deep_speech_lstm, but with dropouts.
     """
     get_custom_objects().update({"clipped_relu": clipped_relu})
-    K.set_learning_phase(1)
+
+    init = random_normal(stddev=0.046875)
 
     # input layer
     features = Input(name='the_input', shape=(None, n_features))
 
-    # 3 x FC layer
-    init = random_normal(stddev=0.046875)
-    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
-                              name='FC_1'))(features)
+    # First 3 FC layers
+    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
+                        name='FC_1')(features)
     x = TimeDistributed(Dropout(0.1))(x)
-    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
-                              name='FC_2'))(x)
+    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
+                              name='FC_2')(x)
     x = TimeDistributed(Dropout(0.1))(x)
-    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init,
-                              name='FC_3'))(x)
+    x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
+                              name='FC_3')(x)
     x = TimeDistributed(Dropout(0.1))(x)
 
     # recurrent layer: BiDirectional LSTM
@@ -105,7 +105,7 @@ def deep_speech_dropout(n_features=26, n_fc=2048, n_recurrent=512, n_labels=29):
     # Implement CTC loss in lambda layer
     loss_out = Lambda(ctc_lambda_func, output_shape=(1,), name='ctc')([y_pred, labels, input_length, label_length])
 
-    model = Model(inputs=[x, labels, input_length, label_length], outputs=loss_out)
+    model = Model(inputs=[features, labels, input_length, label_length], outputs=[loss_out])
 
     return model
 

@@ -41,6 +41,8 @@ parser.add_argument('--lm', type=str,
 parser.add_argument('--lm_vocab', type=str,
                     help='path to text file containing vocabulary used to train KenLM model. The vocabulary must'
                          'be words separated by a single whitespace without newlines')
+parser.add_argument('--dropouts', type=bool, action='store_true',
+                    help='whether to use dropouts (default: False)')
 parser.add_argument('--tensorboard', type=bool, default=True, help='True/False to use tensorboard')
 parser.add_argument('--memcheck', type=bool, default=False, help='print out memory details for each epoch')
 parser.add_argument('--train_batches', type=int, default=0,
@@ -73,7 +75,7 @@ def main():
     print()
 
     opt = SGD(lr=args.learning_rate, decay=1e-6, momentum=0.9, nesterov=True, clipnorm=5)
-    model = create_model(target_dir, opt)
+    model = create_model(target_dir, opt, args.dropouts)
 
     train_model(model, target_dir, args.minutes)
 
@@ -103,7 +105,7 @@ def setup():
     return target_dir
 
 
-def create_model(target_dir, opt):
+def create_model(target_dir, opt, dropouts):
     if args.model_path:
         print(f'trying to load model from {target_dir}')
         if not isdir(args.model_path):
@@ -112,10 +114,15 @@ def create_model(target_dir, opt):
         model = load_model_from_dir(target_dir, opt)
     else:
         print('Creating new model')
-        model = deep_speech_lstm(n_features=26, n_fc=args.fc_size, n_recurrent=args.rnn_size, n_labels=29)
+        if dropouts:
+            model = deep_speech_dropout(n_features=26, n_fc=args.fc_size, n_recurrent=args.rnn_size, n_labels=29)
+        else:
+            model = deep_speech_lstm(n_features=26, n_fc=args.fc_size, n_recurrent=args.rnn_size, n_labels=29)
         model.compile(optimizer=opt, loss=ctc)
 
     model.summary()
+
+    K.set_learning_phase(1)
     return model
 
 

@@ -44,8 +44,6 @@ class ReportCallback(callbacks.Callback):
         self.lm_vocab = None
         self.decoders = {}
         if lm_path:
-            if not vocab_path:
-                raise ValueError('ERROR: Path to vocabulary file must be supplied when supplying path to LM!')
             self.lm_path, self.vocab_path = lm_path, vocab_path
             self.lm, self.lm_vocab = load_lm(lm_path, vocab_path)
 

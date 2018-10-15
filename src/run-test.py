@@ -24,7 +24,11 @@ parser.add_argument('-s', '--batch_size', type=int, default=16,
 parser.add_argument('-l', '--lm', type=str, default='',
                     help='path to compiled KenLM binary for spelling correction (optional)')
 parser.add_argument('-a', '--lm_vocab', type=str, default='',
-                    help='path to vocabulary of LM (mandatory, if lm is set!)')
+                    help='(optional) path to text file containing vocabulary used to train KenLM model. The vocabulary '
+                         'must be words separated by a single whitespace without newlines. A vocabulary is mandatory '
+                         'if a LM is supplied with \'--lm_path\'. If \'--lm_path\' is set and  lm_vocab_path not, a '
+                         'default vocabulary file with the same name as lm_path and the ending \'.vocab\' '
+                         'will be searched. If this is not found, the script will exit.')
 parser.add_argument('-g', '--gpu', type=str, default=None, required=False,
                     help='GPU to use (optional). If not set, you will be asked at runtime')
 args = parser.parse_args()

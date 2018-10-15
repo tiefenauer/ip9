@@ -47,7 +47,7 @@ def lers_norm(ground_truths, predictions):
     return np.array([ler_norm(ground_truth, pred) for (ground_truth, pred) in zip(ground_truths, predictions)])
 
 
-def load_lm(lm_path, vocab_path):
+def load_lm(lm_path, vocab_path=None):
     global LM_MODELS
     if lm_path in LM_MODELS:
         print(f'using cached LM and vocab:')

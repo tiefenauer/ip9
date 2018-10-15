@@ -91,6 +91,22 @@ class BatchGenerator(object):
         raise NotImplementedError
 
 
+class VoiceSegmentsBatchGenerator(BatchGenerator):
+
+    def __init__(self, voice_segments, batch_size):
+        super().__init__(len(voice_segments), batch_size)
+        self.voice_segments = voice_segments
+
+    def extract_features(self, index_array):
+        return [mfcc(segment.audio, samplerate=16000, numcep=26) for segment in (self.voice_segments[i] for i in index_array)]
+
+    def extract_labels(self, index_array):
+        return [f'voice segment'] * len(index_array)
+
+    def shuffle_entries(self):
+        self.voice_segments = shuffle(self.voice_segments)
+
+
 class CSVBatchGenerator(BatchGenerator):
 
     def __init__(self, csv_path, sort=False, n_batches=None, batch_size=16, num_minutes=None):

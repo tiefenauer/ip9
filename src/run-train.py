@@ -38,9 +38,12 @@ parser.add_argument('--decoder', type=str, default='beamsearch,bestpath',
                     help='decoder to use (\'beamsearch\' or \'bestpath\') for validation. Default: None (both)')
 parser.add_argument('--lm', type=str,
                     help='path to KenLM binary file to use for validation')
-parser.add_argument('--lm_vocab', type=str,
-                    help='path to text file containing vocabulary used to train KenLM model. The vocabulary must'
-                         'be words separated by a single whitespace without newlines')
+parser.add_argument('--lm_vocab', type=str, required=False,
+                    help='(optional) path to text file containing vocabulary used to train KenLM model. The vocabulary '
+                         'must be words separated by a single whitespace without newlines. A vocabulary is mandatory '
+                         'if a LM is supplied with \'--lm_path\'. If \'--lm_path\' is set and  lm_vocab_path not, a '
+                         'default vocabulary file with the same name as lm_path and the ending \'.vocab\' '
+                         'will be searched. If this is not found, the script will exit.')
 parser.add_argument('--dropouts', action='store_true',
                     help='whether to use dropouts (default: False)')
 parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='sgd',

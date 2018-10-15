@@ -6,11 +6,12 @@ Forked and adjusted from: https://github.com/robmsmt/KerasDeepSpeech
 """
 
 import argparse
-from datetime import datetime, timedelta
 import os
 import sys
-from os import makedirs, remove
+from datetime import datetime
+from os import makedirs
 from os.path import join, abspath, isdir, exists
+from shutil import rmtree
 
 from keras.callbacks import TensorBoard
 from keras.optimizers import SGD, Adam
@@ -146,7 +147,7 @@ def train_model(model, target_dir, num_minutes=None):
     if args.tensorboard:
         tensorboard_path = join(target_dir, 'tensorboard')
         if exists(tensorboard_path):
-            remove(tensorboard_path)
+            rmtree(tensorboard_path)
         tb_cb = TensorBoard(log_dir=tensorboard_path, write_graph=False, write_images=True)
         cb_list.append(tb_cb)
 

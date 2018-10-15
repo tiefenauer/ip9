@@ -17,13 +17,23 @@ from util.ctc_util import encode
 
 
 class BatchGenerator(object):
-    def __init__(self, n, batch_size):
-        self.n = n
+    def __init__(self, batch_items, batch_size):
+        self.batch_items = batch_items
         self.batch_size = batch_size
+        self.n = len(batch_items)
         self.cur_index = 0
 
+    def __getitem__(self, batch_ix):
+        if isinstance(batch_ix, slice):
+            raise ValueError('Slicing not supported yet...')
+
+        return self.get_batch(batch_ix % len(self))
+
     def __len__(self):
-        return self.n // self.batch_size  # number of batches
+        """
+        The length of a batch generator is equal to the number of batches it produces
+        """
+        return math.ceil(len(self.batch_items) / self.batch_size)
 
     def __iter__(self):
         return self
@@ -43,10 +53,11 @@ class BatchGenerator(object):
             return ret
 
     def has_next(self):
-        return (self.cur_index + 1) * self.batch_size < self.n
+        return self.cur_index < len(self)
 
     def get_batch(self, idx):
-        index_array = range(idx * self.batch_size, (idx + 1) * self.batch_size)
+        index_array = range(idx * self.batch_size, min((idx + 1) * self.batch_size, self.n))
+
         features = self.extract_features(index_array)
         X = pad_sequences(features, dtype='float32', padding='post')
         X_lengths = np.array([feature.shape[0] for feature in features])
@@ -63,7 +74,7 @@ class BatchGenerator(object):
             'source_str': labels
         }
 
-        outputs = {'ctc': np.zeros([self.batch_size])}
+        outputs = {'ctc': np.zeros([len(index_array)])}
 
         return inputs, outputs
 
@@ -93,18 +104,22 @@ class BatchGenerator(object):
 
 class VoiceSegmentsBatchGenerator(BatchGenerator):
 
-    def __init__(self, voice_segments, batch_size):
-        super().__init__(len(voice_segments), batch_size)
-        self.voice_segments = voice_segments
+    def __next__(self):
+        if not self.has_next():
+            raise StopIteration()
+        ret = self.get_batch(self.cur_index)
+        self.cur_index += 1
+        return ret
 
     def extract_features(self, index_array):
-        return [mfcc(segment.audio, samplerate=16000, numcep=26) for segment in (self.voice_segments[i] for i in index_array)]
+        return [mfcc(segment.audio, samplerate=16000, numcep=26) for segment in
+                (self.batch_items[i] for i in index_array)]
 
     def extract_labels(self, index_array):
         return [f'voice segment'] * len(index_array)
 
     def shuffle_entries(self):
-        self.voice_segments = shuffle(self.voice_segments)
+        self.batch_items = shuffle(self.batch_items)
 
 
 class CSVBatchGenerator(BatchGenerator):
@@ -132,7 +147,7 @@ class CSVBatchGenerator(BatchGenerator):
         self.wav_sizes = df['wav_filesize'].tolist()
         self.wav_lengths = df['wav_length'].tolist() if 'wav_length' in df else []
 
-        super().__init__(n=len(df.index), batch_size=batch_size)
+        super().__init__(batch_items=df, batch_size=batch_size)
         del df
 
     def shuffle_entries(self):

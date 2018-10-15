@@ -11,7 +11,7 @@ from util.log_util import create_args_str
 from util.rnn_util import load_model_from_dir, create_keras_session
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-m', '--model_dir', type=str, required=True,
+parser.add_argument('-m', '--model_dir', type=str, required=False,
                     help='path to trained Keras model')
 parser.add_argument('-t', '--target_dir', type=str, required=False,
                     help='target directory for results (optional). If not set, results will be written to model_dir')
@@ -49,6 +49,8 @@ def main():
 
 
 def setup(args):
+    if not args.model_dir:
+        args.model_dir = input('Enter directory where H5 file ist stored: ')
     if not args.target_dir:
         args.target_dir = args.model_dir
 

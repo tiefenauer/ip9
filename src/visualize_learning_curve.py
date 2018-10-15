@@ -75,6 +75,8 @@ def plot_to_subplots(df, axes, styles):
 
 
 def setup(args):
+    if not args.source_dir:
+        args.source_dir = input('Enter source directory: ')
     source_dir = abspath(args.source_dir)
     if not exists(source_dir):
         print(f'ERROR: source dir {args.source_dir} does not exist')
@@ -153,7 +155,7 @@ def plot_dataframe(y, metric, title, ax=None, label=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--source_dir', type=str, required=True,
+    parser.add_argument('--source_dir', type=str, required=False,
                         help='root directory containing output')
     parser.add_argument('--target_dir', nargs='?', type=str,
                         help='(optional) target directory to save plots. Root directory will be used if not set.')

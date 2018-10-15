@@ -6,11 +6,11 @@ Forked and adjusted from: https://github.com/robmsmt/KerasDeepSpeech
 """
 
 import argparse
-import datetime
+from datetime import datetime, timedelta
 import os
 import sys
-from os import makedirs
-from os.path import join, abspath, isdir
+from os import makedirs, remove
+from os.path import join, abspath, isdir, exists
 
 from keras.callbacks import TensorBoard
 from keras.optimizers import SGD, Adam
@@ -68,10 +68,10 @@ parser.add_argument('--gpu', type=str, required=False, default=None,
 args = parser.parse_args()
 
 
-def main():
+def main(date_time):
     print(create_args_str(args))
 
-    target_dir = setup()
+    target_dir = setup(date_time)
     print()
     print(f'all output will be written to {target_dir}')
     print()
@@ -86,9 +86,9 @@ def main():
     train_model(model, target_dir, args.minutes)
 
 
-def setup():
+def setup(date_time):
     if not args.run_id:
-        args.run_id = 'DS_' + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M')
+        args.run_id = 'DS_' + date_time.strftime('%Y-%m-%d_%H-%M')
 
     target_dir = join(args.target_dir, args.run_id)
     if not isdir(target_dir):
@@ -141,7 +141,10 @@ def train_model(model, target_dir, num_minutes=None):
 
     cb_list = []
     if args.tensorboard:
-        tb_cb = TensorBoard(log_dir=join(target_dir, 'tensorboard'), write_graph=False, write_images=True)
+        tensorboard_path = join(target_dir, 'tensorboard')
+        if exists(tensorboard_path):
+            remove(tensorboard_path)
+        tb_cb = TensorBoard(log_dir=tensorboard_path, write_graph=False, write_images=True)
         cb_list.append(tb_cb)
 
     report_cb = ReportCallback(data_valid, model, num_minutes=num_minutes, num_epochs=args.epochs,
@@ -158,4 +161,9 @@ def train_model(model, target_dir, num_minutes=None):
 
 
 if __name__ == '__main__':
-    main()
+    start_time = datetime.now()
+    print(f'Training run started on : {start_time}')
+    main(start_time)
+    end_time = datetime.now()
+    total_time = end_time - start_time
+    print(f'Training run finished on : {end_time}. Total time: {total_time}')

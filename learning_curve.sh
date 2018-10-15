@@ -119,8 +119,11 @@ set -- "${POSITIONAL[@]}" # restore positional parameters
 lc_result_dir=${target_dir%/}/${lc_run_id}
 mkdir -p ${lc_result_dir}
 
+SECONDS=0
+
 echo "
 -----------------------------------------------------
+ Start time: $(date)
  starting learning curve with the following parameters
 -----------------------------------------------------
 lc_run_id       = ${lc_run_id}
@@ -182,3 +185,12 @@ do
     #################################################################################################
     "
 done
+
+duration=$SECONDS
+
+echo "
+-----------------------------------------------------
+ End time: $(date)
+ Finished in ${duration} seconds
+-----------------------------------------------------
+"

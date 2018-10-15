@@ -1,10 +1,11 @@
 import argparse
-from os import getcwd, remove
-from os.path import abspath, exists, splitext
+import math
+from itertools import product
+from os import getcwd, remove, makedirs
+from os.path import abspath, exists, splitext, join
 
 import numpy as np
 import pandas as pd
-from pattern3.metrics import levenshtein_similarity
 
 from core.batch_generator import VoiceSegmentsBatchGenerator
 from core.decoder import BestPathDecoder, BeamSearchDecoder
@@ -12,7 +13,7 @@ from util.asr_util import infer_batches, decoding_strategies, lm_uses
 from util.audio_util import to_wav, read_pcm16_wave
 from util.lm_util import load_lm
 from util.log_util import create_args_str
-from util.lsa_util import smith_waterman
+from util.lsa_util import align_globally
 from util.rnn_util import load_model_from_dir
 from util.string_util import normalize
 from util.vad_util import webrtc_voice
@@ -22,9 +23,11 @@ def main(args):
     print(create_args_str(args))
     audio_path, transcript_path, asr_model, lm, lm_vocab, target_dir = setup(args)
 
+    print(f'all artefacts will be saved to {target_dir}')
+
     audio, rate, transcript = preprocess(audio_path, transcript_path)
     voiced_segments = vad(audio, rate)
-    transcripts = asr(asr_model, voiced_segments, rate, lm, lm_vocab)
+    transcripts = asr(asr_model, voiced_segments, rate, lm, lm_vocab, target_dir)
     alignments = lsa(transcripts, transcript)
 
     c, o, d = calculate_stats(alignments)
@@ -53,7 +56,6 @@ def setup(args):
         if not exists(transcript_path):
             raise ValueError(f'ERROR: not transcript file supplied and no transcript found at {transcript_path}')
 
-    print(f'')
     asr_model_path = abspath(args.asr_model)
     if not exists(asr_model_path):
         raise ValueError(f'ERROR: ASR model not found at {asr_model_path}')
@@ -64,7 +66,10 @@ def setup(args):
         raise ValueError(f'ERROR: LM not found at {lm_path}')
     lm, lm_vocab = load_lm(lm_path)
 
-    target_dir = abspath(args.target_dir) if args.target_dir else getcwd()
+    args.target_dir = abspath(args.target_dir) if args.target_dir else getcwd()
+    target_dir = abspath(join(args.target_dir, splitext(audio_path)[0]))
+    if not exists(target_dir):
+        makedirs(target_dir)
 
     return audio_path, transcript_path, model, lm, lm_vocab, target_dir
 
@@ -97,31 +102,41 @@ def vad(audio, rate):
     return voiced_segments
 
 
-def asr(model, voiced_segments, rate, lm, lm_vocab):
-    print(f'inferring partial transcripts')
-    batch_generator = VoiceSegmentsBatchGenerator(voiced_segments, 16)
-    decoder_greedy = BestPathDecoder(model)
-    decoder_beam = BeamSearchDecoder(model)
-    df_inferences = infer_batches(batch_generator, decoder_greedy, decoder_beam, lm, lm_vocab)
+def asr(model, voiced_segments, rate, lm, lm_vocab, target_dir):
+    inferences_csv = join(target_dir, 'inferences.csv')
+    if exists(inferences_csv):
+        print(f'found inferences from previous run in {target_dir}')
+        df_inferences = pd.read_csv(inferences_csv, header=[0, 1, 2], index_col=0)
 
-    columns = pd.MultiIndex.from_product([decoding_strategies, lm_uses])
-    df_results = pd.DataFrame(index=range(len(batch_generator)), columns=columns)
+    else:
+        print(f'inferring partial transcripts')
+        batch_generator = VoiceSegmentsBatchGenerator(voiced_segments, sample_rate=rate, batch_size=16)
+        decoder_greedy = BestPathDecoder(model)
+        decoder_beam = BeamSearchDecoder(model)
+        df_inferences = infer_batches(batch_generator, decoder_greedy, decoder_beam, lm, lm_vocab)
+        df_inferences.to_csv(inferences_csv)
 
-    for row in df_inferences.iterrows():
-        print(row)
+    transcripts = [''] * len(df_inferences)
 
-    return df_results
+    for ix, row in df_inferences.iterrows():
+        ler_min = math.inf
+        transcript = ''
+        for decoding_strategy, lm_use in product(decoding_strategies, lm_uses):
+            ler_value = row[(decoding_strategy, lm_use)]['LER']
+            if ler_value < ler_min:
+                ler_min = ler_value
+                transcript = row[(decoding_strategy, lm_use)]['prediction']
+        # print(transcript)
+        transcripts[ix] = transcript
+
+    return transcripts
 
 
-def lsa(partial_transcripts, full_transcript):
-    alignments = []
-    for partial_transcript in partial_transcripts:
-        text_start, text_end, b_ = smith_waterman(partial_transcript, full_transcript)
-        alignment_text = full_transcript[text_start:text_end]
-        similarity = levenshtein_similarity(normalize(partial_transcript), normalize(alignment_text))
-        alignment = {'text': alignment_text, 'similarity': similarity, 'text_start': text_start, 'text_end': text_end}
-        alignments.append(alignment)
-    return alignments
+def lsa(transcripts, full_transcript):
+    alignments = align_globally(transcripts, full_transcript)
+    for alignment in alignments:
+        print('original :', full_transcript[alignment['start']:alignment['end']])
+        print('alignment:', alignment['text'])
 
 
 def calculate_stats(alignments):

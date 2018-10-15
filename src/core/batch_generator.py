@@ -62,17 +62,19 @@ class BatchGenerator(object):
         X = pad_sequences(features, dtype='float32', padding='post')
         X_lengths = np.array([feature.shape[0] for feature in features])
 
-        labels = self.extract_labels(index_array)
-        Y = pad_sequences([encode(label) for label in labels], padding='post', value=28)
-        Y_lengths = np.array([len(label) for label in labels])
-
         inputs = {
             'the_input': X,
-            'the_labels': Y,
-            'input_length': X_lengths,
-            'label_length': Y_lengths,
-            'source_str': labels
+            'input_length': X_lengths
         }
+
+        # labels are only known when inferring on labelled data (train-/dev-/test-set), not on completely new data
+        labels = self.extract_labels(index_array)
+        if labels:
+            Y = pad_sequences([encode(label) for label in labels], padding='post', value=28)
+            Y_lengths = np.array([len(label) for label in labels])
+            inputs['the_labels'] = Y
+            inputs['label_length'] = Y_lengths
+            inputs['source_str'] = labels
 
         outputs = {'ctc': np.zeros([len(index_array)])}
 
@@ -104,7 +106,12 @@ class BatchGenerator(object):
 
 class VoiceSegmentsBatchGenerator(BatchGenerator):
 
+    def __init__(self, voiced_segments, sample_rate, batch_size):
+        super().__init__(voiced_segments, batch_size)
+        self.sample_rate = sample_rate
+
     def __next__(self):
+        # we must override this method because otherwise it would be an infinite iterator
         if not self.has_next():
             raise StopIteration()
         ret = self.get_batch(self.cur_index)
@@ -112,11 +119,12 @@ class VoiceSegmentsBatchGenerator(BatchGenerator):
         return ret
 
     def extract_features(self, index_array):
-        return [mfcc(segment.audio, samplerate=16000, numcep=26) for segment in
-                (self.batch_items[i] for i in index_array)]
+        return [mfcc(segment.audio, samplerate=self.sample_rate, numcep=26)
+                for segment in (self.batch_items[i] for i in index_array)]
 
     def extract_labels(self, index_array):
-        return [f'voice segment'] * len(index_array)
+        # no labels for VAD-recognized voiced segments
+        return None
 
     def shuffle_entries(self):
         self.batch_items = shuffle(self.batch_items)

@@ -147,15 +147,17 @@ def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5)
         scores[i][j] = max(match, delete, insert)
 
     alignments = []
-    last_i = None
     source_str, target_str = '', ''
 
     # Traceback: start from the bottom right cell
     i, j = m - 1, n - 1
+    end = i
     while i > 0 and j > 0:
         if str_2[j - 1] == '#':  # beginnings of speech segments are marked with '#'
-            alignments.insert(0, {'start': i, 'end': last_i, 'text': str_1[i:last_i]})
-            last_i = i
+            start = snap_to_closest_word_boundary(i, str_1)
+            end = snap_to_closest_word_boundary(end, str_1)
+            alignments.insert(0, {'start': start - 1, 'end': end - 2, 'text': str_1[start - 1:end - 2]})
+            end = start
 
         score_current = scores[i][j]
         score_diagonal = scores[i - 1][j - 1]
@@ -179,7 +181,7 @@ def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5)
     # add one additional alignment (at max!) if segment beginnings that are not yet processed are encountered
     # The first unprocessed segment is aligned with the remaining text at the beginning of the reference string
     if j > 0:
-        alignments.insert(0, {'start': 0, 'end': last_i, 'text': str_1[0:last_i]})
+        alignments.insert(0, {'start': 0, 'end': end, 'text': str_1[0:end]})
     # Finish tracing up to the top left cell
     while j > 0:
         source_str = '-' + source_str
@@ -200,3 +202,12 @@ def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5)
     # print(f'Alignment: {alignment_str}')
     # print(f'Target   : {target_str}')
     return alignments
+
+
+def snap_to_closest_word_boundary(ix, text):
+    left, right = 0, 0
+    while ix - left - 1 > 0 and text[ix - left - 1] != ' ':
+        left += 1
+    while ix + right + 1 < len(text) and text[ix + right + 1] != ' ':
+        right += 1
+    return ix - left + 1 if left <= right else ix + right - 1

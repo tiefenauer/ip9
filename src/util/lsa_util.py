@@ -155,9 +155,8 @@ def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5)
     while i > 0 and j > 0:
         if str_2[j - 1] == '#':  # beginnings of speech segments are marked with '#'
             start = snap_to_closest_word_boundary(i, str_1)
-            end = snap_to_closest_word_boundary(end, str_1)
-            alignments.insert(0, {'start': start - 1, 'end': end - 2, 'text': str_1[start - 1:end - 2]})
-            end = start
+            alignments.insert(0, {'start': start, 'end': end, 'text': str_1[start:end]})
+            end = start - 1
 
         score_current = scores[i][j]
         score_diagonal = scores[i - 1][j - 1]
@@ -206,8 +205,8 @@ def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5)
 
 def snap_to_closest_word_boundary(ix, text):
     left, right = 0, 0
-    while ix - left - 1 > 0 and text[ix - left - 1] != ' ':
+    while ix - left > 0 and text[ix - left] != ' ':
         left += 1
-    while ix + right + 1 < len(text) and text[ix + right + 1] != ' ':
+    while ix + right < len(text) and text[ix + right] != ' ':
         right += 1
-    return ix - left + 1 if left <= right else ix + right - 1
+    return ix - left + 1 if left <= right else ix + right + 1

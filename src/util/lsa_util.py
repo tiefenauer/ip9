@@ -147,16 +147,14 @@ def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5)
         scores[i][j] = max(match, delete, insert)
 
     alignments = []
-    last_j = None
     last_i = None
     source_str, target_str = '', ''
 
     # Traceback: start from the bottom right cell
     i, j = m - 1, n - 1
     while i > 0 and j > 0:
-        if str_2[j - 1] == '#':
+        if str_2[j - 1] == '#':  # beginnings of speech segments are marked with '#'
             alignments.insert(0, {'start': i, 'end': last_i, 'text': str_1[i:last_i]})
-            last_j = j
             last_i = i
 
         score_current = scores[i][j]
@@ -178,17 +176,19 @@ def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5)
             target_str = str_2[j - 1] + target_str
             j -= 1
 
-    alignments.insert(0, {'start': 0, 'end': last_i, 'text': str_1[0:last_i]})
-
+    # add one additional alignment (at max!) if segment beginnings that are not yet processed are encountered
+    # The first unprocessed segment is aligned with the remaining text at the beginning of the reference string
+    if j > 0:
+        alignments.insert(0, {'start': 0, 'end': last_i, 'text': str_1[0:last_i]})
     # Finish tracing up to the top left cell
-    while i > 0:
-        source_str = str_1[i - 1] + source_str
-        target_str = '-' + target_str
-        i -= 1
     while j > 0:
         source_str = '-' + source_str
         target_str = str_2[j - 1] + target_str
         j -= 1
+    while i > 0:
+        source_str = str_1[i - 1] + source_str
+        target_str = '-' + target_str
+        i -= 1
 
     alignment_str = ''.join(a if a == b else ' ' for a, b in zip(source_str, target_str))
     score = sum(match_score(a, b) for a, b in zip(source_str, target_str))

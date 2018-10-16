@@ -1,4 +1,5 @@
 import itertools
+import math
 
 import pandas as pd
 from tqdm import tqdm
@@ -101,11 +102,10 @@ def extract_best_transcript(df_inferences):
     for ix, row in df_inferences.iterrows():
         ler_min = math.inf
         transcript = ''
-        for decoding_strategy, lm_use in product(decoding_strategies, lm_uses):
+        for decoding_strategy, lm_use in itertools.product(decoding_strategies, lm_uses):
             ler_value = row[(decoding_strategy, lm_use)]['LER']
             if ler_value < ler_min:
                 ler_min = ler_value
                 transcript = row[(decoding_strategy, lm_use)]['prediction']
-        # print(transcript)
-        transcripts[ix] = transcript
+        transcripts[int(ix)] = transcript
     return transcripts

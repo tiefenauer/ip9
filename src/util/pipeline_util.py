@@ -3,7 +3,7 @@ Utility functions for end-to-end tasks
 """
 import json
 import os
-from os.path import join, relpath, splitext, basename
+from os.path import join, relpath, basename, exists, pardir
 from pathlib import Path
 from shutil import copyfile
 
@@ -39,10 +39,11 @@ def create_demo(target_dir, audio_src_path, transcript, df_transcripts, df_stats
     with open(alignment_json_path, 'w') as f:
         json.dump(json_data, f, indent=2)
 
-    # update_index(demo_id)
+    update_index(target_dir, demo_id)
     demo_path = create_demo_index(target_dir, demo_id, transcript)
     for file in ['aligner.js', 'default.css', 'style.css', 'server.py', 'jquery-3.3.2.min.js']:
         copyfile(join(ASSETS_DIR, file), join(target_dir, file))
+    copyfile(join(ASSETS_DIR, 'start_server.sh'), join(join(target_dir, pardir), 'start_server.sh'))
     return create_url(demo_path, target_dir)
 
 
@@ -63,15 +64,18 @@ def create_demo_index(target_dir, demo_id, transcript):
     soup.find(id='demo_title').string = f'Forced Alignment for {demo_id}'
     soup.find(id='target').string = transcript.replace('\n', ' ')
 
-    demo_path = join(target_dir, 'index.html')
-    with open(demo_path, 'w', encoding='utf-8') as f:
+    demo_index_path = join(target_dir, 'index.html')
+    with open(demo_index_path, 'w', encoding='utf-8') as f:
         f.write(soup.prettify())
 
-    return demo_path
+    return demo_index_path
 
 
-def update_index(demo_id):
-    index_path = join(ASSETS_DIR, 'index.html')
+def update_index(target_dir, demo_id):
+    index_path = join(join(target_dir, pardir), 'index.html')
+    if not exists(index_path):
+        copyfile(join(ASSETS_DIR, '_index_template.html'), index_path)
+
     soup = BeautifulSoup(open(index_path), 'html.parser')
 
     if not soup.find(id=demo_id):

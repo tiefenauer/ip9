@@ -1,6 +1,6 @@
 import argparse
-from os import getcwd, remove, makedirs
-from os.path import abspath, exists, splitext, join
+from os import remove, makedirs
+from os.path import abspath, exists, splitext, join, dirname, basename
 
 import numpy as np
 import pandas as pd
@@ -21,17 +21,17 @@ from util.vad_util import webrtc_voice
 
 def main(args):
     print(create_args_str(args))
-    audio_path, transcript_path, keras_path, ds_path, ds_alphabet_path, ds_trie_path, lm_path, target_dir = setup(args)
+    audio_path, trans_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, run_id, target_dir = setup(args)
 
     print(f'all artefacts will be saved to {target_dir}')
 
-    audio_bytes, rate, transcript = preprocess(audio_path, transcript_path)
+    audio_bytes, rate, transcript = preprocess(audio_path, trans_path)
     segments = vad(audio_bytes, rate)
-    df_transcripts = asr(segments, rate, keras_path, ds_path, ds_alphabet_path, ds_trie_path, lm_path, target_dir)
-    df_transcripts = lsa(transcript, df_transcripts, target_dir)
+    df_transcripts = asr(segments, rate, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, target_dir)
+    df_transcripts = gsa(transcript, df_transcripts, target_dir)
 
     df_stats = calculate_stats(df_transcripts)
-    create_demo(target_dir, audio_path, transcript, df_transcripts, df_stats)
+    create_demo(target_dir, audio_path, transcript, df_transcripts, df_stats, demo_id=run_id)
 
     print()
     print_dataframe(df_stats)
@@ -55,10 +55,7 @@ def setup(args):
         if not exists(transcript_path):
             raise ValueError(f'ERROR: not transcript file supplied and no transcript found at {transcript_path}')
 
-    args.target_dir = abspath(args.target_dir) if args.target_dir else getcwd()
-    target_dir = abspath(join(args.target_dir, splitext(audio_path)[0]))
-    if not exists(target_dir):
-        makedirs(target_dir)
+    run_id = args.run_id if args.run_id else splitext(basename(audio_path))[0]
 
     if not args.asr_model and not args.ds_model:
         raise ValueError(f'ERROR: either --asr_model or --ds_model must be set!')
@@ -79,27 +76,39 @@ def setup(args):
         ds_trie_path = abspath(args.trie_path)
         if not exists(ds_trie_path):
             raise ValueError(f'ERROR: Trie not found at {ds_trie_path}')
+
+        run_id += '_ds'
     else:
         keras_model_path = abspath(args.asr_model)
         if not exists(keras_model_path):
             raise ValueError(f'ERROR: Keras model not found at {keras_model_path}')
+        run_id += '_keras'
 
     lm_path = abspath(args.lm_path)
     if not exists(lm_path):
         raise ValueError(f'ERROR: LM not found at {lm_path}')
 
-    return audio_path, transcript_path, keras_model_path, ds_model_path, ds_alphabet_path, ds_trie_path, lm_path, target_dir
+    target_root = abspath(args.target_dir) if args.target_dir else dirname(audio_path)
+    target_dir = abspath(join(target_root, run_id))
+    if not exists(target_dir):
+        makedirs(target_dir)
+
+    return audio_path, transcript_path, keras_model_path, ds_model_path, ds_alphabet_path, ds_trie_path, lm_path, run_id, target_dir
 
 
 def preprocess(audio_path, transcript_path):
-    print(f'preprocessing input')
+    print("""
+    ==================================================
+    PIPELINE STAGE #1 (preprocessing): Converting audio to 16-bit PCM wave and normalizing transcript 
+    ==================================================
+    """)
 
     extension = splitext(audio_path)[-1]
     if extension not in ['.wav', '.mp3']:
         raise ValueError(f'ERROR: can only handle MP3 and WAV files!')
 
     if extension == '.mp3':
-        print(f'converting {audio_path} to PCM-16 wav')
+        print(f'converting {audio_path}')
         tmp_file = 'audio.wav'
         to_wav(audio_path, tmp_file)
         audio_bytes, rate = read_pcm16_wave(tmp_file)
@@ -109,18 +118,36 @@ def preprocess(audio_path, transcript_path):
 
     with open(transcript_path, 'r') as f:
         transcript = normalize(f.read())
+
+    print(f"""
+    ==================================================
+    STAGE #1 COMPLETED: Got {len(audio_bytes)} audio samples and {len(transcript)} labels
+    ==================================================
+    """)
     return audio_bytes, rate, transcript
 
 
 def vad(audio, rate):
-    print(f'splitting input audio into voiced segments...', end='')
+    print("""
+    ==================================================
+    PIPELINE STAGE #2 (VAD): splitting input audio into voiced segments 
+    ==================================================
+    """)
     voiced_segments = list(webrtc_voice(audio, rate))
-    print(f'done! Got {len(voiced_segments)} segments.')
+    print(f"""
+    ==================================================
+    STAGE #2 COMPLETED: Got {len(voiced_segments)} segments.
+    ==================================================
+    """)
     return voiced_segments
 
 
 def asr(voiced_segments, rate, keras_path, ds_path, ds_alphabet_path, ds_trie_path, lm_path, target_dir):
-    print(f'transcribing voice segments')
+    print("""
+    ==================================================
+    PIPELINE STAGE #3 (ASR): transcribing voice segments 
+    ==================================================
+    """)
     transcripts_csv = join(target_dir, 'transcripts.csv')
     if exists(transcripts_csv):
         print(f'found inferences from previous run in {transcripts_csv}')
@@ -152,10 +179,20 @@ def asr(voiced_segments, rate, keras_path, ds_path, ds_alphabet_path, ds_trie_pa
     df_transcripts.index.name = 'id'
     df_transcripts.to_csv(transcripts_csv)
 
-    return df_transcripts, transcripts_csv
+    print(f"""
+    ==================================================
+    STAGE #3 COMPLETED: Saved transcript to {transcripts_csv}
+    ==================================================
+    """)
+    return df_transcripts
 
 
-def lsa(transcript, df_transcripts, target_dir):
+def gsa(transcript, df_transcripts, target_dir):
+    print("""
+    ==================================================
+    PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript 
+    ==================================================
+    """)
     if 'alignment' in df_transcripts.keys():
         print(f'transcripts are already aligned')
         return df_transcripts.replace(np.nan, '', regex=True)
@@ -167,9 +204,13 @@ def lsa(transcript, df_transcripts, target_dir):
     df_transcripts['text_end'] = [a['end'] for a in alignments]
 
     transcripts_csv = join(target_dir, 'transcripts.csv')
-    print(f'saving alignments to {transcripts_csv}')
     df_transcripts.to_csv(transcripts_csv)
 
+    print(f"""
+    ==================================================
+    STAGE #4 COMPLETED: Added alignments to {transcripts_csv}
+    ==================================================
+    """)
     return df_transcripts.replace(np.nan, '', regex=True)
 
 

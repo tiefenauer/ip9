@@ -94,7 +94,7 @@ def to_pcm16(audio, rate):
     :return: a PCM16-Encoded Byte array of the signal converted to 16kHz (mono)
     """
     if hasattr(audio, 'decode'):
-        print(f'Audio is already a byte string. No conversion needed.')
+        # Audio is already a byte string. No conversion needed
         return audio, rate
 
     conversion_needed = False

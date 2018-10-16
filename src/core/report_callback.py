@@ -9,8 +9,8 @@ import pandas as pd
 from keras import callbacks
 
 from core.decoder import BeamSearchDecoder, BestPathDecoder
-from util.asr_util import calculate_metrics_mean, infer_batches, lm_uses, decoding_strategies, metrics
-from util.lm_util import load_lm
+from util.asr_util import calculate_metrics_mean, infer_batches_keras, lm_uses, decoding_strategies, metrics
+from util.lm_util import load_lm_and_vocab
 from util.log_util import print_dataframe
 from util.rnn_util import save_model
 
@@ -45,7 +45,7 @@ class ReportCallback(callbacks.Callback):
         self.decoders = {}
         if lm_path:
             self.lm_path, self.vocab_path = lm_path, vocab_path
-            self.lm, self.lm_vocab = load_lm(lm_path, vocab_path)
+            self.lm, self.lm_vocab = load_lm_and_vocab(lm_path, vocab_path)
 
         if not isdir(self.target_dir):
             makedirs(self.target_dir)
@@ -69,7 +69,7 @@ class ReportCallback(callbacks.Callback):
             self.data_valid.shuffle_entries()
 
         print(f'validating epoch {epoch+1} using best-path and beam search decoding')
-        df_inferences = infer_batches(self.data_valid, self.decoder_greedy, self.decoder_beam, self.lm, self.lm_vocab)
+        df_inferences = infer_batches_keras(self.data_valid, self.decoder_greedy, self.decoder_beam, self.lm, self.lm_vocab)
 
         mask = (df_inferences.loc[:, (slice(None), slice(None), 'WER')] < 0.6).any(axis=1)
         good_inferences = df_inferences[mask]

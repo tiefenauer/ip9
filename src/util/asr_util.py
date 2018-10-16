@@ -11,7 +11,18 @@ lm_uses = ['lm_n', 'lm_y']
 metrics = ['WER', 'LER', 'LER_raw']
 
 
-def infer_batches(batch_generator, decoder_greedy, decoder_beam, lm, lm_vocab):
+def infer_batches_deepspeech(voiced_segments, rate, model):
+    print('transcribing segments using DeepSpeech model')
+    progress = tqdm(voiced_segments, unit=' segments')
+    transcripts = []
+    for voiced_segment in progress:
+        transcript = model.stt(voiced_segment.audio, rate).strip()
+        progress.set_description(transcript)
+        transcripts.append(transcript)
+    return transcripts
+
+
+def infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, lm, lm_vocab):
     batch_generator.cur_index = 0  # reset index
     batch_size = batch_generator.batch_size
 
@@ -82,3 +93,19 @@ def calculate_metrics_mean(df_inferences):
         df.loc[decoding_strategy, lm_used][metric] = df_inferences[decoding_strategy, lm_used, metric].mean()
 
     return df
+
+
+def extract_best_transcript(df_inferences):
+    transcripts = [''] * len(df_inferences)
+
+    for ix, row in df_inferences.iterrows():
+        ler_min = math.inf
+        transcript = ''
+        for decoding_strategy, lm_use in product(decoding_strategies, lm_uses):
+            ler_value = row[(decoding_strategy, lm_use)]['LER']
+            if ler_value < ler_min:
+                ler_min = ler_value
+                transcript = row[(decoding_strategy, lm_use)]['prediction']
+        # print(transcript)
+        transcripts[ix] = transcript
+    return transcripts

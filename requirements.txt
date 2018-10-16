@@ -1,4 +1,4 @@
-deepspeech
+deepspeech=0.2.0
 gensim
 h5py
 kenlm

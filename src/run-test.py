@@ -7,8 +7,9 @@ from keras.optimizers import SGD
 
 from core.batch_generator import CSVBatchGenerator
 from core.report_callback import *
+from util.lm_util import load_lm_and_vocab
 from util.log_util import create_args_str
-from util.rnn_util import load_model_from_dir, create_keras_session
+from util.rnn_util import load_keras_model, create_keras_session
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_dir', type=str, required=False,
@@ -42,12 +43,12 @@ def main():
     print()
 
     opt = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True, clipnorm=5)
-    model = load_model_from_dir(args.model_dir, opt)
+    model = load_keras_model(args.model_dir, opt)
     model.summary()
 
     lm, vocab = None, None
     if args.lm:
-        lm, vocab = load_lm(args.lm, args.lm_vocab)
+        lm, vocab = load_lm_and_vocab(args.lm, args.lm_vocab)
 
     test_model(model, args.test_files, args.test_batches, args.batch_size, lm, vocab, target_dir)
 
@@ -70,7 +71,7 @@ def test_model(model, test_files, test_batches, batch_size, lm, lm_vocab, target
     data_test = CSVBatchGenerator(test_files, sort=False, n_batches=test_batches, batch_size=batch_size)
 
     print(f'Testing model with samples from {test_files}')
-    df_inferences = infer_batches(data_test, BestPathDecoder(model), BeamSearchDecoder(model), lm, lm_vocab)
+    df_inferences = infer_batches_keras(data_test, BestPathDecoder(model), BeamSearchDecoder(model), lm, lm_vocab)
     df_metrics_means = calculate_metrics_mean(df_inferences)
 
     csv_path = join(target_dir, 'test_report.csv')

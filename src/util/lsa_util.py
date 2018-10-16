@@ -29,7 +29,7 @@ def align(voice_segments, transcript, printout=False):
         lines.append(line)
 
         if edit_distance > 0.5:
-            alignments.append(Alignment(voice, alignment_text))
+            alignments.append(Alignment(voice, text_start, text_end))
             # prevent identical transcripts to become aligned with the same part of the audio
             # a = transcript.replace(alignment_text, '-' * len(alignment_text), 1)
 
@@ -39,8 +39,9 @@ def align(voice_segments, transcript, printout=False):
     return alignments
 
 
-def align_globally(full_transcript, partial_transcripts):
-    return needle_wunsch(full_transcript, '#'.join(partial_transcripts))
+def align_globally(transcript, partial_transcripts):
+    inference = '#' + '#'.join(partial_transcripts)
+    return needle_wunsch(transcript, inference)
 
 
 def smith_waterman(a, b, match_score=3, gap_cost=2):
@@ -146,17 +147,17 @@ def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5)
         scores[i][j] = max(match, delete, insert)
 
     alignments = []
-    alignment_end = None
-    orig_end = None
+    last_j = None
+    last_i = None
     source_str, target_str = '', ''
 
     # Traceback: start from the bottom right cell
     i, j = m - 1, n - 1
     while i > 0 and j > 0:
         if str_2[j - 1] == '#':
-            alignments.insert(0, {'start': i, 'end': orig_end, 'text': str_2[j:alignment_end]})
-            alignment_end = j
-            orig_end = i
+            alignments.insert(0, {'start': i, 'end': last_i, 'text': str_1[i:last_i]})
+            last_j = j
+            last_i = i
 
         score_current = scores[i][j]
         score_diagonal = scores[i - 1][j - 1]
@@ -176,6 +177,8 @@ def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5)
             source_str = '-' + source_str
             target_str = str_2[j - 1] + target_str
             j -= 1
+
+    alignments.insert(0, {'start': 0, 'end': last_i, 'text': str_1[0:last_i]})
 
     # Finish tracing up to the top left cell
     while i > 0:

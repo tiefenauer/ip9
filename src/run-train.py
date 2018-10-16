@@ -20,7 +20,7 @@ from core.batch_generator import CSVBatchGenerator
 from core.models import *
 from core.report_callback import ReportCallback
 from util.log_util import create_args_str
-from util.rnn_util import load_model_from_dir, create_keras_session
+from util.rnn_util import load_keras_model, create_keras_session
 
 #######################################################
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Prevent pool_allocator message
@@ -121,7 +121,7 @@ def create_model(target_dir, opt, dropouts):
         if not isdir(args.model_path):
             print(f'ERROR: directory {target_dir} does not exist!', file=sys.stderr)
             exit(0)
-        model = load_model_from_dir(target_dir, opt)
+        model = load_keras_model(target_dir, opt)
     else:
         if dropouts:
             print('Creating new model with dropouts')

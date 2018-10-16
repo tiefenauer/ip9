@@ -2,7 +2,7 @@
 import itertools
 import kenlm
 from heapq import heapify
-from os.path import abspath, exists, join, dirname, splitext
+from os.path import abspath, exists, dirname, join, splitext
 
 import numpy as np
 from pattern3.metrics import levenshtein
@@ -47,34 +47,52 @@ def lers_norm(ground_truths, predictions):
     return np.array([ler_norm(ground_truth, pred) for (ground_truth, pred) in zip(ground_truths, predictions)])
 
 
-def load_lm(lm_path, vocab_path=None):
-    global LM_MODELS
-    if lm_path in LM_MODELS:
-        print(f'using cached LM and vocab:')
-        return LM_MODELS[lm_path]
+def load_lm_and_vocab(lm_path, vocab_path=None):
+    lm = load_lm(lm_path)
+    lm_abs_path = abspath(lm_path)
+    if vocab_path:
+        lm_vocab_abs_path = abspath(vocab_path)
+    else:
+        lm_vocab_abs_path = abspath(join(dirname(lm_abs_path), splitext(lm_abs_path)[0] + '.vocab'))
+        if not exists(lm_vocab_abs_path):
+            raise ValueError(f'ERROR: LM vocabulary not set and no vocabulary found at {lm_vocab_abs_path}')
+    lm_vocab = load_vocab(lm_vocab_abs_path)
+    return lm, lm_vocab
+
+
+def load_lm(lm_path):
+    global LANGUAGE_MODELS
+    if lm_path in LANGUAGE_MODELS:
+        print(f'using cached LM:')
+        return LANGUAGE_MODELS[lm_path]
 
     lm_abs_path = abspath(lm_path)
     if not exists(lm_abs_path):
         raise ValueError(f'ERROR: LM not found at {lm_abs_path}')
 
-    if vocab_path:
-        lm_vocab_abs_path = abspath(vocab_path)
-        if not exists(lm_vocab_abs_path):
-            raise ValueError(f'ERROR: LM vocabulary not found at {lm_vocab_abs_path}')
-    else:
-        lm_vocab_abs_path = abspath(join(dirname(lm_abs_path), splitext(lm_abs_path)[0] + '.vocab'))
-        if not exists(lm_vocab_abs_path):
-            raise ValueError(f'ERROR: LM vocabulary not set and no vocabulary found at {lm_vocab_abs_path}')
+    print(f'loading LM from {lm_abs_path}...', end='')
+    lm = kenlm.Model(lm_abs_path)
+    print(f'done! Loaded {lm.order}-gram model.')
+    LANGUAGE_MODELS[lm_path] = lm
+    return lm
+
+
+def load_vocab(vocab_path):
+    global LM_VOCABS
+    if vocab_path in LM_VOCABS:
+        print(f'using cached LM vocab')
+        return LM_VOCABS[vocab_path]
+
+    lm_vocab_abs_path = abspath(vocab_path)
+    if not exists(lm_vocab_abs_path):
+        raise ValueError(f'ERROR: LM vocabulary not found at {lm_vocab_abs_path}')
 
     with open(lm_vocab_abs_path) as vocab_f:
-        print(f'loading LM from {lm_abs_path}...', end='')
-        lm = kenlm.Model(lm_abs_path)
-        print(f'done! Loaded {lm.order}-gram model.')
         print(f'loading LM vocab from {lm_vocab_abs_path}...', end='')
-        vocab = set(vocab_f.read().split())
-        print(f'done! Loaded {len(vocab)} words.')
-        LM_MODELS[lm_path] = (lm, vocab)
-    return lm, vocab
+        lm_vocab = set(vocab_f.read().split())
+        print(f'done! Loaded {len(lm_vocab)} words.')
+        LM_VOCABS[vocab_path] = lm_vocab
+    return lm_vocab
 
 
 def score(word_list, lm):
@@ -192,4 +210,5 @@ def edits_2(word):
 
 
 # globals
-LM_MODELS = {}
+LANGUAGE_MODELS = {}
+LM_VOCABS = {}

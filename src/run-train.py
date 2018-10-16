@@ -6,12 +6,11 @@ Forked and adjusted from: https://github.com/robmsmt/KerasDeepSpeech
 """
 
 import argparse
+from datetime import datetime, timedelta
 import os
 import sys
-from datetime import datetime
-from os import makedirs
+from os import makedirs, remove
 from os.path import join, abspath, isdir, exists
-from shutil import rmtree
 
 from keras.callbacks import TensorBoard
 from keras.optimizers import SGD, Adam
@@ -45,6 +44,10 @@ parser.add_argument('--lm_vocab', type=str, required=False,
                          'if a LM is supplied with \'--lm_path\'. If \'--lm_path\' is set and  lm_vocab_path not, a '
                          'default vocabulary file with the same name as lm_path and the ending \'.vocab\' '
                          'will be searched. If this is not found, the script will exit.')
+parser.add_argument('--dropouts', action='store_true',
+                    help='whether to use dropouts (default: False)')
+parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='sgd',
+                    help='(optional) optimizer to use. Default=SGD')
 parser.add_argument('--dropouts', action='store_true',
                     help='whether to use dropouts (default: False)')
 parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='sgd',

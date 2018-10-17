@@ -118,7 +118,7 @@ def candidate_words(word, lm_vocab):
     return known_words([word], lm_vocab) \
            or known_words(edits_1(word), lm_vocab) \
            or known_words(edits_2(word), lm_vocab) \
-           or [word]  # fallback: the original word as a list
+           or ['<unk>']
 
 
 def known_words(word_list, lm_vocab):

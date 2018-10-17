@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # set -xe
-usage="$(basename "$0") [-h|--help] [-r|--run_id <string>] [-d|--destination <path>] [-t|--train_files <path>] [-v|--valid_files <path>] [-g|--gpu] [-b|--batch_size <int>] [-e|--epochs <int>] [-l|--lm <path>] [-a|--lm_vocab <path>] [-p|--dropouts] [-o|--optimizer <string>]
+usage="$(basename "$0") [-h|--help] [-r|--run_id <string>] [-d|--destination <path>] [-t|--train_files <path>] [-v|--valid_files <path>] [-g|--gpu] [-b|--batch_size <int>] [-e|--epochs <int>] [-l|--lm <path>] [-a|--lm_vocab <path>] [-i|--language <string>] [-p|--dropouts] [-o|--optimizer <string>]
 where:
     -h|--help                                show this help text
     -r|--run_id <string>                     run-id to use (used to resume training)
@@ -8,6 +8,7 @@ where:
     -l|--lm <path>                           path to n-gram KenLM model (if possible binary)
     -a|--lm_vocab <path>                     path to file containing the vocabulary of the LM specified by -lm.
                                              The file must contain the words used for training delimited by space (no newlines)
+    -i|--language <string>                   The language to train on ('en' or 'de'). This will determine the number of labels and therefore the model architecture. (default: en)
     -t|--train_files <path>                  one or more comma-separated paths to CSV files containing the corpus files to use for training
     -v|--valid_files <path>                  one or more comma-separated paths to CSV files containing the corpus files to use for validation
     -g|--gpu <int>                           GPU to use
@@ -25,6 +26,7 @@ For each amount of training data a separate training run is started. A unique ru
 lc_run_id="learning_run_$(uuidgen)"
 lm=''
 lm_vocab=''
+language='en'
 train_files='/media/D1/readylingua-en/readylingua-en-train.csv'
 valid_files='/media/D1/readylingua-en/readylingua-en-dev.csv'
 target_dir='/home/daniel_tiefenauer/learning_curve_0'
@@ -62,6 +64,11 @@ case $key in
     ;;
     -a|--lm_vocab)
     lm_vocab="$2"
+    shift
+    shift
+    ;;
+    -i|--language)
+    language="$2"
     shift
     shift
     ;;
@@ -131,6 +138,7 @@ target_dir      = ${target_dir}
 lc_result_dir   = ${lc_result_dir}
 lm              = ${lm}
 lm_vocab        = ${lm_vocab}
+language        = ${language}
 train_files     = ${train_files}
 valid_files     = ${valid_files}
 gpu             = ${gpu}
@@ -169,6 +177,7 @@ do
         --minutes ${minutes} \
         --lm ${lm} \
         --lm_vocab ${lm_vocab} \
+        --language ${language} \
         ${dropouts} \
         --optimizer ${optimizer} \
         --gpu ${gpu} \

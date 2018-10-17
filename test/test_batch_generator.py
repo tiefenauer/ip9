@@ -9,7 +9,7 @@ from core.batch_generator import BatchGenerator
 class DummyBatchGenerator(BatchGenerator):
 
     def __init__(self, batch_items, batch_size):
-        super().__init__(batch_items, batch_size)
+        super().__init__(batch_items, batch_size, 'en')
 
     def shuffle_entries(self):
         pass

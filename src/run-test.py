@@ -31,7 +31,8 @@ parser.add_argument('-a', '--lm_vocab', type=str, default='',
                          'default vocabulary file with the same name as lm_path and the ending \'.vocab\' '
                          'will be searched. If this is not found, the script will exit.')
 parser.add_argument('--language', type=str, choices=['en', 'de'], default='en',
-                    help='langauge to train on. English will use 26 characters from the alphabet, German 29 (umlauts)')
+                    help='language to train on. '
+                         'English will use 26 characters from the alphabet, German 29 (umlauts)')
 parser.add_argument('-g', '--gpu', type=str, default=None, required=False,
                     help='GPU to use (optional). If not set, you will be asked at runtime')
 args = parser.parse_args()
@@ -70,7 +71,7 @@ def setup(args):
 
 
 def test_model(model, test_files, test_batches, batch_size, language, lm, lm_vocab, target_dir):
-    data_test = CSVBatchGenerator(test_files, tokens, sort=False, n_batches=test_batches, batch_size=batch_size)
+    data_test = CSVBatchGenerator(test_files, language, sort=False, n_batches=test_batches, batch_size=batch_size)
 
     print(f'Testing model with samples from {test_files}')
     decoder_greedy = BestPathDecoder(model, language)

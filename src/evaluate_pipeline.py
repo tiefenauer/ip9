@@ -248,7 +248,8 @@ if __name__ == '__main__':
     parser.add_argument('--ds_model', type=str, required=False,
                         help=f'path to DeepSpeech model. If set, this will be preferred over \'--asr_model\'.')
     parser.add_argument('--language', type=str, choices=['en', 'de'], default='en',
-                        help='langauge to train on. English will use 26 characters from the alphabet, German 29 (umlauts)')
+                        help='language to train on. '
+                             'English will use 26 characters from the alphabet, German 29 (umlauts)')
     parser.add_argument('--lm_path', type=str,
                         help=f'path to directory with KenLM binary model to use for inference')
     parser.add_argument('--trie_path', type=str, required=False,

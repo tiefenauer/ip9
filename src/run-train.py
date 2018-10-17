@@ -47,7 +47,8 @@ parser.add_argument('--lm_vocab', type=str, required=False,
                          'default vocabulary file with the same name as lm_path and the ending \'.vocab\' '
                          'will be searched. If this is not found, the script will exit.')
 parser.add_argument('--language', type=str, choices=['en', 'de'], default='en',
-                    help='langauge to train on. English will use 26 characters from the alphabet, German 29 (umlauts)')
+                    help='language to train on. '
+                         'English will use 26 characters from the alphabet, German 29 (umlauts)')
 parser.add_argument('--dropouts', action='store_true',
                     help='whether to use dropouts (default: False)')
 parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='sgd',

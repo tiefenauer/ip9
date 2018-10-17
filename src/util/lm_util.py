@@ -13,26 +13,31 @@ from util.ctc_util import ALLOWED_CHARS
 ler = levenshtein
 
 
+def wer(ground_truth, prediction):
+    """
+    Calculates the Word Error Rate (WER) between two strings as the edit distance on word level
+    """
+    return ler(ground_truth.split(), prediction.split())
+
+
 def ler_norm(ground_truth, prediction):
     """
     Calculates the normalized LER by dividing the LER by the length of the longer string. The result will be in [0,1]
     """
-    return levenshtein(ground_truth, prediction) / float(max(len(ground_truth), len(prediction), 1.0))
+    return ler(ground_truth, prediction) / float(len(ground_truth))
 
 
-def wer(ground_truth, prediction):
+def wer_norm(ground_truth, prediction):
     """
-    The WER is defined as the editing/Levenshtein distance on word level (not on character-level!).
+    Calculates the normalized WER by dividing the WER by the length of the ground truth
     """
-    ground_truth = ground_truth.split()
-    prediction = prediction.split()
-    return levenshtein(ground_truth, prediction) / float(len(ground_truth))
+    return wer(ground_truth, prediction) / float(len(ground_truth.split()))
 
 
 def wers(ground_truths, predictions):
     assert len(ground_truths) > 0, f'ERROR: no ground truths provided!'
     assert len(ground_truths) == len(predictions), f'ERROR: # of ground truths does not match # of predictions!'
-    return np.array([wer(ground_truth, pred) for (ground_truth, pred) in zip(ground_truths, predictions)])
+    return np.array([wer_norm(ground_truth, pred) for (ground_truth, pred) in zip(ground_truths, predictions)])
 
 
 def lers(ground_truths, predictions):

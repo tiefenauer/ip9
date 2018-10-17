@@ -1,64 +1,83 @@
-\section{Integrating a Language Model}\label{lm}
+\section{Learning curve}
 
-This chapter describes the importance of \ac{LM}s for \ac{ASR} and how a \ac{LM} was integrated in the simplified \ac{DS} model proposed in this project.
+This section describes how training progress was estimated by plotting a learning curve.
 
-\subsection{Improving the performance of a \ac{STT} engine}
+\subsection{Previous corpora and their problems}
 
-Although \ac{CTC} is the cost that is optimized during training, the usual metrics to evaluate an \ac{STT} system are \ac{WER} and \ac{LER}. The \ac{LER} is defined as the mean normalized edit distance $ed(a, b)$ between two strings $a$ and $b$, i.e. the number of insertions, deletions and changes required to produce string $a$ from string $b$. String $a$ is the reference string, which in this project is the actual transcription of a speech segment (\textit{ground truth} or \textit{label}). String $b$ is the string $b$ in this project is a an inferred transcription (\textit{prediction}). The \ac{LER} operates on character level and is sometimes also referred to as \textit{Levensthein Distance}. 
+The following two corpora were available for training from the previous IP8 project:
 
-The \ac{WER} is very similar to the \ac{LER} and actually builds upon the \ac{LER}. In contrast to \ac{LER} however, \ac{WER} operates on word level, i.e. it represents the number of words in a inferred transcription, that need to be inserted, deleted or changed in order to arrive at the ground truth.
+\begin{itemize}
+	\item \textbf{\ac{LS}}: This corpus was created in the IP8 project from raw data from OpenSLR\footnote{\url{http://www.openslr.org/12/}}. Samples were extracted by exploiting metadata from the corpus. The corpus consists of a number of audio files containing  recordings from different speakers. Each recording contained several aligned samples. A binary index file contained the mapping to the audio file as well as the temporal information for each sample. The raw data was already divided into training-, validation- and test-set, respecting a similar distribution over the sets. This corpus was not changed for this project.
+	\item \textbf{\ac{RL}}: This corpus was created from raw data provided by \textit{ReadyLingua}. Since the raw data contained recordings in several languages, separate subsets were created for each language. The corpus format is equal to the \ac{LS} corpus described above.
+\end{itemize}
 
-Both metrics can be normalized by dividing them by the length of the reference string i.e. the number of characters (\ac{LER}) resp. the number of words (\ac{WER}). If a single evaluation metric is required, the \ac{WER} is often the better choice because it is more related to the way humans assess the quality of a \ac{STT} engine: A transcription that might sound correct when read out loud, but is full of spelling mistakes, is not considered a good transcription. A \ac{LM} can help inferring orthographically correct words from sequences of characters detected by \ac{CTC} and hence decrease the \ac{WER}. Therefore, by using a \ac{LM} the quality of transcriptions improves perceivably, as the following example shows:
+The model in the IP8 project was supposed to be trained on the \ac{LS} corpus, because this corpus was much larger than the \ac{RL} corpus. It became clear however that training on all samples from this corpus was not feasible within project time because training time would have taken more than two months. During the course of the IP8 project it also turned out that the \ac{LS} corpus was probably less useful than initially assumed because the average sample length was much longer than the samples in the \ac{RL} corpus. This made training even harder because with longer sequences convergence was much slower. The \ac{RL} corpus on the other hand consisted of shorter samples, but the total length of all samples was only a few hours compared to the 1000+ hours in the \ac{LS} corpus.
+
+\subsection{New corpus}
+
+Because of the aforementioned problems a new corpus was needed which not only contained a reasonable amount of speech samples but whose average sample length was also short enought for the model to learn quickly. The \ac{CV}\footnote{\url{https://voice.mozilla.org/en/data}} corpus is built and maintained and used actively by the MOzilla Foundation. There are datasets for various languages containing speech samples of different contributors from all over the world. The datasets are publicly available and come already divided into training-, validation- and test-set. Each set consists of an individual audio file per sample and a CSV file containing the transcriptions for each sample.
+
+The English version of the corpus was used to train the Mozilla implementation of  \textit{DeepSpeech}. Although still smaller than than the \ac{LS} corpus, the total length of all validated samples that can be used for training\footnote{CSV file: \code{cv-valid-train.csv}} is much larger than the \ac{RL} corpus while providing samples of similar length at the same time. Table \ref{corpora_stats} shows some statistics about the corpora described above.
 
 \begin{table}[!htbp]
 	\centering
-	\begin{tabular}{|l|l|r|r|r|r|}
+	\begin{tabular}{|l|r|r|r|}
 		\hline
-		\thead{} & \thead{transcript} & \thead{\ac{LER}} & \thead{LER\\(norm.)} & \thead{\ac{WER}} & \thead{WER\\(norm.)} \\
+		\thead{Corpus} & \thead{total audio length} & \thead{avg sample length} & \thead{\# samples} \\
 		\hline
-		ground\\truth & \code{and i put the vice president in charge of mission control\\} & $0$ & $0.00$ & $0$ & $0.00$ \\ 
-		\hline
-		w/ LM & \code{ii put he bice president in charge of mission control} & $6$ & $0.00$ & $4$ & $0.00$ \\ 
-		\hline
-		w/o LM & \code{i put the vice president in charge of mission control} & $4$ & $0.00$ & $1$ & $0.00$ \\
+		LibriSpeech & $44 days, 16:51:03$ & $12.3202$ & $313,491$ \\ 
+		ReadyLingua (English samples) & $4:18:51$ & $3.3538$ & $4,631$ \\ 
+		CommonVoice & $9 days, 15:30:05$ & $4.3118$ & $193,284$ \\ 
 		\hline
 	\end{tabular}
-	\caption{examples of infered transcripts with pre-trained DeepSpeech model with and without \ac{LM}\\(sample \code{20161203potusweeklyaddress} from the ReadyLingua corpus}
+	\caption{Statistics about corpora that were available for training}
+	\label{corpora_stats}
 \end{table}
 
-A \ac{LM} models probabilities of sequences of words. Therefore a \ac{LM} can be used to assign a probability to a sentence. A simple \ac{LM} that does that is the $n$-gram \ac{LM}. $n$-grams are overlapping tuples of words whose probability can be approximated by training on massive text corpora. Although a lot of research has been made in the field of using \ac{NN} for language modelling (like for machine translation), $n$-grams \ac{LM} are still widely used and often the right tool for many tasks \parencite{slp3}, because they are faster to train and require significantly less training data.
+\subsection{Plotting the learning curve}
 
-The Mozilla implementation includes an $n$-Gram \ac{LM} using \textit{KenLM}. The \ac{LM} is queried while decoding the numeric matrices produced by \ac{CTC} using \textit{Beam Search} or \textit{Best-Path} decoding. It uses a \textit{trie} and precompiled custom implementations in C of \textit{TensorFlow}-operations to maximize performance and dedicated weights for the influence the number of valid words and the \ac{LM} itself on the inferred transcription. It is therefore deeply baked in with the decoding process.
-
-A simpler variant that is used in this project is to infer the transcriptions first with \textit{Beam Search} or \textit{Best-Path} decoding using the standard tools provided by Keras. The inferred transcriptions are then post-processed by running it through some sort of spell-checking, which is done as follows:
+Although the training time on all samples of the \ac{CV} corpus is still too long for the available project time, we can still get an estimate of the learning progress by plotting a \textit{learning curve}. For this, training was done on exponentially increasing amounts of training data (1, 10, 100 and 1,000 minutes of transcribed audio). Training was done observing the behavior of the \ac{CTC}-loss for training and validation. Additionally, the progress of the \ac{WER}/\ac{LER}-metrics were observed along the dimensions:
 
 \begin{itemize}
-	\item split the sentence into words 
-	\item for each word $w_i$ in the sentence check the spelling by generating the set $C_i$ of possible corrections by looking it up in $V$, the vocabulary of the \ac{LM}, as follows:
-	\begin{itemize}
-		\item if $w_i \in V$ its spelling is already correct and $w_i$ is kept as the only possible correction, i.e.
-		\begin{equation*}
-		C_i = C_j^0 = \{ w_i \}
-		\end{equation*}
-		\item if $w_i \not\in V$ generate $C_i^1$ as the set of all possible words $w_i^1$ with $ed(w_i, w_i^1) = 1$. This is the combined set of all possible words with one character inserted, deleted or replaced. Keep the words from this combined set that appear in $V$, i.e.
-		\begin{equation*}
-		C_i = C_i^1 = \left \{ w_i^1 \mid (w_i, w_i^1) = 1 \land w_i^1 \in V \right \}
-		\end{equation*}
-		\item if $C_i^1 = \emptyset$ generate $C_i^2$ as the set of all possible words $w_i^2$ with $ed(w_i, w_i^2) = 2$. $C_i^2$ can be recursively calculated from $C_i^1$. Again only keep the words that appear in $V$, i.e.
-		\begin{equation*}
-		C_i = C_i^2 = \left \{ w_i^2 \mid ed(w_i, w_i^2) = 2 \land w_i^2 \in V) \right \}
-		\end{equation*}
-		\item if $C_i^2 = \emptyset$ keep $w_i$ as the only word, accepting that it might be either misspelled, a wrong word, gibberish or simply has never been seen by the \ac{LM}, i.e.
-		\begin{equation*}
-		C_i = C_i{>2} = \left \{ w_i  \right \}
-		\end{equation*}
-	\end{itemize}
-	\item for each possible spelling in $C_i$ build the set $P$ of all possible 2-grams with the possible spellings in the next word as the cartesian product of all words, i.e.
-	\begin{flalign*}
-	&	P = \{ (w_j, w_{j+1} | w_j \in C_j \land w_{j+1} \in C_{j+1} \}{,} && C_j \in \{C_i^0, C_i^1, C_i^2, C_i^{>2} \}
-	\end{flalign*}
-	\item score each 2-gram calculating the log-based probability using a pre-trained 2-gram-\ac{LM}
+	\item \textbf{Decoder dimension}: Since the \ac{CTC} paper proposes two different decoding strategies (\textit{best-path} and \textit{beam search}) \cite{ctc_paper}, progress of the \ac{WER} and \ac{LER} was measured separately for both strategies.
+	\item \textbf{LM dimension}: Since spelling correction \ac{LM} as described above does not necessarily lead to a more accurate transcript, the \ac{WER} and \ac{LER} metrics were measured both with and without using the \ac{LM} .
 \end{itemize}
+
+Figure \ref{lc_loss_cv} shows the learning curve for the \ac{CTC}-loss\ac{WER} and \ac{LER} without using a \ac{LM}. Figure \ref{lc_metrics_cv} shows the learning curve for training with a 4-gram \ac{LM}. To assess the impact of both the decoder- and the \ac{LM} dimension, the plot contains two curves.
+
+\begin{figure}
+	\includegraphics[width=\linewidth]{./img/lc_loss_cv.png}
+	\caption{Learning curve for the CTC-loss while training on 1/10/100/1000 minutes of transcribed audio from the \ac{CV} corpus using the $5$-gram \ac{LM} provided by the Mozilla implementation of \textit{DeepSpeech}}
+	\label{lc_loss_cv}
+\end{figure}
+
+\begin{figure}
+	\includegraphics[width=\linewidth]{./img/lc_metrics_cv.png}
+	\caption{Learning curve for the \ac{WER} and \ac{LER} metric while training on 1/10/100/1000 minutes of transcribed audio from the \ac{CV} corpus with and without spelling correction with a \ac{LM}. For the lines where spelling was corrected, the $5$-gram \ac{LM} provided by the Mozilla implementation of \textit{DeepSpeech} was used.}
+	\label{lc_metrics_cv}
+\end{figure}
+
+%Hier etwas über
+%
+%- Batchgrösse (Qualität nimmt mit zunehmender batchgrösse ab!)
+%- Padding der Trainingssequenzen
+%- Sortierung der Trainingsdaten nach Länge (ist besser, da weniger blanks gepadded, schnellere Konversion)
+%- ...
+%
+%Beispiel für Prediction, wo LER/WER durch LM verschlechtert wurde: (aus /home/daniel/_runs/lc_bestpath_rlen/1000_min_bestpath/test_results.csv)
+%
+%#: 546	
+%ground truth: i want to wish you a very happy thanksgiving	
+%prediction: oento wiceyouepery appy thangksive (LER=0.431818181818182, WER=1)
+%prediction (LM-corrected): onto wiceyouepery app thangksive	(LER=0.454545454545455	WER=1)
+%
+%
+%
+% To do:
+% - train on LibriSpeech data
+% - train using Best-Path
+% - train using no LM
+% - Reset calculation of WER/LER to original implementation
 
 \subsection{Creating a Language Model for German}
 
@@ -78,7 +97,7 @@ Because \textit{KenLM} expects the input as sentences (one sentence per line), t
 The following lines are an excerpt of a article in the German Wikipedia along with its representation in the corpus.
 
 \begin{displayquote}[German Wikipedia article about Speech Recognition\footnote{\url{https://de.wikipedia.org/wiki/Spracherkennung}}]
-Die Größe des Wörterbuchs hängt stark von der Sprache ab. Zum einen haben durchschnittliche deutschsprachige Sprecher mit circa 4000 Wörtern einen deutlich größeren Wortschatz als englischsprachige mit rund 800 Wörtern. Außerdem ergeben sich durch die Flexion in der deutschen Sprache in etwa zehnmal so viele Wortformen, wie in der englischen Sprache, wo nur viermal so viele Wortformen entstehen.
+	Die Größe des Wörterbuchs hängt stark von der Sprache ab. Zum einen haben durchschnittliche deutschsprachige Sprecher mit circa 4000 Wörtern einen deutlich größeren Wortschatz als englischsprachige mit rund 800 Wörtern. Außerdem ergeben sich durch die Flexion in der deutschen Sprache in etwa zehnmal so viele Wortformen, wie in der englischen Sprache, wo nur viermal so viele Wortformen entstehen.
 \end{displayquote}
 
 \begin{lstlisting}[numbers=left, caption=Representation in corpus]
@@ -91,7 +110,7 @@ The final corpus contained data from 2,221,101 Wikipedia articles (42,229,452 se
 
 By limiting the vocabulary to the 500k most frequent words, the unigrams in the KenLM were artificially pruned. The number of unigrams was therefore 500,003 (one unigram for each word in the vocabulary plus one each for the \code{<s>}, \code{</s>} and \code{<unk>} tokens). The $n$-grams used to train the \ac{LM} have been pruned by setting the minimal threshold for $n$-Grams of any order ($n \in 1..4$) to 40. This is the value that Google used (reference from Jurafsky). Pruning unigrams helped getting rid of obvious spelling mistakes and very rare tokens that only appear in very special contexts (like the tokens \textit{aaaaa} or \textit{zzyzzyxx}) (EDIT: Pruning unigrams is not supported by KenLM, but the vocabulary can be limited). Such words are mostly not no real German words and should therefore not be trained on. Pruning higher-order $n$-grams was done to increase performance (both in space and time).
 
-\subsection{Evaluating the \ac{LM}}
+\subsection{Evaluating the model}
 
 The best way to evaluate a \ac{LM}is to embed it in an application and measure how much the application improves \parencite{slp3}. This is called \textit{extrinsic evaluation} and has been done by comparing the learning curves with and without using a \ac{LM}. However, to measure the performance of a \ac{LM} independently (\textit{intrinsic evaluation}) one would have to provide a test set containing unseen sentences an assess the scores of the \ac{LM} on their $n$-grams. The results can then be compared to a reference \ac{LM}: Whatever model produces higher probabilities (or lower perplexity) to the $n$-grams in the test set is deemed to perform better. However, because models can only be compared if they use the same vocabulary \parencite{slp3}, this would require training the reference model would need to be trained on the same corpus, which can become very time consuming.
 

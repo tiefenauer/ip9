@@ -6,7 +6,7 @@ from keras import backend as K
 from python_speech_features import mfcc
 from tqdm import tqdm
 
-from util.lm_util import ler_norm, wer, ler, correction
+from util.lm_util import ler_norm, wer_norm, ler, correction
 from util.rnn_util import decode
 
 decoding_strategies = ['greedy', 'beam']
@@ -63,22 +63,22 @@ def infer_batch(batch_inputs, decoder_greedy, decoder_beam, lm=None, lm_vocab=No
                                                                                   preds_greedy, preds_greedy_lm,
                                                                                   preds_beam, preds_beam_lm):
         df.loc[ground_truth, ('greedy', 'lm_n', 'prediction')] = pred_greedy
-        df.loc[ground_truth, ('greedy', 'lm_n', 'WER')] = wer(ground_truth, pred_greedy)
+        df.loc[ground_truth, ('greedy', 'lm_n', 'WER')] = wer_norm(ground_truth, pred_greedy)
         df.loc[ground_truth, ('greedy', 'lm_n', 'LER')] = ler_norm(ground_truth, pred_greedy)
         df.loc[ground_truth, ('greedy', 'lm_n', 'LER_raw')] = ler(ground_truth, pred_greedy)
 
         df.loc[ground_truth, ('greedy', 'lm_y', 'prediction')] = pred_greedy_lm
-        df.loc[ground_truth, ('greedy', 'lm_y', 'WER')] = wer(ground_truth, pred_greedy_lm)
+        df.loc[ground_truth, ('greedy', 'lm_y', 'WER')] = wer_norm(ground_truth, pred_greedy_lm)
         df.loc[ground_truth, ('greedy', 'lm_y', 'LER')] = ler_norm(ground_truth, pred_greedy_lm)
         df.loc[ground_truth, ('greedy', 'lm_y', 'LER_raw')] = ler(ground_truth, pred_greedy_lm)
 
         df.loc[ground_truth, ('beam', 'lm_n', 'prediction')] = pred_beam
-        df.loc[ground_truth, ('beam', 'lm_n', 'WER')] = wer(ground_truth, pred_beam)
+        df.loc[ground_truth, ('beam', 'lm_n', 'WER')] = wer_norm(ground_truth, pred_beam)
         df.loc[ground_truth, ('beam', 'lm_n', 'LER')] = ler_norm(ground_truth, pred_beam)
         df.loc[ground_truth, ('beam', 'lm_n', 'LER_raw')] = ler(ground_truth, pred_beam)
 
         df.loc[ground_truth, ('beam', 'lm_y', 'prediction')] = pred_beam_lm
-        df.loc[ground_truth, ('beam', 'lm_y', 'WER')] = wer(ground_truth, pred_beam_lm)
+        df.loc[ground_truth, ('beam', 'lm_y', 'WER')] = wer_norm(ground_truth, pred_beam_lm)
         df.loc[ground_truth, ('beam', 'lm_y', 'LER')] = ler_norm(ground_truth, pred_beam_lm)
         df.loc[ground_truth, ('beam', 'lm_y', 'LER_raw')] = ler(ground_truth, pred_beam_lm)
 

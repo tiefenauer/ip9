@@ -144,6 +144,7 @@ if [ ! -f "${corpus_file}" ] ; then
     echo "All XML tags will be removed. Numeric word tokens will be replaced by the <num> token."
     echo "Non-ASCII characters will be replaced with their closest ASCII equivalent (if possible), but umlauts will be preserved!"
     echo "This will take some time (~4h). Go to sleep or something..."
+    export PYTHONPATH=$(pwd)
     result=$(find $cleaned_dir -name '*bz2' -exec bzcat {} \+ \
             | pv \
             | tee >(    sed 's/<[^>]*>//g' \

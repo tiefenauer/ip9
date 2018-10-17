@@ -104,7 +104,7 @@ def create_readylingua_corpus(source_root, target_root, max_entries):
         index_file = join(raw_path, files['index'])
         transcript_file = join(raw_path, files['text'])
 
-        segments = create_segments(index_file, transcript_file, segmentation_file, parms['rate'])
+        segments = create_segments(index_file, transcript_file, parms['rate'], parms['language'])
 
         # Resample and crop audio
         audio_dst = join(target_root, parms['id'] + ".wav")
@@ -195,7 +195,7 @@ def collect_corpus_entry_parms(directory, files):
     return {'id': corpus_entry_id, 'name': corpus_entry_name, 'language': language, 'rate': rate, 'channels': channels}
 
 
-def create_segments(index_file, transcript_file, segmentation_file, original_sample_rate):
+def create_segments(index_file, transcript_file, original_sample_rate, language):
     # segmentation = collect_segmentation(segmentation_file)
     speeches = collect_speeches(index_file)
     transcript = Path(transcript_file).read_text(encoding='utf-8')
@@ -210,7 +210,10 @@ def create_segments(index_file, transcript_file, segmentation_file, original_sam
         end_text = speech_meta['end_text'] + 1  # komische Indizierung
 
         seg_transcript = transcript[start_text:end_text]
-        segments.append(SpeechSegment(start_frame=start_frame, end_frame=end_frame, transcript=seg_transcript))
+        segments.append(SpeechSegment(start_frame=start_frame,
+                                      end_frame=end_frame,
+                                      transcript=seg_transcript,
+                                      language=language))
 
     return segments
 

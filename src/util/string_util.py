@@ -10,10 +10,17 @@ umlauts = re.compile('[äöü]]')
 number = re.compile('[0-9]+')
 digit = re.compile('[0-9]')
 not_alphanumeric = re.compile('[^0-9a-zA-Z ]+')
+not_alphanumeric_with_umlauts = re.compile('[^0-9a-zA-Zäöü ]+')
 
 
-def normalize(text):
-    return remove_multi_spaces(replace_not_alphanumeric(unidecode(text.strip().lower())))
+def normalize(text, keep_umlauts=False):
+    text = text.strip().lower()
+    if keep_umlauts:
+        text = unidecode_keep_umlauts(text)
+    else:
+        text = unidecode(text)
+    text = replace_not_alphanumeric(text, keep_umlauts=keep_umlauts)
+    return remove_multi_spaces(text)
 
 
 def remove_multi_spaces(text):
@@ -28,7 +35,9 @@ def remove_punctuation(text):
     return ''.join(c for c in text if c not in punctiation_extended)
 
 
-def replace_not_alphanumeric(text, repl=' '):
+def replace_not_alphanumeric(text, repl=' ', keep_umlauts=False):
+    if keep_umlauts:
+        return re.sub(not_alphanumeric_with_umlauts, repl, text)
     return re.sub(not_alphanumeric, repl, text)
 
 

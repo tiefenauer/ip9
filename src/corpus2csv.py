@@ -21,8 +21,8 @@ parser.add_argument('-t', '--target_dir', type=str, help='target directory to sa
 parser.add_argument('-l', '--language', type=str, help='language to use')
 parser.add_argument('-num', '--include_numeric', action='store_true', default=False,
                     help='(optional) whether to include transcripts with numeric chars (default: False)')
-parser.add_argument('-m', '--max', nargs='?', type=int, default=None,
-                    help='(optional) maximum number of speech segments minutes to process')
+parser.add_argument('-m', '--max', nargs='?', type=int, default=0,
+                    help='(optional) maximum number of speech segments minutes to process (default: all)')
 parser.add_argument('-f', '--force', action='store_true',
                     help='(optional) force override existing files. Default: False')
 parser.add_argument('-p', '--precompute_features', action='store_true',
@@ -108,15 +108,18 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, max_audio_le
         wav_path = f'{segment_id}.wav'
         txt_path = f'{segment_id}.txt'
 
-        if not exists(wav_path) or not getsize(wav_path) or override:
-            sf.write(wav_path, segment.audio, segment.rate, subtype='PCM_16')
+        wav_path_absolute = join(target_dir, wav_path)
+        txt_path_absolute = join(target_dir, txt_path)
 
-        if not exists(txt_path) or not getsize(txt_path) or override:
-            with open(txt_path, 'w') as f:
+        if not exists(wav_path_absolute) or not getsize(wav_path_absolute) or override:
+            sf.write(wav_path_absolute, segment.audio, segment.rate, subtype='PCM_16')
+
+        if not exists(txt_path_absolute) or not getsize(txt_path_absolute) or override:
+            with open(txt_path_absolute, 'w') as f:
                 transcript = f'{segment.start_frame} {segment.end_frame} {segment.text}'
                 f.write(transcript)
 
-        files.append((wav_path, getsize(wav_path), segment.audio_length, segment.text))
+        files.append((wav_path, getsize(wav_path_absolute), segment.audio_length, segment.text))
         sum_audio_length += segment.audio_length
 
         description = wav_path

@@ -313,7 +313,10 @@ def create_segments(segments_file, transcript_file):
             id, start_frame, end_frame = parse_segment_line(line)
             segment_text = segment_texts[id] if id in segment_texts else ''
 
-            speech = SpeechSegment(start_frame=start_frame, end_frame=end_frame, transcript=segment_text)
+            speech = SpeechSegment(start_frame=start_frame,
+                                   end_frame=end_frame,
+                                   transcript=segment_text,
+                                   language='en')
             segments.append(speech)
 
     return segments

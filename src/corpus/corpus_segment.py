@@ -20,7 +20,8 @@ class SpeechSegment(Audible):
     _mel_specgram = None
     _mfcc = None
 
-    def __init__(self, start_frame, end_frame, transcript):
+    def __init__(self, start_frame, end_frame, transcript, language):
+        self.language = language
         self.start_frame = start_frame
         self.end_frame = end_frame
         self.transcript = transcript.strip() if transcript else ''
@@ -52,7 +53,8 @@ class SpeechSegment(Audible):
     @transcript.setter
     def transcript(self, transcript):
         self._transcript = transcript
-        self.text = normalize(transcript)
+        keep_umlauts = self.language == 'de'
+        self.text = normalize(transcript, keep_umlauts=keep_umlauts)
 
     @property
     def audio_length(self):

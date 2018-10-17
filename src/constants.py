@@ -5,10 +5,10 @@ from os.path import abspath, dirname, join
 SRC_DIR = dirname(abspath(__file__))  # absolute path to project ./src/ directory
 ROOT_DIR = abspath(join(SRC_DIR, os.pardir))  # absolute path to project root directory
 
-LS_SOURCE = os.environ.get('LS_SOURCE')  # path to LibriSpeech source files
-LS_TARGET = os.environ.get('LS_TARGET')  # path where LibriSpeech corpus is stored
-RL_SOURCE = os.environ.get('RL_SOURCE')  # path to ReadyLingua source files
-RL_TARGET = os.environ.get('RL_TARGET')  # path where ReadyLingua corpus is stored
+LS_SOURCE = "/media/daniel/Data/corpus/librispeech-raw"
+LS_TARGET = "/media/daniel/IP9/corpora/librispeech-corpus"
+RL_SOURCE = "/media/daniel/Data/corpus/readylingua-raw"
+RL_TARGET = "/media/daniel/IP9/corpora/readylingua-corpus"
 
 TARGET_ROOT = os.environ.get('TARGET_ROOT')
 

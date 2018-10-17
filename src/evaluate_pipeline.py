@@ -25,7 +25,7 @@ def main(args):
 
     print(f'all artefacts will be saved to {target_dir}')
 
-    audio_bytes, rate, transcript = preprocess(audio_path, trans_path)
+    audio_bytes, rate, transcript = preprocess(audio_path, trans_path, lang)
     segments = vad(audio_bytes, rate)
     df_transcripts = asr(lang, segments, rate, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, target_dir)
     df_transcripts = gsa(transcript, df_transcripts, target_dir)
@@ -99,7 +99,7 @@ def setup(args):
     return language, audio_path, transcript_path, keras_model_path, ds_model_path, ds_alphabet_path, ds_trie_path, lm_path, run_id, target_dir
 
 
-def preprocess(audio_path, transcript_path):
+def preprocess(audio_path, transcript_path, language):
     print("""
     ==================================================
     PIPELINE STAGE #1 (preprocessing): Converting audio to 16-bit PCM wave and normalizing transcript 
@@ -120,7 +120,8 @@ def preprocess(audio_path, transcript_path):
         audio_bytes, rate = read_pcm16_wave(audio_path)
 
     with open(transcript_path, 'r') as f:
-        transcript = normalize(f.read())
+        keep_umlauts = language == 'de'
+        transcript = normalize(f.read(), keep_umlauts=keep_umlauts)
 
     print(f"""
     ==================================================

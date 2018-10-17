@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # processes a standard LibriSpeech corpus file by removing the root path (i.e. make the audio file paths relative to the root path) and adding length information
 # usage: ./make_path_relative.sh /path/to/common-voice/corpus/cv-valid-train.csv > /path/to/output/dir/cv-valid-train-rel.csv
 echo 'wav_filename,wav_filesize,wav_length,transcript'

@@ -13,7 +13,7 @@ not_alphanumeric = re.compile('[^0-9a-zA-Z ]+')
 
 
 def normalize(text):
-    return replace_not_alphanumeric(unidecode(remove_multi_spaces(text.strip().lower())))
+    return remove_multi_spaces(replace_not_alphanumeric(unidecode(text.strip().lower())))
 
 
 def remove_multi_spaces(text):
@@ -28,7 +28,7 @@ def remove_punctuation(text):
     return ''.join(c for c in text if c not in punctiation_extended)
 
 
-def replace_not_alphanumeric(text, repl=''):
+def replace_not_alphanumeric(text, repl=' '):
     return re.sub(not_alphanumeric, repl, text)
 
 

@@ -1,55 +1,17 @@
 """
 Contains various helper functions to create/train a BRNN
 """
-import string
 from genericpath import exists
 from os import makedirs
 from os.path import join
 
-import numpy as np
 import tensorflow as tf
+from deepspeech import Model
 from keras import backend as K
 from keras.engine.saving import model_from_json, load_model
 from keras.utils import get_custom_objects
 
 from core.models import clipped_relu, ctc
-
-# 29 target classes
-# <space> = 0, a=1, b=2, ..., z=26, '=27, _ (padding token) = 28
-SPACE_TOKEN = '<space>'
-ALLOWED_CHARS = string.ascii_lowercase  # add umlauts here
-CHAR_TOKENS = ' ' + ALLOWED_CHARS + '\''
-
-
-def tokenize(text):
-    """Splits a text into tokens.
-    The text must only contain the lowercase characters a-z and digits. This must be ensured prior to calling this
-    method for performance reasons. The tokens are the characters in the text. A special <space> token is added between
-    the words. Since numbers are a special case (e.g. '1' and '3' are 'one' and 'three' if pronounced separately, but
-    'thirteen' if the text is '13'), digits are mapped to the special '<unk>' token.
-    """
-
-    text = text.replace(' ', '  ')
-    words = text.split(' ')
-
-    tokens = np.hstack([SPACE_TOKEN if x == '' else list(x) for x in words])
-    return tokens
-
-
-def encode(text):
-    return [encode_token(token) for token in tokenize(text)]
-
-
-def encode_token(token):
-    return 0 if token == SPACE_TOKEN else CHAR_TOKENS.index(token)
-
-
-def decode(tokens):
-    return ''.join([decode_token(x) for x in tokens])
-
-
-def decode_token(ind):
-    return '' if ind in [-1, len(CHAR_TOKENS)] else CHAR_TOKENS[ind]
 
 
 def save_model(model, target_dir):
@@ -67,7 +29,15 @@ def save_model(model, target_dir):
         json_file.write(model.to_json())
 
 
-def load_model_from_dir(root_path, opt=None):
+def load_ds_model(model_path, alphabet_path, n_features=26, n_context=9, beam_width=500, lm_path=None,
+                  trie_path=None, lm_weight=1.75, valid_word_count_weight=1.00):
+    ds = Model(model_path, n_features, n_context, alphabet_path, beam_width)
+    if lm_path and trie_path:
+        ds.enableDecoderWithLM(alphabet_path, lm_path, trie_path, lm_weight, valid_word_count_weight)
+    return ds
+
+
+def load_keras_model(root_path, opt=None):
     """
     Load model from directory
     :param root_path: directory with model files

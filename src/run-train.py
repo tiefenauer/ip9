@@ -19,7 +19,7 @@ from core.batch_generator import CSVBatchGenerator
 from core.models import *
 from core.report_callback import ReportCallback
 from util.log_util import create_args_str
-from util.rnn_util import load_model_from_dir, create_keras_session
+from util.rnn_util import load_keras_model, create_keras_session
 
 #######################################################
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Prevent pool_allocator message
@@ -38,9 +38,16 @@ parser.add_argument('--decoder', type=str, default='beamsearch,bestpath',
                     help='decoder to use (\'beamsearch\' or \'bestpath\') for validation. Default: None (both)')
 parser.add_argument('--lm', type=str,
                     help='path to KenLM binary file to use for validation')
-parser.add_argument('--lm_vocab', type=str,
-                    help='path to text file containing vocabulary used to train KenLM model. The vocabulary must'
-                         'be words separated by a single whitespace without newlines')
+parser.add_argument('--lm_vocab', type=str, required=False,
+                    help='(optional) path to text file containing vocabulary used to train KenLM model. The vocabulary '
+                         'must be words separated by a single whitespace without newlines. A vocabulary is mandatory '
+                         'if a LM is supplied with \'--lm_path\'. If \'--lm_path\' is set and  lm_vocab_path not, a '
+                         'default vocabulary file with the same name as lm_path and the ending \'.vocab\' '
+                         'will be searched. If this is not found, the script will exit.')
+parser.add_argument('--dropouts', action='store_true',
+                    help='whether to use dropouts (default: False)')
+parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='sgd',
+                    help='(optional) optimizer to use. Default=SGD')
 parser.add_argument('--dropouts', action='store_true',
                     help='whether to use dropouts (default: False)')
 parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='sgd',
@@ -117,7 +124,7 @@ def create_model(target_dir, opt, dropouts):
         if not isdir(args.model_path):
             print(f'ERROR: directory {target_dir} does not exist!', file=sys.stderr)
             exit(0)
-        model = load_model_from_dir(target_dir, opt)
+        model = load_keras_model(target_dir, opt)
     else:
         if dropouts:
             print('Creating new model with dropouts')
@@ -143,7 +150,7 @@ def train_model(model, target_dir, num_minutes=None):
     if args.tensorboard:
         tensorboard_path = join(target_dir, 'tensorboard')
         if exists(tensorboard_path):
-            remove(tensorboard_path)
+            rmtree(tensorboard_path)
         tb_cb = TensorBoard(log_dir=tensorboard_path, write_graph=False, write_images=True)
         cb_list.append(tb_cb)
 

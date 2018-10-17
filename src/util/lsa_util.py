@@ -29,7 +29,7 @@ def align(voice_segments, transcript, printout=False):
         lines.append(line)
 
         if edit_distance > 0.5:
-            alignments.append(Alignment(voice, alignment_text))
+            alignments.append(Alignment(voice, text_start, text_end))
             # prevent identical transcripts to become aligned with the same part of the audio
             # a = transcript.replace(alignment_text, '-' * len(alignment_text), 1)
 
@@ -37,6 +37,11 @@ def align(voice_segments, transcript, printout=False):
         with open(printout, 'w', encoding='utf-8') as f:
             f.writelines('\n'.join(lines))
     return alignments
+
+
+def align_globally(transcript, partial_transcripts):
+    inference = '#' + '#'.join(partial_transcripts)
+    return needle_wunsch(transcript, inference)
 
 
 def smith_waterman(a, b, match_score=3, gap_cost=2):
@@ -105,3 +110,103 @@ def traceback(H, b, b_='', old_i=0):
 
     b_ = b[j - 1] + infix + b_
     return traceback(H[0:i, 0:j], b, b_, i)
+
+
+def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5):
+    """
+    Needle-Wunsch algorithm for global sequence alignemnt. Performs a global alignment to match a string with a
+    reference string.
+    Code (with changes) from https://github.com/alevchuk/pairwise-alignment-in-python/blob/master/alignment.py
+    :param str_1: the reference string
+    :param str_2: the string to align with the reference string
+    :param match_score:
+    :param mismatch_score:
+    :param gap_score:
+    :return:
+    """
+
+    def match_score(a, b):
+        if a == b:
+            return 10
+        if a == '-' or b == '-':
+            return -5
+        return -5
+
+    # reference string on axis 0, other string on axis 1
+    m, n = len(str_1) + 1, len(str_2) + 1
+
+    # Generate DP table and traceback path pointer matrix
+    scores = np.zeros((m, n))
+    scores[:, 0] = np.arange(m) * gap_score
+    scores[0, :] = np.arange(n) * gap_score
+
+    for i, j in itertools.product(range(1, m), range(1, n)):
+        match = scores[i - 1][j - 1] + match_score(str_1[i - 1], str_2[j - 1])
+        delete = scores[i - 1][j] + gap_score
+        insert = scores[i][j - 1] + gap_score
+        scores[i][j] = max(match, delete, insert)
+
+    alignments = []
+    source_str, target_str = '', ''
+
+    # Traceback: start from the bottom right cell
+    i, j = m - 1, n - 1
+    end = i
+    while i > 0 and j > 0:
+        if str_2[j - 1] == '#':  # beginnings of speech segments are marked with '#'
+            start = snap_to_closest_word_boundary(i, str_1)
+            alignments.insert(0, {'start': start, 'end': end, 'text': str_1[start:end]})
+            end = start - 1
+
+        score_current = scores[i][j]
+        score_diagonal = scores[i - 1][j - 1]
+        score_up = scores[i][j - 1]
+        score_left = scores[i - 1][j]
+
+        if score_current == score_diagonal + match_score(str_1[i - 1], str_2[j - 1]):
+            source_str = str_1[i - 1] + source_str
+            target_str = str_2[j - 1] + target_str
+            i -= 1
+            j -= 1
+        elif score_current == score_left + gap_score:
+            source_str = str_1[i - 1] + source_str
+            target_str = '-' + target_str
+            i -= 1
+        elif score_current == score_up + gap_score:
+            source_str = '-' + source_str
+            target_str = str_2[j - 1] + target_str
+            j -= 1
+
+    # add one additional alignment (at max!) if segment beginnings that are not yet processed are encountered
+    # The first unprocessed segment is aligned with the remaining text at the beginning of the reference string
+    if j > 0:
+        alignments.insert(0, {'start': 0, 'end': end, 'text': str_1[0:end]})
+    # Finish tracing up to the top left cell
+    while j > 0:
+        source_str = '-' + source_str
+        target_str = str_2[j - 1] + target_str
+        j -= 1
+    while i > 0:
+        source_str = str_1[i - 1] + source_str
+        target_str = '-' + target_str
+        i -= 1
+
+    alignment_str = ''.join(a if a == b else ' ' for a, b in zip(source_str, target_str))
+    score = sum(match_score(a, b) for a, b in zip(source_str, target_str))
+    match = float(100) * sum(1 if a == b else 0 for a, b in zip(source_str, target_str)) / len(target_str)
+
+    # print(f'Match: {match:3.3f}%')
+    # print(f'Score: {score}', )
+    # print(f'Source   : {source_str}')
+    # print(f'Alignment: {alignment_str}')
+    # print(f'Target   : {target_str}')
+    return alignments
+
+
+def snap_to_closest_word_boundary(ix, text):
+    left, right = 0, 0
+    while ix - left > 0 and text[ix - left] != ' ':
+        left += 1
+    while ix + right < len(text) and text[ix + right] != ' ':
+        right += 1
+    return ix - left + 1 if left <= right else ix + right + 1

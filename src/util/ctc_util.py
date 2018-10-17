@@ -33,7 +33,7 @@ def encode_token(token):
 
 
 def decode(tokens):
-    return ''.join([decode_token(x) for x in tokens])
+    return ''.join([decode_token(x) for x in tokens]).strip()
 
 
 def decode_token(ind):

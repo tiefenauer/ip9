@@ -3,7 +3,7 @@ from unittest import TestCase
 from hamcrest import assert_that, is_
 
 from util import lm_util
-from util.lm_util import ler, ler_norm, wer, wer_norm
+from util.lm_util import ler, ler_norm, wer, wer_norm, load_lm_and_vocab
 
 
 class TestLMUtil(TestCase):
@@ -38,6 +38,18 @@ class TestLMUtil(TestCase):
         # 3 deletes + 2 swaps + 78 replaces + 104 insert
         assert_that(len(list(result)), is_(3 + 2 + 78 + 104))
 
+    def test_load_lm(self):
+        lm, vocab = load_lm_and_vocab('../lm/timit_en/libri-timit-lm.klm')
+        assert_that(lm, is_(not_(None)))
+        assert_that(vocab, is_(not_(None)))
+
+    def test_correction(self):
+        lm, lm_vocab = load_lm_and_vocab('../lm/timit_en/libri-timit-lm.klm')
+        # 2 insertions (buut has >1 candidate!), 1 deltion, 1 substitution
+        text = 'buut langage modelang is aweesome'
+        text_corrected = lm_util.correction(text, lm=lm, lm_vocab=lm_vocab)
+        assert_that(text_corrected, is_('but language modeling is awesome'))
+
     def test_ler(self):
         ground_truth = 'and i put the vice president in charge of mission control'
         inference_no_lm = 'ii put he bice president in charge of mission control'
@@ -49,8 +61,8 @@ class TestLMUtil(TestCase):
         ground_truth = 'and i put the vice president in charge of mission control'
         inference_no_lm = 'ii put he bice president in charge of mission control'
         inference_lm = 'i put the vice president in charge of mission control'
-        assert_that(ler_norm(ground_truth, inference_no_lm), is_(6/len(ground_truth)))
-        assert_that(ler_norm(ground_truth, inference_lm), is_(4/len(ground_truth)))
+        assert_that(ler_norm(ground_truth, inference_no_lm), is_(6 / len(ground_truth)))
+        assert_that(ler_norm(ground_truth, inference_lm), is_(4 / len(ground_truth)))
 
     def test_wer(self):
         ground_truth = 'and i put the vice president in charge of mission control'
@@ -63,5 +75,5 @@ class TestLMUtil(TestCase):
         ground_truth = 'and i put the vice president in charge of mission control'
         inference_no_lm = 'ii put he bice president in charge of mission control'
         inference_lm = 'i put the vice president in charge of mission control'
-        assert_that(wer_norm(ground_truth, inference_no_lm), is_(4/len(ground_truth.split())))
-        assert_that(wer_norm(ground_truth, inference_lm), is_(1/len(ground_truth.split())))
+        assert_that(wer_norm(ground_truth, inference_no_lm), is_(4 / len(ground_truth.split())))
+        assert_that(wer_norm(ground_truth, inference_lm), is_(1 / len(ground_truth.split())))

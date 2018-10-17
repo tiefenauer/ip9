@@ -1,9 +1,7 @@
 import itertools
+import math
 
-import numpy as np
 import pandas as pd
-from keras import backend as K
-from python_speech_features import mfcc
 from tqdm import tqdm
 
 from util.lm_util import ler_norm, wer_norm, ler, correction
@@ -14,29 +12,25 @@ lm_uses = ['lm_n', 'lm_y']
 metrics = ['WER', 'LER', 'LER_raw']
 
 
-def infer_transcription(model, audio, rate):
-    feature = mfcc(audio, samplerate=rate, numcep=26)
-    input_length = np.array([feature.shape[0]])
-
-    input_date = model.get_layer('the_input').input[0]
-    ctc = model.get_layer('ctc')
-    K.set_learning_phase(0)
-    test_func = K.function([input_date, K.learning_phase()], [ctc])
-
-    y_pred = test_func([[feature]])
-    decoded_int = K.get_value(K.ctc_decode(y_pred=y_pred, input_length=input_length, greedy=False))
-    decoded_str = [decode(int_seq) for int_seq in decoded_int]
-    K.clear_session()
-
-    return decoded_str[0]
+def infer_batches_deepspeech(voiced_segments, rate, model):
+    print('transcribing segments using DeepSpeech model')
+    progress = tqdm(voiced_segments, unit=' segments')
+    transcripts = []
+    for voiced_segment in progress:
+        transcript = model.stt(voiced_segment.audio, rate).strip()
+        progress.set_description(transcript)
+        transcripts.append(transcript)
+    return transcripts
 
 
-def infer_batches(batch_generator, decoder_greedy, decoder_beam, lm, lm_vocab):
+def infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, lm, lm_vocab):
     batch_generator.cur_index = 0  # reset index
+    batch_size = batch_generator.batch_size
+
     inferences = []
-    for _ in tqdm(range(len(batch_generator))):
+    for batch_ix in tqdm(range(len(batch_generator)), desc='transcribing/decoding batch', unit=' batches', position=1):
         batch_inputs, _ = next(batch_generator)
-        batch_inferences = infer_batch(batch_inputs, decoder_greedy, decoder_beam, lm, lm_vocab)
+        batch_inferences = infer_batch(batch_ix, batch_size, batch_inputs, decoder_greedy, decoder_beam, lm, lm_vocab)
         inferences.append(batch_inferences)
 
     df_inferences = pd.concat(inferences, sort=False)
@@ -44,16 +38,23 @@ def infer_batches(batch_generator, decoder_greedy, decoder_beam, lm, lm_vocab):
     return df_inferences
 
 
-def infer_batch(batch_inputs, decoder_greedy, decoder_beam, lm=None, lm_vocab=None):
+def infer_batch(batch_ix, batch_size, batch_inputs, decoder_greedy, decoder_beam, lm=None, lm_vocab=None):
     batch_input = batch_inputs['the_input']
     batch_input_lengths = batch_inputs['input_length']
-    ground_truths = batch_inputs['source_str']
+
+    if 'source_str' in batch_inputs:
+        ground_truths = batch_inputs['source_str']
+    else:
+        indexes = range(batch_ix * batch_size, batch_ix * batch_size + len(batch_input))
+        ground_truths = [str(i) for i in indexes]
 
     preds_greedy = decoder_greedy.decode(batch_input, batch_input_lengths)
     preds_beam = decoder_beam.decode(batch_input, batch_input_lengths)
 
-    preds_greedy_lm = [correction(pred_greedy, lm, lm_vocab) for pred_greedy in preds_greedy]
-    preds_beam_lm = [correction(pred_beam, lm, lm_vocab) for pred_beam in preds_beam]
+    preds_greedy_lm = [correction(pred_greedy, lm, lm_vocab) for pred_greedy in
+                       tqdm(preds_greedy, unit=' voice segments', desc='making corrections (greedy)', position=0)]
+    preds_beam_lm = [correction(pred_beam, lm, lm_vocab) for pred_beam in
+                     tqdm(preds_beam, unit=' voice segments', desc='making corrections (beam)', position=0)]
 
     columns = pd.MultiIndex.from_product([decoding_strategies, lm_uses, ['prediction'] + metrics],
                                          names=['decoding strategy', 'LM correction', 'predictions'])
@@ -93,3 +94,18 @@ def calculate_metrics_mean(df_inferences):
         df.loc[decoding_strategy, lm_used][metric] = df_inferences[decoding_strategy, lm_used, metric].mean()
 
     return df
+
+
+def extract_best_transcript(df_inferences):
+    transcripts = [''] * len(df_inferences)
+
+    for ix, row in df_inferences.iterrows():
+        ler_min = math.inf
+        transcript = ''
+        for decoding_strategy, lm_use in itertools.product(decoding_strategies, lm_uses):
+            ler_value = row[(decoding_strategy, lm_use)]['LER']
+            if ler_value < ler_min:
+                ler_min = ler_value
+                transcript = row[(decoding_strategy, lm_use)]['prediction']
+        transcripts[int(ix)] = transcript
+    return transcripts

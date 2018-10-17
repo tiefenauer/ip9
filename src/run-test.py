@@ -30,6 +30,8 @@ parser.add_argument('-a', '--lm_vocab', type=str, default='',
                          'if a LM is supplied with \'--lm_path\'. If \'--lm_path\' is set and  lm_vocab_path not, a '
                          'default vocabulary file with the same name as lm_path and the ending \'.vocab\' '
                          'will be searched. If this is not found, the script will exit.')
+parser.add_argument('--language', type=str, choices=['en', 'de'], default='en',
+                    help='langauge to train on. English will use 26 characters from the alphabet, German 29 (umlauts)')
 parser.add_argument('-g', '--gpu', type=str, default=None, required=False,
                     help='GPU to use (optional). If not set, you will be asked at runtime')
 args = parser.parse_args()
@@ -50,7 +52,7 @@ def main():
     if args.lm:
         lm, vocab = load_lm_and_vocab(args.lm, args.lm_vocab)
 
-    test_model(model, args.test_files, args.test_batches, args.batch_size, lm, vocab, target_dir)
+    test_model(model, args.test_files, args.test_batches, args.batch_size, args.language, lm, vocab, target_dir)
 
 
 def setup(args):
@@ -67,11 +69,13 @@ def setup(args):
     return target_dir
 
 
-def test_model(model, test_files, test_batches, batch_size, lm, lm_vocab, target_dir):
-    data_test = CSVBatchGenerator(test_files, sort=False, n_batches=test_batches, batch_size=batch_size)
+def test_model(model, test_files, test_batches, batch_size, language, lm, lm_vocab, target_dir):
+    data_test = CSVBatchGenerator(test_files, tokens, sort=False, n_batches=test_batches, batch_size=batch_size)
 
     print(f'Testing model with samples from {test_files}')
-    df_inferences = infer_batches_keras(data_test, BestPathDecoder(model), BeamSearchDecoder(model), lm, lm_vocab)
+    decoder_greedy = BestPathDecoder(model, language)
+    decoder_beam = BeamSearchDecoder(model, language)
+    df_inferences = infer_batches_keras(data_test, decoder_greedy, decoder_beam, language, lm, lm_vocab)
     df_metrics_means = calculate_metrics_mean(df_inferences)
 
     csv_path = join(target_dir, 'test_report.csv')

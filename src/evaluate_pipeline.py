@@ -21,13 +21,13 @@ from util.vad_util import webrtc_voice
 
 def main(args):
     print(create_args_str(args))
-    audio_path, trans_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, run_id, target_dir = setup(args)
+    lang, audio_path, trans_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, run_id, target_dir = setup(args)
 
     print(f'all artefacts will be saved to {target_dir}')
 
     audio_bytes, rate, transcript = preprocess(audio_path, trans_path)
     segments = vad(audio_bytes, rate)
-    df_transcripts = asr(segments, rate, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, target_dir)
+    df_transcripts = asr(lang, segments, rate, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, target_dir)
     df_transcripts = gsa(transcript, df_transcripts, target_dir)
 
     df_stats = calculate_stats(df_transcripts)
@@ -93,7 +93,10 @@ def setup(args):
     if not exists(target_dir):
         makedirs(target_dir)
 
-    return audio_path, transcript_path, keras_model_path, ds_model_path, ds_alphabet_path, ds_trie_path, lm_path, run_id, target_dir
+    if args.language not in ['en', 'de']:
+        raise ValueError('ERROR: Language must be either en or de')
+
+    return language, audio_path, transcript_path, keras_model_path, ds_model_path, ds_alphabet_path, ds_trie_path, lm_path, run_id, target_dir
 
 
 def preprocess(audio_path, transcript_path):
@@ -142,7 +145,7 @@ def vad(audio, rate):
     return voiced_segments
 
 
-def asr(voiced_segments, rate, keras_path, ds_path, ds_alphabet_path, ds_trie_path, lm_path, target_dir):
+def asr(language, voiced_segments, rate, keras_path, ds_path, ds_alphabet_path, ds_trie_path, lm_path, target_dir):
     print("""
     ==================================================
     PIPELINE STAGE #3 (ASR): transcribing voice segments 
@@ -164,9 +167,9 @@ def asr(voiced_segments, rate, keras_path, ds_path, ds_alphabet_path, ds_trie_pa
         lm, lm_vocab = load_lm_and_vocab(args.lm_path)
 
         batch_generator = VoiceSegmentsBatchGenerator(voiced_segments, sample_rate=rate, batch_size=16)
-        decoder_greedy = BestPathDecoder(keras_model)
-        decoder_beam = BeamSearchDecoder(keras_model)
-        df_inferences = infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, lm, lm_vocab)
+        decoder_greedy = BestPathDecoder(keras_model, language)
+        decoder_beam = BeamSearchDecoder(keras_model, language)
+        df_inferences = infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, language, lm, lm_vocab)
         transcripts = extract_best_transcript(df_inferences)
 
     columns = ['transcript', 'audio_start', 'audio_end']
@@ -243,6 +246,8 @@ if __name__ == '__main__':
                         help=f'path to Keras model to use for inference')
     parser.add_argument('--ds_model', type=str, required=False,
                         help=f'path to DeepSpeech model. If set, this will be preferred over \'--asr_model\'.')
+    parser.add_argument('--language', type=str, choices=['en', 'de'], default='en',
+                        help='langauge to train on. English will use 26 characters from the alphabet, German 29 (umlauts)')
     parser.add_argument('--lm_path', type=str,
                         help=f'path to directory with KenLM binary model to use for inference')
     parser.add_argument('--trie_path', type=str, required=False,

@@ -16,7 +16,7 @@ from util.rnn_util import save_model
 
 
 class ReportCallback(callbacks.Callback):
-    def __init__(self, data_valid, model, target_dir, num_epochs, num_minutes=None, save_progress=True,
+    def __init__(self, data_valid, model, language, target_dir, num_epochs, num_minutes=None, save_progress=True,
                  early_stopping=False, shuffle_data=True, force_output=False, lm_path=None, vocab_path=None):
         """
         Will calculate WER and LER at epoch end and print out infered transcriptions from validation set using the 
@@ -33,6 +33,7 @@ class ReportCallback(callbacks.Callback):
         super().__init__()
         self.data_valid = data_valid
         self.model = model
+        self.language = language
         self.target_dir = target_dir
         self.num_epochs = num_epochs
         self.num_minutes = num_minutes
@@ -50,8 +51,8 @@ class ReportCallback(callbacks.Callback):
         if not isdir(self.target_dir):
             makedirs(self.target_dir)
 
-        self.decoder_greedy = BestPathDecoder(model)
-        self.decoder_beam = BeamSearchDecoder(model)
+        self.decoder_greedy = BestPathDecoder(model, language)
+        self.decoder_beam = BeamSearchDecoder(model, language)
 
         # WER/LER history
         columns = pd.MultiIndex.from_product([metrics, decoding_strategies, lm_uses],
@@ -69,7 +70,8 @@ class ReportCallback(callbacks.Callback):
             self.data_valid.shuffle_entries()
 
         print(f'validating epoch {epoch+1} using best-path and beam search decoding')
-        df_inferences = infer_batches_keras(self.data_valid, self.decoder_greedy, self.decoder_beam, self.lm, self.lm_vocab)
+        df_inferences = infer_batches_keras(self.data_valid, self.decoder_greedy, self.decoder_beam, self.language,
+                                            self.lm, self.lm_vocab)
 
         mask = (df_inferences.loc[:, (slice(None), slice(None), 'WER')] < 0.6).any(axis=1)
         good_inferences = df_inferences[mask]

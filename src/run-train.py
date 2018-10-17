@@ -6,11 +6,12 @@ Forked and adjusted from: https://github.com/robmsmt/KerasDeepSpeech
 """
 
 import argparse
-from datetime import datetime, timedelta
 import os
 import sys
-from os import makedirs, remove
+from datetime import datetime
+from os import makedirs
 from os.path import join, abspath, isdir, exists
+from shutil import rmtree
 
 from keras.callbacks import TensorBoard
 from keras.optimizers import SGD, Adam
@@ -18,6 +19,7 @@ from keras.optimizers import SGD, Adam
 from core.batch_generator import CSVBatchGenerator
 from core.models import *
 from core.report_callback import ReportCallback
+from util.ctc_util import get_tokens
 from util.log_util import create_args_str
 from util.rnn_util import load_keras_model, create_keras_session
 
@@ -44,6 +46,8 @@ parser.add_argument('--lm_vocab', type=str, required=False,
                          'if a LM is supplied with \'--lm_path\'. If \'--lm_path\' is set and  lm_vocab_path not, a '
                          'default vocabulary file with the same name as lm_path and the ending \'.vocab\' '
                          'will be searched. If this is not found, the script will exit.')
+parser.add_argument('--language', type=str, choices=['en', 'de'], default='en',
+                    help='langauge to train on. English will use 26 characters from the alphabet, German 29 (umlauts)')
 parser.add_argument('--dropouts', action='store_true',
                     help='whether to use dropouts (default: False)')
 parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='sgd',
@@ -88,9 +92,9 @@ def main(date_time):
         opt = Adam(lr=args.learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-8, clipnorm=5)
     else:
         opt = SGD(lr=args.learning_rate, decay=1e-6, momentum=0.9, nesterov=True, clipnorm=5)
-    model = create_model(target_dir, opt, args.dropouts)
+    model = create_model(target_dir, opt, args.dropouts, args.language)
 
-    train_model(model, target_dir, args.minutes)
+    train_model(model, args.language, target_dir, args.minutes)
 
 
 def setup(date_time):
@@ -118,7 +122,11 @@ def setup(date_time):
     return target_dir
 
 
-def create_model(target_dir, opt, dropouts):
+def create_model(target_dir, opt, dropouts, language):
+    tokens = get_tokens(language)
+    n_labels = len(tokens) + 1  # +1 for blank token!
+    print(f'using {n_labels} labels in output layer')
+
     if args.model_path:
         print(f'trying to load model from {target_dir}')
         if not isdir(args.model_path):
@@ -128,10 +136,10 @@ def create_model(target_dir, opt, dropouts):
     else:
         if dropouts:
             print('Creating new model with dropouts')
-            model = deep_speech_dropout(n_features=26, n_fc=args.fc_size, n_recurrent=args.rnn_size, n_labels=29)
+            model = deep_speech_dropout(n_features=26, n_fc=args.fc_size, n_recurrent=args.rnn_size, n_labels=n_labels)
         else:
             print('Creating new model without dropouts')
-            model = deep_speech_lstm(n_features=26, n_fc=args.fc_size, n_recurrent=args.rnn_size, n_labels=29)
+            model = deep_speech_lstm(n_features=26, n_fc=args.fc_size, n_recurrent=args.rnn_size, n_labels=n_labels)
         model.compile(optimizer=opt, loss=ctc)
 
     model.summary()
@@ -139,11 +147,11 @@ def create_model(target_dir, opt, dropouts):
     return model
 
 
-def train_model(model, target_dir, num_minutes=None):
+def train_model(model, language, target_dir, num_minutes=None):
     print("Creating data batch generators")
-    data_train = CSVBatchGenerator(args.train_files, sort=True, n_batches=args.train_batches,
+    data_train = CSVBatchGenerator(args.train_files, language=language, sort=True, n_batches=args.train_batches,
                                    batch_size=args.batch_size, num_minutes=num_minutes)
-    data_valid = CSVBatchGenerator(args.valid_files, sort=False, n_batches=args.valid_batches,
+    data_valid = CSVBatchGenerator(args.valid_files, language=language, sort=False, n_batches=args.valid_batches,
                                    batch_size=args.batch_size)
 
     cb_list = []
@@ -154,7 +162,7 @@ def train_model(model, target_dir, num_minutes=None):
         tb_cb = TensorBoard(log_dir=tensorboard_path, write_graph=False, write_images=True)
         cb_list.append(tb_cb)
 
-    report_cb = ReportCallback(data_valid, model, num_minutes=num_minutes, num_epochs=args.epochs,
+    report_cb = ReportCallback(data_valid, model, language, num_minutes=num_minutes, num_epochs=args.epochs,
                                target_dir=target_dir, lm_path=args.lm, vocab_path=args.lm_vocab)
     cb_list.append(report_cb)
 

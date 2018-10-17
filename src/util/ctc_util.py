@@ -2,11 +2,21 @@ import string
 
 import numpy as np
 
-# 29 target classes
-# <space> = 0, a=1, b=2, ..., z=26, '=27, _ (padding token) = 28
 SPACE_TOKEN = '<space>'
-ALLOWED_CHARS = string.ascii_lowercase  # add umlauts here
-CHAR_TOKENS = ' ' + ALLOWED_CHARS + '\''
+
+
+def get_alphabet(language):
+    if language == 'de':
+        return string.ascii_lowercase + 'äöü'
+    return string.ascii_lowercase
+
+
+def get_tokens(language):
+    # English has 31 target labels  (+ blank token):
+    #   <space>=0, a=1, b=2, ..., z=26, ä=27, ö=28, ü=29, '=30, _ (padding token)=31
+    # German has 28 target labels (+ blank token):
+    #   <space>=0, a=1, b=2, ..., z=26, '=27, _ (padding token)=28
+    return ' ' + get_alphabet(language) + '\''
 
 
 def tokenize(text):
@@ -24,17 +34,17 @@ def tokenize(text):
     return tokens
 
 
-def encode(text):
-    return [encode_token(token) for token in tokenize(text)]
+def encode(text, tokens):
+    return [encode_token(token, tokens) for token in tokenize(text.strip())]
 
 
-def encode_token(token):
-    return 0 if token == SPACE_TOKEN else CHAR_TOKENS.index(token)
+def encode_token(token, tokens):
+    return 0 if token == SPACE_TOKEN else tokens.index(token)
 
 
-def decode(tokens):
-    return ''.join([decode_token(x) for x in tokens]).strip()
+def decode(int_seq, tokens):
+    return ''.join([decode_token(x, tokens) for x in int_seq]).strip()
 
 
-def decode_token(ind):
-    return '' if ind in [-1, len(CHAR_TOKENS)] else CHAR_TOKENS[ind]
+def decode_token(ind, tokens):
+    return '' if ind in [-1, len(tokens)] else tokens[ind]

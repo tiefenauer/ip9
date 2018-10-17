@@ -5,7 +5,6 @@ import pandas as pd
 from tqdm import tqdm
 
 from util.lm_util import ler_norm, wer_norm, ler, correction
-from util.rnn_util import decode
 
 decoding_strategies = ['greedy', 'beam']
 lm_uses = ['lm_n', 'lm_y']
@@ -23,14 +22,14 @@ def infer_batches_deepspeech(voiced_segments, rate, model):
     return transcripts
 
 
-def infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, lm, lm_vocab):
+def infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, language, lm, vocab):
     batch_generator.cur_index = 0  # reset index
     batch_size = batch_generator.batch_size
 
     inferences = []
-    for batch_ix in tqdm(range(len(batch_generator)), desc='transcribing/decoding batch', unit=' batches', position=1):
+    for ix in tqdm(range(len(batch_generator)), desc='transcribing/decoding batch', unit=' batches', position=1):
         batch_inputs, _ = next(batch_generator)
-        batch_inferences = infer_batch(batch_ix, batch_size, batch_inputs, decoder_greedy, decoder_beam, lm, lm_vocab)
+        batch_inferences = infer_batch(ix, batch_size, batch_inputs, decoder_greedy, decoder_beam, language, lm, vocab)
         inferences.append(batch_inferences)
 
     df_inferences = pd.concat(inferences, sort=False)
@@ -38,7 +37,7 @@ def infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, lm, lm_vo
     return df_inferences
 
 
-def infer_batch(batch_ix, batch_size, batch_inputs, decoder_greedy, decoder_beam, lm=None, lm_vocab=None):
+def infer_batch(batch_ix, batch_size, batch_inputs, decoder_greedy, decoder_beam, language, lm=None, lm_vocab=None):
     batch_input = batch_inputs['the_input']
     batch_input_lengths = batch_inputs['input_length']
 
@@ -51,9 +50,9 @@ def infer_batch(batch_ix, batch_size, batch_inputs, decoder_greedy, decoder_beam
     preds_greedy = decoder_greedy.decode(batch_input, batch_input_lengths)
     preds_beam = decoder_beam.decode(batch_input, batch_input_lengths)
 
-    preds_greedy_lm = [correction(pred_greedy, lm, lm_vocab) for pred_greedy in
+    preds_greedy_lm = [correction(pred_greedy, language, lm, lm_vocab) for pred_greedy in
                        tqdm(preds_greedy, unit=' voice segments', desc='making corrections (greedy)', position=0)]
-    preds_beam_lm = [correction(pred_beam, lm, lm_vocab) for pred_beam in
+    preds_beam_lm = [correction(pred_beam, language, lm, lm_vocab) for pred_beam in
                      tqdm(preds_beam, unit=' voice segments', desc='making corrections (beam)', position=0)]
 
     columns = pd.MultiIndex.from_product([decoding_strategies, lm_uses, ['prediction'] + metrics],

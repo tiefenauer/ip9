@@ -7,7 +7,7 @@ from os.path import abspath, exists, dirname, join, splitext
 import numpy as np
 from pattern3.metrics import levenshtein
 
-from util.ctc_util import ALLOWED_CHARS
+from util.ctc_util import get_alphabet
 
 # the LER is just the Levenshtein/edit distance
 ler = levenshtein
@@ -109,33 +109,36 @@ def score(word_list, lm):
     return lm.score(' '.join(word_list), bos=False, eos=False)
 
 
-def correction(sentence, lm=None, lm_vocab=None):
+def correction(sentence, language, lm=None, lm_vocab=None):
     """
     Get most probable spelling correction for a given sentence.
     :param sentence:
     :return:
     """
+    assert language in ['en', 'de'], 'language must be one of [\'en\', \'de\']'
     if not lm or not lm_vocab:
         return sentence
+    alphabet = get_alphabet(language)
     beam_width = 1024
     layer = [(0, [])]  # list of (score, 2-gram)-pairs
     for word in sentence.split():
-        layer = [(-score(node + [word_c], lm), node + [word_c]) for word_c in candidate_words(word, lm_vocab) for
-                 sc, node in layer]
+        layer = [(-score(node + [word_c], lm), node + [word_c])
+                 for word_c in candidate_words(word, lm_vocab, alphabet)
+                 for sc, node in layer]
         heapify(layer)
         layer = layer[:beam_width]
     return ' '.join(layer[0][1])
 
 
-def candidate_words(word, lm_vocab):
+def candidate_words(word, lm_vocab, alphabet):
     """
     Generate possible spelling corrections for a given word.
     :param word: single word as a string
     :return: list of possible spelling corrections for each word
     """
     return known_words([word], lm_vocab) \
-           or known_words(edits_1(word), lm_vocab) \
-           or known_words(edits_2(word), lm_vocab) \
+           or known_words(edits_1(word, alphabet), lm_vocab) \
+           or known_words(edits_2(word, alphabet), lm_vocab) \
            or ['<unk>']
 
 
@@ -148,14 +151,17 @@ def known_words(word_list, lm_vocab):
     return set(filter(lambda word: word in lm_vocab, word_list))
 
 
-def edits_1(word_str):
+def edits_1(word_str, alphabet):
     """
     generates a list of all words with edit distance 1 for a given word
     Note that generators must be used for performance reasons.
     :param word_str: single word as a string
     :return: generator for all possible words with edit distance 1
     """
-    return itertools.chain(deletes(word_str), swaps(word_str), replaces(word_str), inserts(word_str))
+    return itertools.chain(deletes(word_str),
+                           swaps(word_str),
+                           replaces(word_str, alphabet),
+                           inserts(word_str, alphabet))
 
 
 def splits(word_str):
@@ -185,33 +191,36 @@ def swaps(word_str):
     return (L + R[1] + R[0] + R[2:] for L, R in splits(word_str) if len(R) > 1)
 
 
-def replaces(word_str):
+def replaces(word_str, alphabet):
     """
     generates all possible variants of a word where 1 character is replaces
     (e.g. 'abc' -> 'bbc', 'cbc', ..., 'aac', 'acc', ..., 'aba', 'abb', ... )
     :param word_str: the word as string
+    :param alphabet: the alphabet to use for the language
     :return: generator for all variants of the word where 1 character is replaced
     """
-    return (L + c + R[1:] for L, R in splits(word_str) if R for c in ALLOWED_CHARS)
+    return (L + c + R[1:] for L, R in splits(word_str) if R for c in alphabet)
 
 
-def inserts(words_str):
+def inserts(words_str, alphabet):
     """
     generates all possible variants of a word where 1 character is inserted. Identical elements may be present
     (e.g. 'abc' -> 'aabc', 'babc', 'cabc', ..., 'aabc', 'abbc', 'acbc', ..., 'abac', 'abbc', 'abcc', ..., 'abca', 'abcb', 'abcc', ...
     :param words_str: the word as string
+    :param alphabet: the alphabet to use for the language
     :return: generator for all variants of the word where 1 character is inserted
     """
-    return (L + c + R for L, R in splits(words_str) for c in ALLOWED_CHARS)
+    return (L + c + R for L, R in splits(words_str) for c in alphabet)
 
 
-def edits_2(word):
+def edits_2(word, alphabet):
     """
     generates a list of all words with edit distance 2 for a list of words
     :param word: list of word-strings
+    :param alphabet: the alphabet to use for the language
     :return:
     """
-    return (e2 for e1 in edits_1(word) for e2 in edits_1(e1))
+    return (e2 for e1 in edits_1(word, alphabet) for e2 in edits_1(e1, alphabet))
 
 
 # globals

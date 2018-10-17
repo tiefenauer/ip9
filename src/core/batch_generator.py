@@ -13,15 +13,16 @@ from pydub.utils import mediainfo
 from python_speech_features import mfcc
 from sklearn.utils import shuffle
 
-from util.ctc_util import encode
+from util.ctc_util import encode, get_tokens
 
 
 class BatchGenerator(object):
-    def __init__(self, batch_items, batch_size):
+    def __init__(self, batch_items, batch_size, language):
         self.batch_items = batch_items
         self.batch_size = batch_size
         self.n = len(batch_items)
         self.cur_index = 0
+        self.tokens = get_tokens(language)
 
     def __getitem__(self, batch_ix):
         if isinstance(batch_ix, slice):
@@ -70,7 +71,7 @@ class BatchGenerator(object):
         # labels are only known when inferring on labelled data (train-/dev-/test-set), not on completely new data
         labels = self.extract_labels(index_array)
         if labels:
-            Y = pad_sequences([encode(label) for label in labels], padding='post', value=28)
+            Y = pad_sequences([encode(label, self.tokens) for label in labels], padding='post', value=28)
             Y_lengths = np.array([len(label) for label in labels])
             inputs['the_labels'] = Y
             inputs['label_length'] = Y_lengths
@@ -132,7 +133,7 @@ class VoiceSegmentsBatchGenerator(BatchGenerator):
 
 class CSVBatchGenerator(BatchGenerator):
 
-    def __init__(self, csv_path, sort=False, n_batches=None, batch_size=16, num_minutes=None):
+    def __init__(self, csv_path, language, sort=False, n_batches=None, batch_size=16, num_minutes=None):
         df, total_audio_length = read_data_from_csv(csv_path=csv_path, sort=sort)
         df['wav_filename'] = df['wav_filename'].map(lambda wav_file: join(dirname(abspath(csv_path)), wav_file))
 
@@ -155,7 +156,7 @@ class CSVBatchGenerator(BatchGenerator):
         self.wav_sizes = df['wav_filesize'].tolist()
         self.wav_lengths = df['wav_length'].tolist() if 'wav_length' in df else []
 
-        super().__init__(batch_items=df, batch_size=batch_size)
+        super().__init__(batch_items=df, batch_size=batch_size, language=language)
         del df
 
     def shuffle_entries(self):

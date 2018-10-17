@@ -52,8 +52,6 @@ parser.add_argument('--dropouts', action='store_true',
                     help='whether to use dropouts (default: False)')
 parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='sgd',
                     help='(optional) optimizer to use. Default=SGD')
-parser.add_argument('--dropouts', action='store_true',
-                    help='whether to use dropouts (default: False)')
 parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='sgd',
                     help='(optional) optimizer to use. Default=SGD')
 parser.add_argument('--tensorboard', type=bool, default=True, help='True/False to use tensorboard')

@@ -159,12 +159,6 @@ if [ ! -f "${corpus_file}" ] ; then
     echo "Processed $(cat ${corpus_file} | wc -w) words"
     echo "Processed $(cat ${corpus_file} | xargs -n1 | sort | uniq -c) unique words"
 
-    echo "compressing $corpus_file. File size before:"
-    du -h ${corpus_file}
-    bzip2 ${corpus_file}
-    echo "done! Compressed file size:"
-    du -h ${corpus_file}.bz2
-
     # vocabulary must be recreated because corpus might have changed
     recreate_vocab = 1
 fi
@@ -200,11 +194,16 @@ if [ ${recreate_vocab} = 1 ] ; then
     echo "Top $top_words words make up $fraction% of words"
 fi
 
+echo "compressing $corpus_file. File size before:"
+du -h ${corpus_file}
+bzip2 ${corpus_file}
+echo "done! Compressed file size:"
+du -h ${corpus_file}.bz2
 
-if [ ! -f $lm_arpa ]; then
+if [ ! -f ${lm_arpa} ]; then
     echo "Training $order-gram KenLM model with data from $corpus_file.bz2 and saving ARPA file to $lm_arpa"
     echo "This can take several hours, depending on the order of the model"
-    lmplz -o ${order} -T ${tmp_dir} -S 40%  --limit_vocab_file ${lm_vocab} <${corpus_file}.bz2
+    lmplz -o ${order} -T ${tmp_dir} -S 40%  --limit_vocab_file ${lm_vocab} --arpa ${lm_arpa} <${corpus_file}.bz2
 fi
 
 if [ ! -f $lm_binary ]; then

@@ -28,19 +28,19 @@ class TestLMUtil(TestCase):
         alphabet = get_alphabet('en')
         result = lm_util.replaces('abc', alphabet)
         # 3*26 = 78 replaces: bbc, cbc, dbc, ..., aac, acc, adc, ... aba, abb, abd, ...
-        assert_that(len(list(result)), is_(78))
+        assert_that(len(list(result)), is_(81))
 
     def test_inserts(self):
         alphabet = get_alphabet('en')
         result = lm_util.inserts('abc', alphabet)
         # 4*26 = 104 inserts: aabc, babc, ..., aabc, abbc, acbc, ..., abac, abbc, abcc, abdc, ..., abca, abcb, abcc, ...
-        assert_that(len(list(result)), is_(104))
+        assert_that(len(list(result)), is_(108))
 
     def test_edits_1(self):
         alphabet = get_alphabet('en')
         result = lm_util.edits_1('abc', alphabet)
-        # 3 deletes + 2 swaps + 78 replaces + 104 insert
-        assert_that(len(list(result)), is_(3 + 2 + 78 + 104))
+        # 3 deletes + 2 swaps + 3*27 replaces + 4*27- insert
+        assert_that(len(list(result)), is_(3 + 2 + 81 + 108))
 
     def test_load_lm(self):
         lm, vocab = load_lm_and_vocab('/media/daniel/IP9//lm/timit_en/libri-timit-lm.klm')

@@ -8,7 +8,7 @@ SPACE_TOKEN = '<space>'
 def get_alphabet(language):
     if language == 'de':
         return string.ascii_lowercase + 'äöü'
-    return string.ascii_lowercase
+    return string.ascii_lowercase + '\''
 
 
 def get_tokens(language):
@@ -16,7 +16,7 @@ def get_tokens(language):
     #   <space>=0, a=1, b=2, ..., z=26, ä=27, ö=28, ü=29, '=30, _ (padding token)=31
     # German has 28 target labels (+ blank token):
     #   <space>=0, a=1, b=2, ..., z=26, '=27, _ (padding token)=28
-    return ' ' + get_alphabet(language) + '\''
+    return ' ' + get_alphabet(language)
 
 
 def tokenize(text):

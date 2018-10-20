@@ -8,16 +8,12 @@ from util.ctc_util import encode, decode, get_tokens, get_alphabet
 class TestEncodingDecoding(TestCase):
 
     def test_get_alphabet(self):
-        alphabet_en = get_alphabet('en')
-        alphabet_de = get_alphabet('de')
-        assert_that(len(alphabet_en), is_(26))
-        assert_that(len(alphabet_de), is_(29))
+        assert_that(len(get_alphabet('en')), is_(27))  # a..z, '
+        assert_that(len(get_alphabet('de')), is_(29))  # a..z, ä,ö,ü
 
     def test_get_tokens(self):
-        tokens_en = get_tokens('en')
-        tokens_de = get_tokens('de')
-        assert_that(len(tokens_en), is_(28))
-        assert_that(len(tokens_de), is_(31))
+        assert_that(len(get_tokens('en')), is_(28))
+        assert_that(len(get_tokens('de')), is_(30))
 
     def test_encoding_english(self):
         text = 'foo bar  '

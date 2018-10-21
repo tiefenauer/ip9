@@ -134,15 +134,16 @@ class ReadyLinguaCorpus(Corpus, ABC):
             speech_segments = [seg for corpus_entry in self.corpus_entries
                                for seg in corpus_entry.speech_segments_not_numeric]
 
-        # 80/10/10 split
-        n_entries = len(speech_segments)
-        train_split = int(n_entries * 0.8)
+        # 80/10/10 split, observing corpus entry boundaries
+        train_split = 0
+        prev_corpus_entry_id = None
+        for train_split, speech_segment in enumerate(speech_segments):
+            if train_split > 0.8 * len(speech_segments) and speech_segment.corpus_entry.id is not prev_corpus_entry_id:
+                break
+            prev_corpus_entry_id = speech_segment.corpus_entry.id
         test_split = int(train_split + (n_entries - train_split) / 2)
 
-        train_set = speech_segments[:train_split]
-        dev_set = speech_segments[train_split:test_split]
-        test_set = speech_segments[test_split:]
-        return train_set, dev_set, test_set
+        return speech_segments[:train_split], speech_segments[train_split:test_split], speech_segments[test_split:]
 
 
 class LibriSpeechCorpus(Corpus):

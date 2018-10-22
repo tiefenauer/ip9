@@ -133,8 +133,16 @@ class VoiceSegmentsBatchGenerator(BatchGenerator):
 
 class CSVBatchGenerator(BatchGenerator):
 
-    def __init__(self, csv_path, language, sort=False, n_batches=None, batch_size=16, num_minutes=None):
+    def __init__(self, csv_path, lang, sort=False, n_batches=None, batch_size=16, num_minutes=None, use_synth=False):
         df, total_audio_length = read_data_from_csv(csv_path=csv_path, sort=sort)
+        if not use_synth:
+            def is_original(row):
+                return not any(suffix in row['wav_filename'] for suffix in
+                               ['-high', '-low', '-fast', '-slow', '-shift', '-distorted'])
+
+            # is_synth = lambda row: any(suffix in row['wav_filename'] for suffix in synth_suffixes)
+            df = df[df.apply(is_original, axis=1)]
+
         df['wav_filename'] = df['wav_filename'].map(lambda wav_file: join(dirname(abspath(csv_path)), wav_file))
 
         if n_batches:
@@ -156,7 +164,7 @@ class CSVBatchGenerator(BatchGenerator):
         self.wav_sizes = df['wav_filesize'].tolist()
         self.wav_lengths = df['wav_length'].tolist() if 'wav_length' in df else []
 
-        super().__init__(batch_items=df, batch_size=batch_size, language=language)
+        super().__init__(batch_items=df, batch_size=batch_size, language=lang)
         del df
 
     def shuffle_entries(self):

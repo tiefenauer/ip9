@@ -54,19 +54,20 @@ parser.add_argument('--dropouts', action='store_true',
 parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='sgd',
                     help='(optional) optimizer to use. Default=SGD')
 parser.add_argument('--tensorboard', type=bool, default=True, help='True/False to use tensorboard')
-parser.add_argument('--memcheck', type=bool, default=False, help='print out memory details for each epoch')
 parser.add_argument('--train_batches', type=int, default=0,
                     help='number of batches to use for training in each epoch. Use 0 for automatic')
 parser.add_argument('--valid_batches', type=int, default=0,
                     help='number of batches to use for validation in each epoch. Use 0 for automatic')
-parser.add_argument('--fc_size', type=int, default=512, help='fully connected size for model')
-parser.add_argument('--rnn_size', type=int, default=512, help='size of the RNN layer')
+parser.add_argument('--n_fc', type=int, default=512, help='fully connected size for model')
+parser.add_argument('--n_recurrent', type=int, default=512, help='size of the RNN layer')
 parser.add_argument('--model_path', type=str, default='',
                     help="""If value set, load the checkpoint in a folder minus name minus the extension (weights 
                        assumed as same name diff ext) e.g. --model_path ./checkpoints/ TRIMMED_ds_ctc_model/""")
 parser.add_argument('--learning_rate', type=float, default=0.01, help='the learning rate used by the optimiser')
 parser.add_argument('--sort_samples', type=bool, default=True,
                     help='sort utterances by their length in the first epoch')
+parser.add_argument('--synthesized', action='store_true',
+                    help='use synthesized training data (if available)')
 parser.add_argument('--epochs', type=int, default=20, help='Number of epochs to train the model')
 parser.add_argument('--minutes', type=int, default=None,
                     help='Number of minutes of training data to use. Default: None (=all)')
@@ -133,10 +134,10 @@ def create_model(target_dir, opt, dropouts, language):
     else:
         if dropouts:
             print('Creating new model with dropouts')
-            model = deep_speech_dropout(n_features=26, n_fc=args.fc_size, n_recurrent=args.rnn_size, n_labels=n_labels)
+            model = deep_speech_dropout(n_features=26, n_fc=args.n_fc, n_recurrent=args.n_recurrent, n_labels=n_labels)
         else:
             print('Creating new model without dropouts')
-            model = deep_speech_lstm(n_features=26, n_fc=args.fc_size, n_recurrent=args.rnn_size, n_labels=n_labels)
+            model = deep_speech_lstm(n_features=26, n_fc=args.n_fc, n_recurrent=args.n_recurrent, n_labels=n_labels)
         model.compile(optimizer=opt, loss=ctc)
 
     model.summary()
@@ -146,28 +147,25 @@ def create_model(target_dir, opt, dropouts, language):
 
 def train_model(model, language, target_dir, num_minutes=None):
     print("Creating data batch generators")
-    data_train = CSVBatchGenerator(args.train_files, language=language, sort=True, n_batches=args.train_batches,
-                                   batch_size=args.batch_size, num_minutes=num_minutes)
-    data_valid = CSVBatchGenerator(args.valid_files, language=language, sort=False, n_batches=args.valid_batches,
+    data_train = CSVBatchGenerator(args.train_files, lang=language, sort=True, n_batches=args.train_batches,
+                                   batch_size=args.batch_size, num_minutes=num_minutes, use_synth=args.synthesized)
+    data_valid = CSVBatchGenerator(args.valid_files, lang=language, sort=False, n_batches=args.valid_batches,
                                    batch_size=args.batch_size)
 
-    cb_list = []
-    if args.tensorboard:
-        tensorboard_path = join(target_dir, 'tensorboard')
-        if exists(tensorboard_path):
-            rmtree(tensorboard_path)
-        tb_cb = TensorBoard(log_dir=tensorboard_path, write_graph=False, write_images=True)
-        cb_list.append(tb_cb)
+    tensorboard_path = join(target_dir, 'tensorboard')
+    if exists(tensorboard_path):
+        rmtree(tensorboard_path)
+    tb_cb = TensorBoard(log_dir=tensorboard_path, write_graph=False, write_images=True)
 
     report_cb = ReportCallback(data_valid, model, language, num_minutes=num_minutes, num_epochs=args.epochs,
                                target_dir=target_dir, lm_path=args.lm, vocab_path=args.lm_vocab)
-    cb_list.append(report_cb)
 
     model.fit_generator(generator=data_train,
                         validation_data=data_valid,
                         steps_per_epoch=len(data_train),
                         validation_steps=len(data_valid),
-                        epochs=args.epochs, callbacks=cb_list, workers=1)
+                        epochs=args.epochs,
+                        callbacks=[tb_cb, report_cb])
 
     K.clear_session()
 

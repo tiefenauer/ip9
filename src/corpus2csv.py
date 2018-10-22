@@ -86,11 +86,11 @@ def extract_segments(target_dir, corpus_id, corpus, synthesize=False, max_audio_
     print(f'processing training segments')
     df_train = process_subset('train', train_set, synthesize, corpus_id, target_dir, max_audio_length, override)
 
-    print(f'processing validation segments')
-    df_valid = process_subset('dev', dev_set, synthesize, corpus_id, target_dir, max_audio_length * 0.2, override)
+    print(f'processing validation segments (data is only synthesized for training set)')
+    df_valid = process_subset('dev', dev_set, False, corpus_id, target_dir, max_audio_length * 0.2, override)
 
-    print(f'processing validation segments')
-    df_test = process_subset('test', test_set, synthesize, corpus_id, target_dir, max_audio_length * 0.2, override)
+    print(f'processing validation segments (data is only synthesized for training set)')
+    df_test = process_subset('test', test_set, False, corpus_id, target_dir, max_audio_length * 0.2, override)
 
     return df_train, df_valid, df_test
 

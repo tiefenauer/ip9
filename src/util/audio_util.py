@@ -2,10 +2,10 @@
 Utility functions for audio manipulation
 """
 import logging
-import random
 import subprocess
 import wave
 
+import librosa
 import numpy as np
 from librosa.effects import time_stretch, pitch_shift
 from pydub import AudioSegment
@@ -78,22 +78,36 @@ def frame_to_ms(val_frame, sample_rate):
     return float(val_frame / sample_rate)
 
 
-def shift(audio, max_shift=None):
-    max_shift = max_shift if max_shift else int(0.01 * len(audio))
-    shift = np.random.randint(low=1, high=max_shift)
-    return audio[shift:]
+def distort_audio(audio, rate, shift_s=0, pitch_factor=0, tempo_factor=1):
+    audio_distorted = shift(audio, rate, shift_s)
+    audio_distorted = change_pitch(audio_distorted, rate, pitch_factor)
+    audio_distorted = change_tempo(audio_distorted, tempo_factor)
+    return audio_distorted
 
 
-def distort(audio, rate, tempo=False, pitch=False):
-    audio = audio.astype(np.float32)
-    distorted = audio
-    if tempo:
-        factor = random.uniform(0.8, 1.2) if isinstance(tempo, bool) else tempo
-        distorted = time_stretch(distorted, factor)
-    if pitch:
-        factor = random.uniform(1, 4) if isinstance(tempo, bool) else tempo
-        distorted = pitch_shift(distorted, rate, factor)
-    return distorted
+def shift(audio, rate, shift_s=0, shift_left=False):
+    shift_frames = int(shift_s * rate)
+    return audio[shift_frames:] if shift_left else np.concatenate((np.zeros((shift_frames,)), audio))
+
+
+def change_pitch(audio, rate, factor=1.0):
+    return pitch_shift(audio, rate, factor)
+
+
+def change_tempo(audio, factor=1.0):
+    return time_stretch(audio, factor)
+
+
+def add_echo(audio, rate, gain_in=0.8, gain_out=0.9, delay_decay="500 0.2"):
+    delay_decay = delay_decay.split()
+    assert len(delay_decay) % 2 == 0, f'delay_decay must contain pairwise values, but got {len(delay_decay)} values'
+    assert len(delay_decay) > 1, f'at least 2 values are required, but got {len(delay_decay)} values'
+    delay_decay = ' '.join(delay_decay)
+    effect = f'echo {gain_in:.3f} {gain_out:.3f} {delay_decay}'
+    tmp_file = 'tmp.wav'
+    librosa.output.write_wav(tmp_file, audio, rate)
+    result = subprocess.check_output(['sox', tmp_file, tmp_file, effect])
+    return result
 
 
 def mp3_to_wav(infile, outfile, outrate=16000, outchannels=1):

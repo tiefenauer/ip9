@@ -58,6 +58,10 @@ def main():
 def extract_speech_segments(corpus_id, corpus, target_dir, max_audio_length, override=False, precompute_features=False):
     train_set, dev_set, test_set = corpus.train_dev_test_split(include_numeric=args.include_numeric)
 
+    print(f'training length is: {timedelta(seconds=sum(seg.audio_length for seg in train_set))}')
+    print(f'dev length is: {timedelta(seconds=sum(seg.audio_length for seg in dev_set))}')
+    print(f'test length is: {timedelta(seconds=sum(seg.audio_length for seg in test_set))}')
+
     print(f'processing training segments')
     df_train = process_subset('train', train_set, corpus_id, target_dir, max_audio_length, override)
 

@@ -129,16 +129,15 @@ class ReadyLinguaCorpus(Corpus, ABC):
 
     def train_dev_test_split(self, include_numeric=False):
         if include_numeric:
-            speech_segments = [seg for corpus_entry in self.corpus_entries for seg in corpus_entry.speech_segments]
+            segments = [seg for corpus_entry in self.corpus_entries for seg in corpus_entry.speech_segments]
         else:
-            speech_segments = [seg for corpus_entry in self.corpus_entries
+            segments = [seg for corpus_entry in self.corpus_entries
                                for seg in corpus_entry.speech_segments_not_numeric]
 
-        total_length = sum(segment.audio_length for segment in speech_segments)
-        train_split = self.get_index_for_audio_length(speech_segments, total_length * 0.8)
-        test_split = self.get_index_for_audio_length(speech_segments, total_length * 0.9)
-
-        return speech_segments[:train_split], speech_segments[train_split:test_split], speech_segments[test_split:]
+        total_length = sum(segment.audio_length for segment in segments)
+        train_split = self.get_index_for_audio_length(segments, total_length * 0.8)
+        test_split = self.get_index_for_audio_length(segments, total_length * 0.9)
+        return segments[:train_split], segments[train_split:test_split], segments[test_split:]
 
     @staticmethod
     def get_index_for_audio_length(segments, min_length):

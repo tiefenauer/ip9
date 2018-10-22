@@ -15,7 +15,8 @@ where:
     -b|--batch_size <int>                    batch size (default: 16)
     -e|--epochs <int>                        number of epochs to train (default: 30)
     -u|--valid_batches <int>                 number of batches to use for validation (default: all)
-    -p|--dropouts                            whether to use dropouts
+    -p|--dropouts                            whether to use dropout regularization (default: no)
+    -x|--use_synth                           whether to use synthesized data for training (default: no)
     -o|--optimizer                           optimizer to use ('adam' or 'sgd'). (default: 'adam')
 
 Create data to plot a learning curve by running a simplified version of the DeepSpeech-BRNN. This script will call run-train.py with increasing amounts of training data (1 to 1000 minutes).
@@ -35,6 +36,7 @@ batch_size='16'
 epochs='30'
 valid_batches='0'
 dropouts=''
+use_synth=''
 optimizer='sgd'
 
 POSITIONAL=()
@@ -72,11 +74,6 @@ case $key in
     shift
     shift
     ;;
-    -x|--decoder)
-    decoder="$2"
-    shift
-    shift
-    ;;
     -t|--train_files)
     train_files="$2"
     shift
@@ -109,6 +106,10 @@ case $key in
     ;;
     -p|--dropout)
     dropouts='--dropouts'
+    shift
+    ;;
+    -x|--use_synth)
+    use_synth='--use_synth'
     shift
     ;;
     -o|--optimizer)
@@ -146,6 +147,7 @@ batch_size      = ${batch_size}
 epochs          = ${epochs}
 valid_batches   = ${valid_batches}
 dropouts        = ${dropouts}
+use_synth       = ${use_synth}
 optimizer       = ${optimizer}
 -----------------------------------------------------
 " | tee ${lc_result_dir%/}/${lc_run_id}.log
@@ -179,6 +181,7 @@ do
         --lm_vocab ${lm_vocab} \
         --language ${language} \
         ${dropouts} \
+        ${use_synth} \
         --optimizer ${optimizer} \
         --gpu ${gpu} \
         --batch_size ${batch_size} \

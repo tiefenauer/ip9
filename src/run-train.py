@@ -51,6 +51,8 @@ parser.add_argument('--language', type=str, choices=['en', 'de'], default='en',
                          'English will use 26 characters from the alphabet, German 29 (umlauts)')
 parser.add_argument('--dropouts', action='store_true',
                     help='whether to use dropouts (default: False)')
+parser.add_argument('--use_synth', action='store_true',
+                    help='use synthesized training data if available (default: False)')
 parser.add_argument('--optimizer', type=str, choices=['adam', 'sgd'], default='sgd',
                     help='(optional) optimizer to use. Default=SGD')
 parser.add_argument('--tensorboard', type=bool, default=True, help='True/False to use tensorboard')
@@ -66,8 +68,6 @@ parser.add_argument('--model_path', type=str, default='',
 parser.add_argument('--learning_rate', type=float, default=0.01, help='the learning rate used by the optimiser')
 parser.add_argument('--sort_samples', type=bool, default=True,
                     help='sort utterances by their length in the first epoch')
-parser.add_argument('--synthesized', action='store_true',
-                    help='use synthesized training data (if available)')
 parser.add_argument('--epochs', type=int, default=20, help='Number of epochs to train the model')
 parser.add_argument('--minutes', type=int, default=None,
                     help='Number of minutes of training data to use. Default: None (=all)')
@@ -148,7 +148,7 @@ def create_model(target_dir, opt, dropouts, language):
 def train_model(model, language, target_dir, num_minutes=None):
     print("Creating data batch generators")
     data_train = CSVBatchGenerator(args.train_files, lang=language, sort=True, n_batches=args.train_batches,
-                                   batch_size=args.batch_size, num_minutes=num_minutes, use_synth=args.synthesized)
+                                   batch_size=args.batch_size, num_minutes=num_minutes, use_synth=args.use_synth)
     data_valid = CSVBatchGenerator(args.valid_files, lang=language, sort=False, n_batches=args.valid_batches,
                                    batch_size=args.batch_size)
 

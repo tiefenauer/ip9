@@ -4,11 +4,11 @@ import math
 import pandas as pd
 from tqdm import tqdm
 
-from util.lm_util import ler_norm, wer_norm, ler, correction
+from util.lm_util import ler_norm, wer_norm, ler, correction, wer
 
 decoding_strategies = ['greedy', 'beam']
 lm_uses = ['lm_n', 'lm_y']
-metrics = ['WER', 'LER', 'LER_raw']
+metrics = ['WER', 'LER', 'WER_raw', 'LER_raw']
 
 
 def infer_batches_deepspeech(voiced_segments, rate, model):
@@ -65,21 +65,25 @@ def infer_batch(batch_ix, batch_size, batch_inputs, decoder_greedy, decoder_beam
         df.loc[ground_truth, ('greedy', 'lm_n', 'prediction')] = pred_greedy
         df.loc[ground_truth, ('greedy', 'lm_n', 'WER')] = wer_norm(ground_truth, pred_greedy)
         df.loc[ground_truth, ('greedy', 'lm_n', 'LER')] = ler_norm(ground_truth, pred_greedy)
+        df.loc[ground_truth, ('greedy', 'lm_n', 'WER_raw')] = wer(ground_truth, pred_greedy)
         df.loc[ground_truth, ('greedy', 'lm_n', 'LER_raw')] = ler(ground_truth, pred_greedy)
 
         df.loc[ground_truth, ('greedy', 'lm_y', 'prediction')] = pred_greedy_lm
         df.loc[ground_truth, ('greedy', 'lm_y', 'WER')] = wer_norm(ground_truth, pred_greedy_lm)
         df.loc[ground_truth, ('greedy', 'lm_y', 'LER')] = ler_norm(ground_truth, pred_greedy_lm)
+        df.loc[ground_truth, ('greedy', 'lm_y', 'WER_raw')] = wer(ground_truth, pred_greedy_lm)
         df.loc[ground_truth, ('greedy', 'lm_y', 'LER_raw')] = ler(ground_truth, pred_greedy_lm)
 
         df.loc[ground_truth, ('beam', 'lm_n', 'prediction')] = pred_beam
         df.loc[ground_truth, ('beam', 'lm_n', 'WER')] = wer_norm(ground_truth, pred_beam)
         df.loc[ground_truth, ('beam', 'lm_n', 'LER')] = ler_norm(ground_truth, pred_beam)
+        df.loc[ground_truth, ('beam', 'lm_n', 'WER_raw')] = wer(ground_truth, pred_beam)
         df.loc[ground_truth, ('beam', 'lm_n', 'LER_raw')] = ler(ground_truth, pred_beam)
 
         df.loc[ground_truth, ('beam', 'lm_y', 'prediction')] = pred_beam_lm
         df.loc[ground_truth, ('beam', 'lm_y', 'WER')] = wer_norm(ground_truth, pred_beam_lm)
         df.loc[ground_truth, ('beam', 'lm_y', 'LER')] = ler_norm(ground_truth, pred_beam_lm)
+        df.loc[ground_truth, ('beam', 'lm_y', 'WER_raw')] = wer(ground_truth, pred_beam_lm)
         df.loc[ground_truth, ('beam', 'lm_y', 'LER_raw')] = ler(ground_truth, pred_beam_lm)
 
     return df
@@ -102,7 +106,7 @@ def extract_best_transcript(df_inferences):
         ler_min = math.inf
         transcript = ''
         for decoding_strategy, lm_use in itertools.product(decoding_strategies, lm_uses):
-            ler_value = row[(decoding_strategy, lm_use)]['LER']
+            ler_value = row[(decoding_strategy, lm_use)]['LER_raw']
             if ler_value < ler_min:
                 ler_min = ler_value
                 transcript = row[(decoding_strategy, lm_use)]['prediction']

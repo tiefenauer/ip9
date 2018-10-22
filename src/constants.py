@@ -6,9 +6,9 @@ SRC_DIR = dirname(abspath(__file__))  # absolute path to project ./src/ director
 ROOT_DIR = abspath(join(SRC_DIR, os.pardir))  # absolute path to project root directory
 
 LS_SOURCE = "/media/daniel/Data/corpus/librispeech-raw"
-LS_TARGET = "/media/daniel/IP9/corpora/librispeech-corpus"
+LS_TARGET = "/media/daniel/IP9/corpora/librispeech"
 RL_SOURCE = "/media/daniel/Data/corpus/readylingua-raw"
-RL_TARGET = "/media/daniel/IP9/corpora/readylingua-corpus"
+RL_TARGET = "/media/daniel/IP9/corpora/readylingua"
 
 TARGET_ROOT = os.environ.get('TARGET_ROOT')
 

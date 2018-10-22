@@ -41,7 +41,7 @@ def create_demo(target_dir, audio_src_path, transcript, df_transcripts, df_stats
 
     update_index(target_dir, demo_id)
     demo_path = create_demo_index(target_dir, demo_id, transcript)
-    for file in ['aligner.js', 'default.css', 'style.css', 'server.py', 'jquery-3.3.2.min.js']:
+    for file in ['aligner.js', 'default.css', 'style.css', 'jquery-3.3.2.min.js']:
         copyfile(join(ASSETS_DIR, file), join(target_dir, file))
     copyfile(join(ASSETS_DIR, 'start_server.sh'), join(join(target_dir, pardir), 'start_server.sh'))
     return create_url(demo_path, target_dir)

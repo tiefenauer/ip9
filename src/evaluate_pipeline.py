@@ -2,14 +2,16 @@ import argparse
 from os import remove, makedirs
 from os.path import abspath, exists, splitext, join, dirname, basename
 
+import librosa
 import numpy as np
 import pandas as pd
+from librosa.output import write_wav
 
 from core.batch_generator import VoiceSegmentsBatchGenerator
 from core.decoder import BestPathDecoder, BeamSearchDecoder
 from util.asr_util import infer_batches_keras, infer_batches_deepspeech, \
     extract_best_transcript
-from util.audio_util import to_wav, read_pcm16_wave, frame_to_ms
+from util.audio_util import to_wav, read_pcm16_wave, frame_to_ms, write_pcm16_wave
 from util.lm_util import load_lm_and_vocab
 from util.log_util import create_args_str, print_dataframe
 from util.lsa_util import align_globally
@@ -18,10 +20,45 @@ from util.rnn_util import load_keras_model, load_ds_model
 from util.string_util import normalize
 from util.vad_util import webrtc_voice
 
+parser = argparse.ArgumentParser(description="""
+    Evaluate the performance of a pipeline by calculating the following values for each entry in a test set:
+    - C: length of unaligned text (normalized by dividing by total length of ground truth)
+    - O: length of overlapping alignments (normalized by dividing by total legnth of all alignments)
+    - D: average Levenshtein distance over all alignments of the current entry
+
+    The values are averaged through division by the number of entries in the test set.
+    """)
+parser.add_argument('--audio', type=str, required=False,
+                    help=f'path to audio file containing a recording to be aligned (mp3 or wav)')
+parser.add_argument('--transcript', type=str, required=False,
+                    help=f'(optional) path to text file containing the transcript of the recording. If not set, '
+                         f'a file with the same name as \'--audio\' ending with \'.txt\' will be assumed.')
+parser.add_argument('--run_id', type=str, required=False,
+                    help=f'(optional) unique ID to identify the run. A subfolder with this mane will be created in '
+                         f'the same directory where the audio file is. This is useful to compare runs on the same '
+                         f'audio/transcript combination with different models. If not set, the name of the audio '
+                         f'file will be used.')
+parser.add_argument('--asr_model', type=str, required=False,
+                    help=f'path to Keras model to use for inference')
+parser.add_argument('--ds_model', type=str, required=False,
+                    help=f'path to DeepSpeech model. If set, this will be preferred over \'--asr_model\'.')
+parser.add_argument('--language', type=str, choices=['en', 'de'], required=False,
+                    help='language to train on. '
+                         'English will use 26 characters from the alphabet, German 29 (umlauts)')
+parser.add_argument('--lm_path', type=str,
+                    help=f'path to directory with KenLM binary model to use for inference')
+parser.add_argument('--trie_path', type=str, required=False,
+                    help=f'(optional) path to trie, only used when --ds_model is set')
+parser.add_argument('--alphabet_path', type=str, required=False,
+                    help=f'(optional) path to file containing alphabet, only used when --ds_model is set')
+parser.add_argument('--target_dir', type=str, nargs='?', help=f'path to write stats file to')
+args = parser.parse_args()
+
 
 def main(args):
     print(create_args_str(args))
-    lang, audio_path, trans_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, run_id, target_dir = setup(args)
+    lang, audio_path, trans_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, run_id, target_dir = setup(
+        args)
 
     print(f'all artefacts will be saved to {target_dir}')
 
@@ -43,22 +80,32 @@ def main(args):
 
 
 def setup(args):
+    if not args.audio:
+        args.audio = input('Enter path to audio file: ')
     audio_path = abspath(args.audio)
     if not exists(audio_path):
         raise ValueError(f'ERROR: no audio file found at {audio_path}')
+
     if args.transcript:
         transcript_path = abspath(args.transcript)
         if not exists(transcript_path):
             raise ValueError(f'ERROR: no transcript file found at {transcript_path}')
     else:
         transcript_path = abspath(splitext(audio_path)[0] + '.txt')
-        if not exists(transcript_path):
-            raise ValueError(f'ERROR: not transcript file supplied and no transcript found at {transcript_path}')
+        while not exists(transcript_path):
+            transcript_path = abspath(args.transcript)
+            args.transcript = input(f'No transcript found at {transcript_path}. Enter path to transcript file: ')
 
     run_id = args.run_id if args.run_id else splitext(basename(audio_path))[0]
 
-    if not args.asr_model and not args.ds_model:
-        raise ValueError(f'ERROR: either --asr_model or --ds_model must be set!')
+    while not args.asr_model and not args.ds_model:
+        if not args.asr_model:
+            args.asr_model = input(
+                'Enter path to directory containing Keras model (*.h5) or Leave blank to use DeepSpeech model: ')
+        if not args.asr_model and not args.ds_model:
+            args.ds_model = input('Enter path to directory containing DeepSpeech model (*.pbmm): ')
+            if not args.ds_model:
+                print('ERROR: either --asr_model or --ds_model must be set!')
 
     ds_model_path, ds_alphabet_path, ds_trie_path, keras_model_path = '', '', '', ''
     if args.ds_model:
@@ -84,19 +131,26 @@ def setup(args):
             raise ValueError(f'ERROR: Keras model not found at {keras_model_path}')
         run_id += '_keras'
 
+    if not args.lm_path:
+        args.lm_path = input('Enter path to binary file of KenLM n-gram model: ')
     lm_path = abspath(args.lm_path)
     if not exists(lm_path):
         raise ValueError(f'ERROR: LM not found at {lm_path}')
 
+    if not args.target_dir:
+        args.target_dir = input(
+            'Enter directory to save results to or leave blank to save in same directory like audio file: ')
     target_root = abspath(args.target_dir) if args.target_dir else dirname(audio_path)
     target_dir = abspath(join(target_root, run_id))
     if not exists(target_dir):
         makedirs(target_dir)
 
-    if args.language not in ['en', 'de']:
-        raise ValueError('ERROR: Language must be either en or de')
+    if not args.language:
+        args.language = input('Enter language of audio/transcript (en or de): ')
+        if args.language not in ['en', 'de']:
+            raise ValueError('ERROR: Language must be either en or de')
 
-    return language, audio_path, transcript_path, keras_model_path, ds_model_path, ds_alphabet_path, ds_trie_path, lm_path, run_id, target_dir
+    return args.language, audio_path, transcript_path, keras_model_path, ds_model_path, ds_alphabet_path, ds_trie_path, lm_path, run_id, target_dir
 
 
 def preprocess(audio_path, transcript_path, language):
@@ -112,12 +166,21 @@ def preprocess(audio_path, transcript_path, language):
 
     if extension == '.mp3':
         print(f'converting {audio_path}')
-        tmp_file = 'audio.wav'
+        tmp_file = 'tmp.wav'
         to_wav(audio_path, tmp_file)
         audio_bytes, rate = read_pcm16_wave(tmp_file)
         remove(tmp_file)
     else:
         audio_bytes, rate = read_pcm16_wave(audio_path)
+
+    if rate is not 16000:
+        print(f'Resampling from {rate}Hz to 16.000Hz/mono')
+        # audio, rate = librosa.load(audio_path, sr=16000, mono=True)
+        tmp_file = 'tmp.wav'
+        to_wav(audio_path, tmp_file)
+        # write_pcm16_wave(tmp_file, audio, rate)
+        audio_bytes, rate = read_pcm16_wave(tmp_file)
+        remove(tmp_file)
 
     with open(transcript_path, 'r') as f:
         keep_umlauts = language == 'de'
@@ -167,7 +230,7 @@ def asr(language, voiced_segments, rate, keras_path, ds_path, ds_alphabet_path, 
         keras_model = load_keras_model(keras_path)
         lm, lm_vocab = load_lm_and_vocab(args.lm_path)
 
-        batch_generator = VoiceSegmentsBatchGenerator(voiced_segments, sample_rate=rate, batch_size=16)
+        batch_generator = VoiceSegmentsBatchGenerator(voiced_segments, sample_rate=rate, batch_size=16, language=language)
         decoder_greedy = BestPathDecoder(keras_model, language)
         decoder_beam = BeamSearchDecoder(keras_model, language)
         df_inferences = infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, language, lm, lm_vocab)
@@ -225,38 +288,4 @@ def calculate_stats(alignments):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="""
-        Evaluate the performance of a pipeline by calculating the following values for each entry in a test set:
-        - C: length of unaligned text (normalized by dividing by total length of ground truth)
-        - O: length of overlapping alignments (normalized by dividing by total legnth of all alignments)
-        - D: average Levenshtein distance over all alignments of the current entry
-
-        The values are averaged through division by the number of entries in the test set.
-        """)
-    parser.add_argument('--audio', type=str,
-                        help=f'path to audio file containing a recording to be aligned (mp3 or wav)')
-    parser.add_argument('--transcript', type=str, required=False,
-                        help=f'(optional) path to text file containing the transcript of the recording. If not set, '
-                             f'a file with the same name as \'--audio\' ending with \'.txt\' will be assumed.')
-    parser.add_argument('--run_id', type=str, required=False,
-                        help=f'(optional) unique ID to identify the run. A subfolder with this mane will be created in '
-                             f'the same directory where the audio file is. This is useful to compare runs on the same '
-                             f'audio/transcript combination with different models. If not set, the name of the audio '
-                             f'file will be used.')
-    parser.add_argument('--asr_model', type=str, required=False,
-                        help=f'path to Keras model to use for inference')
-    parser.add_argument('--ds_model', type=str, required=False,
-                        help=f'path to DeepSpeech model. If set, this will be preferred over \'--asr_model\'.')
-    parser.add_argument('--language', type=str, choices=['en', 'de'], default='en',
-                        help='language to train on. '
-                             'English will use 26 characters from the alphabet, German 29 (umlauts)')
-    parser.add_argument('--lm_path', type=str,
-                        help=f'path to directory with KenLM binary model to use for inference')
-    parser.add_argument('--trie_path', type=str, required=False,
-                        help=f'(optional) path to trie, only used when --ds_model is set')
-    parser.add_argument('--alphabet_path', type=str, required=False,
-                        help=f'(optional) path to file containing alphabet, only used when --ds_model is set')
-    parser.add_argument('--target_dir', type=str, nargs='?', help=f'path to write stats file to')
-    args = parser.parse_args()
-
     main(args)

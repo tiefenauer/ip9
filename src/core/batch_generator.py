@@ -107,8 +107,8 @@ class BatchGenerator(object):
 
 class VoiceSegmentsBatchGenerator(BatchGenerator):
 
-    def __init__(self, voiced_segments, sample_rate, batch_size):
-        super().__init__(voiced_segments, batch_size)
+    def __init__(self, voiced_segments, sample_rate, batch_size, language):
+        super().__init__(voiced_segments, batch_size, language)
         self.sample_rate = sample_rate
 
     def __next__(self):

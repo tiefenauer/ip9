@@ -135,10 +135,11 @@ class ReadyLinguaCorpus(Corpus, ABC):
                                for seg in corpus_entry.speech_segments_not_numeric]
 
         # 80/10/10 split, observing corpus entry boundaries
+        n_entries = len(speech_segments)
         train_split = 0
         prev_corpus_entry_id = None
         for train_split, speech_segment in enumerate(speech_segments):
-            if train_split > 0.8 * len(speech_segments) and speech_segment.corpus_entry.id is not prev_corpus_entry_id:
+            if train_split > 0.8 * n_entries and speech_segment.corpus_entry.id is not prev_corpus_entry_id:
                 break
             prev_corpus_entry_id = speech_segment.corpus_entry.id
         test_split = int(train_split + (n_entries - train_split) / 2)

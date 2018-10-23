@@ -13,6 +13,18 @@ from bs4 import BeautifulSoup
 from constants import ROOT_DIR
 
 ASSETS_DIR = join(ROOT_DIR, 'assets')
+ASSETS_FILES = [
+    'aligner.js',
+    'default.css',
+    'style.css',
+    'jquery-3.3.2.min.js',
+    'bootstrap.bundle.min.js',
+    'bootstrap.bundle.min.js.map',
+    # 'bootstrap-popover.css',
+    'bootstrap-tooltip.css',
+    # 'bootstrap.min.css',
+    # 'bootstrap.min.css.map'
+]
 
 
 def create_demo(target_dir, audio_src_path, transcript, df_transcripts, df_stats, demo_id=None):
@@ -41,7 +53,7 @@ def create_demo(target_dir, audio_src_path, transcript, df_transcripts, df_stats
 
     update_index(target_dir, demo_id)
     demo_path = create_demo_index(target_dir, demo_id, transcript)
-    for file in ['aligner.js', 'default.css', 'style.css', 'jquery-3.3.2.min.js']:
+    for file in ASSETS_FILES:
         copyfile(join(ASSETS_DIR, file), join(target_dir, file))
     copyfile(join(ASSETS_DIR, 'start_server.sh'), join(join(target_dir, pardir), 'start_server.sh'))
     return create_url(demo_path, target_dir)
@@ -50,10 +62,11 @@ def create_demo(target_dir, audio_src_path, transcript, df_transcripts, df_stats
 def create_alignment_json(df_transcripts):
     alignments = []
     for _, row in df_transcripts.iterrows():
-        text = row['alignment']
+        transcript = row['transcript']
+        alignment = row['alignment']
         audio_start = row['audio_start']
         audio_end = row['audio_end']
-        alignments.append([text, audio_start, audio_end])
+        alignments.append([transcript, alignment, audio_start, audio_end])
     return {'alignments': alignments}
 
 

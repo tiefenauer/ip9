@@ -15,14 +15,23 @@
         player[0].load();
 
         alignments.forEach(alignment => align(alignment, player[0], target[0]));
+
+        // add .unaligned clas to all unaligned text nodes
+        $('#target').contents()
+            .filter(function(){return this.nodeType === 3 && $(this).text() !== ' '})
+            .wrap("<span class='unaligned'></span>")
+
+        // enable popovers
+        $('[data-toggle="tooltip"]').popover({'placement': 'bottom', 'trigger': 'hover'})
     };
 
-    let align = function (alignment, player, target) {
+    let align = function (alignment_entry, player, target) {
         // align a simple entry from alignments.json: [text::strt, start::float, stop::float] (time in seconds)
-        let text = alignment[0];
-        let node = createNode(target, text);
-        alignment[3] = node
-        $(node).click(() => player.currentTime = alignment[1])
+        let transcript = alignment_entry[0]
+        let alignment = alignment_entry[1];
+        let node = createNode(target, transcript, alignment);
+        alignment_entry[4] = node
+        $(node).click(() => player.currentTime = alignment_entry[2])
     };
 
     let isTextNodeContaining = function (text) {
@@ -30,22 +39,24 @@
         return node => {
             let isTextNode = [3, 4].includes(node.nodeType);
             let containsText = node.data.toLowerCase().includes(text.toLowerCase());
-            let isAligned = $(node).hasClass('aligned') || $(node.parentElement).hasClass('aligned')
+            let isAligned = $(node).hasClass('aligned') || $(node.parentElement).hasClass('aligned');
             return isTextNode && containsText && !isAligned
         }
     }
 
-    let createNode = function (target, text) {
+    let createNode = function (target, transcript, alignment) {
         // replaces all occurrences of {text} in target with a <span class='aligned'>{text}</span>
         let textNodes = getTextNodesIn(target);
-        let node = textNodes.find(isTextNodeContaining(text))
+        let node = textNodes.find(isTextNodeContaining(alignment));
         if (node) {
-            let wordNode = node.splitText(node.data.toLowerCase().indexOf(text.toLowerCase()))
-            wordNode.splitText(text.length)
-            let highlightedWord = $('<span></span>').addClass('aligned')
-            $(wordNode).replaceWith(highlightedWord)
-            highlightedWord.append(wordNode)
-            return highlightedWord;
+            let alignmentNode = node.splitText(node.data.toLowerCase().indexOf(alignment.toLowerCase()));
+            alignmentNode.splitText(alignment.length)
+            let highlightedNode = $('<span></span>')
+                .addClass('aligned')
+                .attr({'data-toggle': 'tooltip', 'data-content': transcript});
+            $(alignmentNode).replaceWith(highlightedNode);
+            highlightedNode.append(alignmentNode);
+            return highlightedNode;
         }
     };
 

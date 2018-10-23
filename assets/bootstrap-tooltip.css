@@ -101,7 +101,7 @@
 }
 
 .tooltip-inner {
-  max-width: 200px;
+  /*max-width: 200px;*/
   padding: 0.25rem 0.5rem;
   color: #fff;
   text-align: center;

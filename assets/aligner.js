@@ -22,7 +22,7 @@
             .wrap("<span class='unaligned'></span>")
 
         // enable popovers
-        $('[data-toggle="tooltip"]').popover({'placement': 'bottom', 'trigger': 'hover'})
+        $('[data-toggle="tooltip"]').tooltip({'placement': 'bottom', 'trigger': 'hover'})
     };
 
     let align = function (alignment_entry, player, target) {
@@ -53,7 +53,7 @@
             alignmentNode.splitText(alignment.length)
             let highlightedNode = $('<span></span>')
                 .addClass('aligned')
-                .attr({'data-toggle': 'tooltip', 'data-content': transcript});
+                .attr({'data-toggle': 'tooltip', 'title': transcript});
             $(alignmentNode).replaceWith(highlightedNode);
             highlightedNode.append(alignmentNode);
             return highlightedNode;

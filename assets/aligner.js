@@ -8,10 +8,10 @@
         let alignments = content.alignments
 
         player.attr('src', 'audio.mp3')
-        player.on('timeupdate', alignments, selectWord);
-        player.on('seeked', alignments, selectWord);
-        player.on('timeupdate', alignments, selectWord);
-        player.on('seeked', alignments, selectWord);
+        player.on('timeupdate', alignments, highlightAlignment);
+        player.on('seeked', alignments, highlightAlignment);
+        player.on('timeupdate', alignments, highlightAlignment);
+        player.on('seeked', alignments, highlightAlignment);
         player[0].load();
 
         alignments.forEach(alignment => align(alignment, player[0], target[0]));
@@ -78,13 +78,13 @@
         return textNodes;
     };
 
-    let selectWord = function (e) {
+    let highlightAlignment = function (e) {
         // selects a word by setting the classes and focus
         let alignments = e.data
         $('.current').removeClass('current')
         alignments.forEach(alignment => {
-            if (player.currentTime >= alignment[1] && player.currentTime <= alignment[2] && alignment[3]) {
-                let node = alignment[3];
+            if (player.currentTime >= alignment[2] && player.currentTime <= alignment[3] && alignment[4]) {
+                let node = alignment[4];
                 $(node).addClass('current')
                 node.focus();
             }

@@ -2,6 +2,7 @@
 Utility functions for LSA stage
 """
 import itertools
+from functools import reduce
 
 import numpy as np
 from pattern3.metrics import levenshtein_similarity
@@ -40,8 +41,9 @@ def align(voice_segments, transcript, printout=False):
 
 
 def align_globally(transcript, partial_transcripts):
-    inference = '#' + '#'.join(partial_transcripts)
-    return needle_wunsch(transcript, inference)
+    inference = ' '.join(partial_transcripts)
+    beginnings = reduce(lambda x, y: x + [len(y) + x[-1] + 1], partial_transcripts[:-1], [0])
+    return needle_wunsch(transcript, inference, beginnings)
 
 
 def smith_waterman(a, b, match_score=3, gap_cost=2):
@@ -112,7 +114,7 @@ def traceback(H, b, b_='', old_i=0):
     return traceback(H[0:i, 0:j], b, b_, i)
 
 
-def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5):
+def needle_wunsch(str_1, str_2, beginnings, match_score=10, mismatch_score=-5, gap_score=-5):
     """
     Needle-Wunsch algorithm for global sequence alignemnt. Performs a global alignment to match a string with a
     reference string.
@@ -153,7 +155,8 @@ def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5)
     i, j = m - 1, n - 1
     end = i
     while i > 0 and j > 0:
-        if str_2[j - 1] == '#':  # beginnings of speech segments are marked with '#'
+        if j - 1 in beginnings:
+            beginnings.remove(j - 1)
             start = snap_to_closest_word_boundary(i, str_1)
             alignments.insert(0, {'start': start, 'end': end, 'text': str_1[start:end]})
             end = start - 1
@@ -177,11 +180,6 @@ def needle_wunsch(str_1, str_2, match_score=10, mismatch_score=-5, gap_score=-5)
             target_str = str_2[j - 1] + target_str
             j -= 1
 
-    # add one additional alignment (at max!) if segment beginnings that are not yet processed are encountered
-    # The first unprocessed segment is aligned with the remaining text at the beginning of the reference string
-    if j > 0:
-        alignments.insert(0, {'start': 0, 'end': end, 'text': str_1[0:end]})
-    # Finish tracing up to the top left cell
     while j > 0:
         source_str = '-' + source_str
         target_str = str_2[j - 1] + target_str

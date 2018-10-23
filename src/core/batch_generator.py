@@ -136,12 +136,14 @@ class CSVBatchGenerator(BatchGenerator):
     def __init__(self, csv_path, lang, sort=False, n_batches=None, batch_size=16, num_minutes=None, use_synth=False):
         df, total_audio_length = read_data_from_csv(csv_path=csv_path, sort=sort)
         if not use_synth:
-            def is_original(row):
-                return not any(suffix in row['wav_filename'] for suffix in
-                               ['-high', '-low', '-fast', '-slow', '-shift', '-distorted'])
+            synth_suffixes = ['-high', '-low', '-fast', '-slow', '-shift', '-distorted']
+            print(f'keeping only non-synthesized data (samples ending in {synth_suffixes}))')
 
-            # is_synth = lambda row: any(suffix in row['wav_filename'] for suffix in synth_suffixes)
+            def is_original(row):
+                return not any(suffix in row['wav_filename'] for suffix in synth_suffixes)
+
             df = df[df.apply(is_original, axis=1)]
+            print(f'kept {len(df)} samples')
 
         df['wav_filename'] = df['wav_filename'].map(lambda wav_file: join(dirname(abspath(csv_path)), wav_file))
 

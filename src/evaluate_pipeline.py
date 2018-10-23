@@ -293,11 +293,10 @@ def calculate_stats(df_alignments):
     similarity_avg = np.mean([levenshtein_similarity(gt, al) for gt, al in zip(ground_truths, alignments)])
 
     data = [
-        ['number of alignments', str(len(df_alignments))],
         ['average LER', str(ler_avg)],
         ['average Levenshtein similarity', str(similarity_avg)],
     ]
-    df_stats = pd.DataFrame(data=data, columns=['value'])
+    df_stats = pd.DataFrame(data=data, columns=['metric', 'value'])
     return df_stats
 
 

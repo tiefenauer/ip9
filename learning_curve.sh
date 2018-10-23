@@ -126,9 +126,12 @@ set -- "${POSITIONAL[@]}" # restore positional parameters
 
 lc_result_dir=${target_dir%/}/${lc_run_id}
 mkdir -p ${lc_result_dir}
+logfile=${lc_result_dir%/}/${lc_run_id}.log
 
 SECONDS=0
 
+git status > ${logfile}
+git rev-parse HEAD >> ${logfile}
 echo "
 -----------------------------------------------------
  Start time: $(date)
@@ -150,7 +153,7 @@ dropouts        = ${dropouts}
 use_synth       = ${use_synth}
 optimizer       = ${optimizer}
 -----------------------------------------------------
-" | tee ${lc_result_dir%/}/${lc_run_id}.log
+" | tee -a ${logfile}
 
 if [[ ${gpu} = '' ]]; then
     echo "Enter GPU # to use for training"

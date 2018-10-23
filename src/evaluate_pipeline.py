@@ -2,16 +2,14 @@ import argparse
 from os import remove, makedirs
 from os.path import abspath, exists, splitext, join, dirname, basename
 
-import librosa
 import numpy as np
 import pandas as pd
-from librosa.output import write_wav
 
 from core.batch_generator import VoiceSegmentsBatchGenerator
 from core.decoder import BestPathDecoder, BeamSearchDecoder
 from util.asr_util import infer_batches_keras, infer_batches_deepspeech, \
     extract_best_transcript
-from util.audio_util import to_wav, read_pcm16_wave, frame_to_ms, write_pcm16_wave
+from util.audio_util import to_wav, read_pcm16_wave, frame_to_ms
 from util.lm_util import load_lm_and_vocab
 from util.log_util import create_args_str, print_dataframe
 from util.lsa_util import align_globally
@@ -64,11 +62,11 @@ def main(args):
 
     audio_bytes, rate, transcript = preprocess(audio_path, trans_path, lang)
     segments = vad(audio_bytes, rate)
-    df_transcripts = asr(lang, segments, rate, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, target_dir)
-    df_transcripts = gsa(transcript, df_transcripts, target_dir)
+    df_alignments = asr(lang, segments, rate, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, target_dir)
+    df_alignments = gsa(transcript, df_alignments, target_dir)
 
-    df_stats = calculate_stats(df_transcripts)
-    create_demo(target_dir, audio_path, transcript, df_transcripts, df_stats, demo_id=run_id)
+    df_stats = calculate_stats(df_alignments)
+    create_demo(target_dir, audio_path, transcript, df_alignments, df_stats, demo_id=run_id)
 
     print()
     print_dataframe(df_stats)
@@ -76,7 +74,7 @@ def main(args):
 
     stats_csv = join(target_dir, 'stats.csv')
     print(f'Saving stats to {stats_csv}')
-    df_transcripts.to_csv(stats_csv)
+    df_alignments.to_csv(stats_csv)
 
 
 def setup(args):
@@ -214,10 +212,10 @@ def asr(language, voiced_segments, rate, keras_path, ds_path, ds_alphabet_path, 
     PIPELINE STAGE #3 (ASR): transcribing voice segments 
     ==================================================
     """)
-    transcripts_csv = join(target_dir, 'transcripts.csv')
-    if exists(transcripts_csv):
-        print(f'found inferences from previous run in {transcripts_csv}')
-        return pd.read_csv(transcripts_csv, header=0, index_col=0)
+    alignments_csv = join(target_dir, 'alignments.csv')
+    if exists(alignments_csv):
+        print(f'found inferences from previous run in {alignments_csv}')
+        return pd.read_csv(alignments_csv, header=0, index_col=0)
 
     if ds_path:
         print(f'loading DeepSpeech model from {ds_path}, using alphabet at {ds_alphabet_path}, '
@@ -236,51 +234,51 @@ def asr(language, voiced_segments, rate, keras_path, ds_path, ds_alphabet_path, 
         transcripts = extract_best_transcript(df_inferences)
 
     columns = ['transcript', 'audio_start', 'audio_end']
-    df_transcripts = pd.DataFrame(index=range(len(transcripts)), columns=columns)
+    df_alignments = pd.DataFrame(index=range(len(transcripts)), columns=columns)
     for i, (voice_segment, transcript) in enumerate(zip(voiced_segments, transcripts)):
         audio_start = frame_to_ms(voice_segment.start_frame, rate)
         audio_end = frame_to_ms(voice_segment.end_frame, rate)
-        df_transcripts.loc[i] = [transcript, audio_start, audio_end]
+        df_alignments.loc[i] = [transcript, audio_start, audio_end]
 
-    df_transcripts.index.name = 'id'
-    df_transcripts.to_csv(transcripts_csv)
+    df_alignments.index.name = 'id'
+    df_alignments.to_csv(alignments_csv)
 
     print(f"""
     ==================================================
-    STAGE #3 COMPLETED: Saved transcript to {transcripts_csv}
+    STAGE #3 COMPLETED: Saved transcript to {alignments_csv}
     ==================================================
     """)
-    return df_transcripts
+    return df_alignments
 
 
-def gsa(transcript, df_transcripts, target_dir):
+def gsa(transcript, df_alignments, target_dir):
     print("""
     ==================================================
     PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript 
     ==================================================
     """)
-    if 'alignment' in df_transcripts.keys():
+    if 'alignment' in df_alignments.keys():
         print(f'transcripts are already aligned')
-        return df_transcripts.replace(np.nan, '', regex=True)
+        return df_alignments.replace(np.nan, '', regex=True)
 
-    print(f'aligning transcript with {len(df_transcripts)} transcribed voice segments')
-    alignments = align_globally(transcript, df_transcripts['transcript'].tolist())
-    df_transcripts['alignment'] = [a['text'] for a in alignments]
-    df_transcripts['text_start'] = [a['start'] for a in alignments]
-    df_transcripts['text_end'] = [a['end'] for a in alignments]
+    print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')
+    alignments = align_globally(transcript, df_alignments['transcript'].tolist())
+    df_alignments['alignment'] = [a['text'] for a in alignments]
+    df_alignments['text_start'] = [a['start'] for a in alignments]
+    df_alignments['text_end'] = [a['end'] for a in alignments]
 
     transcripts_csv = join(target_dir, 'transcripts.csv')
-    df_transcripts.to_csv(transcripts_csv)
+    df_alignments.to_csv(transcripts_csv)
 
     print(f"""
     ==================================================
     STAGE #4 COMPLETED: Added alignments to {transcripts_csv}
     ==================================================
     """)
-    return df_transcripts.replace(np.nan, '', regex=True)
+    return df_alignments.replace(np.nan, '', regex=True)
 
 
-def calculate_stats(alignments):
+def calculate_stats(df_alignments):
     data = [[1, 1, 1]]
     df_stats = pd.DataFrame(data=data, columns=['C', 'O', 'D'])
     return df_stats

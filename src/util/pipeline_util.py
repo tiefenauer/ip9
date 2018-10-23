@@ -60,13 +60,12 @@ def create_demo(target_dir, audio_src_path, transcript, df_transcripts, df_stats
 
 
 def create_alignment_json(df_transcripts):
-    alignments = []
-    for _, row in df_transcripts.iterrows():
-        transcript = row['transcript']
-        alignment = row['alignment']
-        audio_start = row['audio_start']
-        audio_end = row['audio_end']
-        alignments.append([transcript, alignment, audio_start, audio_end])
+    alignments = [{'id': ix,
+                   'transcript': row['transcript'],
+                   'text': row['alignment'],
+                   'start': row['audio_start'],
+                   'end': row['audio_end']
+                   } for ix, row in df_transcripts.iterrows()]
     return {'alignments': alignments}
 
 

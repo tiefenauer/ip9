@@ -27,11 +27,11 @@
 
     let align = function (alignment_entry, player, target) {
         // align a simple entry from alignments.json: [text::strt, start::float, stop::float] (time in seconds)
-        let transcript = alignment_entry[0]
-        let alignment = alignment_entry[1];
+        let transcript = alignment_entry.transcript
+        let alignment = alignment_entry.text;
         let node = createNode(target, transcript, alignment);
-        alignment_entry[4] = node
-        $(node).click(() => player.currentTime = alignment_entry[2])
+        alignment_entry.node = node
+        $(node).click(() => player.currentTime = alignment_entry.start)
     };
 
     let isTextNodeContaining = function (text) {
@@ -83,8 +83,8 @@
         let alignments = e.data
         $('.current').removeClass('current')
         alignments.forEach(alignment => {
-            if (player.currentTime >= alignment[2] && player.currentTime <= alignment[3] && alignment[4]) {
-                let node = alignment[4];
+            if (player.currentTime >= alignment.start && player.currentTime <= alignment.end && alignment.node) {
+                let node = alignment.node;
                 $(node).addClass('current')
                 node.focus();
             }

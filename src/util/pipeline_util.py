@@ -32,9 +32,6 @@ def create_demo(target_dir, audio_src_path, transcript, df_transcripts, df_stats
         demo_id = basename(audio_src_path)
     print(f'assigned demo id: {demo_id}.')
 
-    language = langdetect.detect(transcript)
-    print(f'detected language: {language}')
-
     audio_dst_path = join(target_dir, 'audio.mp3')
     transcript_path = join(target_dir, 'transcript.txt')
     alignment_json_path = join(target_dir, 'alignment.json')

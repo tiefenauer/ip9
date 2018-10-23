@@ -2,15 +2,17 @@ import argparse
 from os import remove, makedirs
 from os.path import abspath, exists, splitext, join, dirname, basename
 
+import langdetect
 import numpy as np
 import pandas as pd
+from pattern3.metrics import levenshtein_similarity
 
 from core.batch_generator import VoiceSegmentsBatchGenerator
 from core.decoder import BestPathDecoder, BeamSearchDecoder
 from util.asr_util import infer_batches_keras, infer_batches_deepspeech, \
     extract_best_transcript
 from util.audio_util import to_wav, read_pcm16_wave, frame_to_ms
-from util.lm_util import load_lm_and_vocab
+from util.lm_util import load_lm_and_vocab, ler_norm
 from util.log_util import create_args_str, print_dataframe
 from util.lsa_util import align_globally
 from util.pipeline_util import create_demo
@@ -60,7 +62,7 @@ def main(args):
 
     print(f'all artefacts will be saved to {target_dir}')
 
-    audio_bytes, rate, transcript = preprocess(audio_path, trans_path, lang)
+    audio_bytes, rate, transcript, lang = preprocess(audio_path, trans_path, lang)
     segments = vad(audio_bytes, rate)
     df_alignments = asr(lang, segments, rate, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, target_dir)
     df_alignments = gsa(transcript, df_alignments, target_dir)
@@ -144,14 +146,14 @@ def setup(args):
         makedirs(target_dir)
 
     if not args.language:
-        args.language = input('Enter language of audio/transcript (en or de): ')
-        if args.language not in ['en', 'de']:
+        args.language = input('Enter language of audio/transcript (en or de) or leave empty to detect automatically: ')
+        if args.language and args.language not in ['en', 'de']:
             raise ValueError('ERROR: Language must be either en or de')
 
     return args.language, audio_path, transcript_path, keras_model_path, ds_model_path, ds_alphabet_path, ds_trie_path, lm_path, run_id, target_dir
 
 
-def preprocess(audio_path, transcript_path, language):
+def preprocess(audio_path, transcript_path, language=None):
     print("""
     ==================================================
     PIPELINE STAGE #1 (preprocessing): Converting audio to 16-bit PCM wave and normalizing transcript 
@@ -183,12 +185,16 @@ def preprocess(audio_path, transcript_path, language):
     with open(transcript_path, 'r') as f:
         transcript = normalize(f.read(), language)
 
+    if not language:
+        language = langdetect.detect(transcript)
+        print(f'detected language from transcript: {language}')
+
     print(f"""
     ==================================================
     STAGE #1 COMPLETED: Got {len(audio_bytes)} audio samples and {len(transcript)} labels
     ==================================================
     """)
-    return audio_bytes, rate, transcript
+    return audio_bytes, rate, transcript, language
 
 
 def vad(audio, rate):
@@ -227,7 +233,8 @@ def asr(language, voiced_segments, rate, keras_path, ds_path, ds_alphabet_path, 
         keras_model = load_keras_model(keras_path)
         lm, lm_vocab = load_lm_and_vocab(args.lm_path)
 
-        batch_generator = VoiceSegmentsBatchGenerator(voiced_segments, sample_rate=rate, batch_size=16, language=language)
+        batch_generator = VoiceSegmentsBatchGenerator(voiced_segments, sample_rate=rate, batch_size=16,
+                                                      language=language)
         decoder_greedy = BestPathDecoder(keras_model, language)
         decoder_beam = BeamSearchDecoder(keras_model, language)
         df_inferences = infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, language, lm, lm_vocab)
@@ -279,8 +286,18 @@ def gsa(transcript, df_alignments, target_dir):
 
 
 def calculate_stats(df_alignments):
-    data = [[1, 1, 1]]
-    df_stats = pd.DataFrame(data=data, columns=['C', 'O', 'D'])
+    ground_truths = df_alignments['transcript'].values
+    alignments = df_alignments['alignment'].values
+
+    ler_avg = np.mean([ler_norm(gt, al) for gt, al in zip(ground_truths, alignments)])
+    similarity_avg = np.mean([levenshtein_similarity(gt, al) for gt, al in zip(ground_truths, alignments)])
+
+    data = [
+        ['number of alignments', str(len(df_alignments))],
+        ['average LER', str(ler_avg)],
+        ['average Levenshtein similarity', str(similarity_avg)],
+    ]
+    df_stats = pd.DataFrame(data=data, columns=['value'])
     return df_stats
 
 

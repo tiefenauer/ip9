@@ -139,7 +139,7 @@ def candidate_words(word, lm_vocab, alphabet):
     return known_words([word], lm_vocab) \
            or known_words(edits_1(word, alphabet), lm_vocab) \
            or known_words(edits_2(word, alphabet), lm_vocab) \
-           or ['<unk>']
+           or [word]
 
 
 def known_words(word_list, lm_vocab):

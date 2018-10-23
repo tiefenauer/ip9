@@ -13,17 +13,21 @@ sns.set()
 import matplotlib.pyplot as plt
 import pandas as pd
 
+parser = argparse.ArgumentParser()
+parser.add_argument('source_dir', type=str, help='root directory containing output')
+args = parser.parse_args()
+
 
 def main(args):
-    source_dir, target_dir = setup(args)
+    source_dir = setup(args)
     df_losses, df_metrics = collect_data(source_dir)
 
     fig_loss, _ = plot_losses(df_losses)
     fig_best, fig_beam, _, _ = plot_metrics(df_metrics)
 
-    fig_loss.savefig(join(target_dir, 'losses.png'))
-    fig_best.savefig(join(target_dir, 'metrics_greedy.png'))
-    fig_beam.savefig(join(target_dir, 'metrics_beam.png'))
+    fig_loss.savefig(join(source_dir, 'losses.png'))
+    fig_best.savefig(join(source_dir, 'metrics_greedy.png'))
+    fig_beam.savefig(join(source_dir, 'metrics_beam.png'))
 
     plt.show()
 
@@ -81,10 +85,7 @@ def setup(args):
     if not exists(source_dir):
         print(f'ERROR: source dir {args.source_dir} does not exist')
         exit(1)
-    if not args.target_dir:
-        args.target_dir = source_dir
-    target_dir = abspath(args.target_dir)
-    return source_dir, target_dir
+    return source_dir
 
 
 def collect_data(source_dir):
@@ -154,10 +155,4 @@ def plot_dataframe(y, metric, title, ax=None, label=None):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--source_dir', type=str, required=False,
-                        help='root directory containing output')
-    parser.add_argument('--target_dir', nargs='?', type=str,
-                        help='(optional) target directory to save plots. Root directory will be used if not set.')
-    args = parser.parse_args()
     main(args)

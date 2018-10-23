@@ -1,2 +1,10 @@
 #!/usr/bin/env bash
-./learning_curve.sh -r lc_rl_de_wiki_dropouts -d /media/D1/daniel.tiefenauer/_runs/ -t /media/D1/daniel.tiefenauer/corpora/readylingua-de/readylingua-de-train.csv -v /media/D1/daniel.tiefenauer/corpora/readylingua-de/readylingua-de-dev.csv -l /media/D1/daniel.tiefenauer/lm/wiki_de/wiki_de_5_gram_pruned.klm -a /media/D1/daniel.tiefenauer/lm/wiki_de/wiki_de_5_gram_pruned.vocab -e 30 --language de -p
+./learning_curve.sh --run_id lc_rl_de_wiki_dropouts \
+                    --destination /media/D1/daniel.tiefenauer/_runs/ \
+                    --train_files /media/D1/daniel.tiefenauer/corpora/readylingua-de/readylingua-de-train.csv \
+                    --valid_files /media/D1/daniel.tiefenauer/corpora/readylingua-de/readylingua-de-dev.csv \
+                    --lm /media/D1/daniel.tiefenauer/lm/wiki_de/wiki_de_5_gram_pruned.klm \
+                    --lm_vocab /media/D1/daniel.tiefenauer/lm/wiki_de/wiki_de_5_gram_pruned.vocab \
+                    --epochs 30 \
+                    --language de \
+                    --dropouts

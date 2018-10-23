@@ -2,7 +2,8 @@ from operator import itemgetter
 
 import nltk
 
-from util.string_util import replace_numeric, remove_punctuation, unidecode_keep_umlauts
+from util.ctc_util import get_alphabet
+from util.string_util import replace_numeric, remove_punctuation, unidecode_with_alphabet
 
 
 def process_line(line, language='german', min_words=4, ):
@@ -17,14 +18,15 @@ def process_line(line, language='german', min_words=4, ):
 
 
 def process_sentence(sent, language, min_words=0):
-    words = [normalize_word(word) for word in nltk.word_tokenize(sent, language=language)]
+    alphabet = get_alphabet(language)
+    words = [normalize_word(word, alphabet) for word in nltk.word_tokenize(sent, language=language)]
     if len(words) >= min_words:
         return ' '.join(w for w in words if w).strip()  # prevent multiple spaces
     return ''
 
 
-def normalize_word(token):
-    _token = unidecode_keep_umlauts(token)
+def normalize_word(token, alphabet):
+    _token = unidecode_with_alphabet(token, alphabet)
     _token = remove_punctuation(_token)  # remove any special chars
     if replace_numeric(_token, by_single_digit=True) == '#':
         # if token is a number, replace it with <unk> token

@@ -1,10 +1,11 @@
 import argparse
 import multiprocessing as mp
 
-from lm.lm_preprocessing import process_line
 from tqdm import tqdm
 
-from util.string_util import remove_multi_spaces, unidecode_keep_umlauts, remove_punctuation, replace_numeric
+from lm.lm_corpus_util import process_line
+from util.ctc_util import get_alphabet
+from util.string_util import remove_multi_spaces, unidecode_with_alphabet, remove_punctuation, replace_numeric
 
 
 def main(input_path, output_path, num_lines=None, num_threads=1):
@@ -17,9 +18,9 @@ def main(input_path, output_path, num_lines=None, num_threads=1):
             f_out.write(sentence)
 
 
-def normalize_sentence(sentence):
+def normalize_sentence(sentence, language):
     return remove_multi_spaces(
-        unidecode_keep_umlauts(remove_punctuation(replace_numeric(sentence, by_single_digit=True))))
+        unidecode_with_alphabet(remove_punctuation(replace_numeric(sentence, by_single_digit=True)), get_alphabet(language)))
 
 
 if __name__ == '__main__':

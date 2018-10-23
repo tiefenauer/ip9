@@ -183,8 +183,7 @@ def preprocess(audio_path, transcript_path, language):
         remove(tmp_file)
 
     with open(transcript_path, 'r') as f:
-        keep_umlauts = language == 'de'
-        transcript = normalize(f.read(), keep_umlauts=keep_umlauts)
+        transcript = normalize(f.read(), language)
 
     print(f"""
     ==================================================

@@ -53,8 +53,7 @@ class SpeechSegment(Audible):
     @transcript.setter
     def transcript(self, transcript):
         self._transcript = transcript
-        keep_umlauts = self.language == 'de'
-        self.text = normalize(transcript, keep_umlauts=keep_umlauts)
+        self.text = normalize(transcript, self.language)
 
     @property
     def audio_length(self):

@@ -1,9 +1,10 @@
 import re
 import string
 import warnings
-from sys import version_info
 
-from unidecode import unidecode, _warn_if_not_unicode, Cache
+from unidecode import _warn_if_not_unicode, Cache
+
+from util.ctc_util import get_alphabet
 
 punctiation_extended = string.punctuation + """"„“‚‘"""
 umlauts = re.compile('[äöü]]')
@@ -13,13 +14,11 @@ not_alphanumeric = re.compile('[^0-9a-zA-Z ]+')
 not_alphanumeric_with_umlauts = re.compile('[^0-9a-zA-Zäöü ]+')
 
 
-def normalize(text, keep_umlauts=False):
+def normalize(text, language):
     text = text.strip().lower()
-    if keep_umlauts:
-        text = unidecode_keep_umlauts(text)
-    else:
-        text = unidecode(text)
-    text = replace_not_alphanumeric(text, keep_umlauts=keep_umlauts)
+    alphabet = get_alphabet(language)
+    text = unidecode_with_alphabet(text, alphabet)
+    text = replace_not_allowed(text, alphabet + ' 0123456789')
     return remove_multi_spaces(text)
 
 
@@ -33,6 +32,10 @@ def create_filename(text):
 
 def remove_punctuation(text):
     return ''.join(c for c in text if c not in punctiation_extended)
+
+
+def replace_not_allowed(text, allowed_chars, repl=' '):
+    return ''.join(char if char in allowed_chars else repl for char in text)
 
 
 def replace_not_alphanumeric(text, repl=' ', keep_umlauts=False):
@@ -49,28 +52,31 @@ def contains_numeric(text):
     return any(char.isdigit() for char in text)
 
 
-def unidecode_keep_umlauts(text):
-    # modified version from unidecode.unidecode_expect_ascii that does not replace umlauts
+def unidecode_with_alphabet(text, alphabet):
+    """
+    Modified version from unidecode.unidecode_expect_ascii that does not replace characters of a given alphabet
+    :param text: the text to unidecode
+    :param alphabet: the alphabet as a string of the allowed characters
+    :return: the unidecoded text
+    """
     _warn_if_not_unicode(text)
     try:
-        bytestring = text.encode('ASCII')
+        text_ascii = text.encode('ASCII')
     except UnicodeEncodeError:
-        return _unidecode_keep_umlauts(text)
-    if version_info[0] >= 3:
-        return text
-    else:
-        return bytestring
+        return _unidecode_excluding_allowed_chars(text, set(alphabet))
+    return text_ascii.decode('utf-8')
 
 
-def _unidecode_keep_umlauts(text):
-    # modified version from unidecode._unidecode that keeps umlauts
+def _unidecode_excluding_allowed_chars(text, allowed_chars):
+    # modified version from unidecode._unidecode that does not replace allowed characters
     retval = []
+    allowed_codepoints = [ord(char) for char in allowed_chars]
 
     for char in text:
         codepoint = ord(char)
 
         # Basic ASCII, ä/Ä, ö/Ö, ü/Ü
-        if codepoint < 0x80 or codepoint in [0xe4, 0xc4, 0xf6, 0xd6, 0xfc, 0xdc]:
+        if codepoint < 0x80 or codepoint in allowed_codepoints:
             retval.append(str(char))
             continue
 

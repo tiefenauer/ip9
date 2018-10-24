@@ -1,9 +1,13 @@
+import os
 from functools import reduce
-from os import remove
-from os.path import splitext
+from genericpath import exists
+from os import remove, makedirs
+from os.path import splitext, join
 
 import langdetect
 import numpy as np
+import pandas as pd
+from keras import backend as K
 from tqdm import tqdm
 
 from core.batch_generator import VoiceSegmentsBatchGenerator
@@ -13,9 +17,107 @@ from util.asr_util import infer_batches_keras, extract_best_transcript
 from util.audio_util import to_wav, read_pcm16_wave, ms_to_frames
 from util.lm_util import load_lm_and_vocab
 from util.lsa_util import needle_wunsch
-from util.rnn_util import load_ds_model, load_keras_model
+from util.pipeline_util import create_alignments_dataframe
+from util.rnn_util import load_ds_model, load_keras_model, create_keras_session
 from util.string_util import normalize
 from util.vad_util import webrtc_split
+
+
+def pipeline(audio_path, trans_path=None, lang=None, keras_path=None, ds_path=None, ds_alpha_path=None,
+             ds_trie_path=None, lm_path=None, target_dir=None, gpu=None):
+    """
+    Forced Alignment using pipeline.
+
+    :param audio_path: path to audio file to align with transcript (wav or mp3)
+    :param trans_path: (optional) path to txt file containing transcript. If not set, a text file with the same name as
+                       the audio file will be searched
+    :param lang: (optional) language of the audio file. If not set, the language will be guessed from the transcript
+    :param keras_path: (optional) path to directory containing Keras model (*.h5)
+    :param ds_path: (optional) path to pre-trained DeepSpeech model (*.pbmm). If set, this model will be preferred
+                    over Keras model
+    :param ds_alpha_path: (optional) path to txt file containing alphabet for DS model. Required if ds_path is set
+    :param ds_trie_path: (optional) path to binary file containing trie for DS model. Only used if ds_path is set
+    :param lm_path: (optional) path to binary file containing KenLM n-gram Language Model
+    :param target_dir: (optional) path to directory to save results. If set, intermediate results are written and need
+                       not be recalculated upon subsequent runs
+    :param gpu: the GPU to use for inference
+    :return:
+    """
+    if not exists(target_dir):
+        makedirs(target_dir)
+    print("""
+    ==================================================
+    PIPELINE STAGE #1 (preprocessing): Converting audio to 16-bit PCM wave and normalizing transcript 
+    --------------------------------------------------
+    """)
+    audio_bytes, sample_rate, transcript, lang = preprocess(audio_path, trans_path, lang)
+    print(f"""
+    --------------------------------------------------
+    STAGE #1 COMPLETED: Got {len(audio_bytes)} audio samples and {len(transcript)} labels
+    ==================================================
+    """)
+    print("""
+    ==================================================
+    PIPELINE STAGE #2 (VAD): splitting input audio into voiced segments 
+    --------------------------------------------------
+    """)
+    voiced_segments = vad(audio_bytes, sample_rate)
+    print(f"""
+    --------------------------------------------------
+    STAGE #2 COMPLETED: Got {len(voiced_segments)} segments.
+    ==================================================
+    """)
+    print("""
+    ==================================================
+    PIPELINE STAGE #3 (ASR): transcribing voice segments
+    --------------------------------------------------
+    """)
+    alignments_csv = join(target_dir, 'alignments.csv')
+    if target_dir and exists(alignments_csv):
+        print(f'found inferences from previous run in {alignments_csv}')
+        df_alignments = pd.read_csv(alignments_csv, header=0, index_col=0).replace(np.nan, '')
+    else:
+        if ds_path:
+            print(f'using DeepSpeech model at {ds_path}')
+            transcripts = asr_ds(voiced_segments, sample_rate, ds_path, ds_alpha_path, lm_path, ds_trie_path, gpu)
+        else:
+            print(f'using simplified Keras model at {keras_path}')
+            transcripts = asr_keras(voiced_segments, lang, sample_rate, keras_path, lm_path, gpu)
+
+        df_alignments = create_alignments_dataframe(voiced_segments, transcripts, sample_rate)
+        if target_dir:
+            print(f'saving alignments to {alignments_csv}')
+            df_alignments.to_csv(join(target_dir, alignments_csv))
+    df_alignments.replace(np.nan, '', regex=True, inplace=True)
+    print(f"""
+    --------------------------------------------------
+    STAGE #3 COMPLETED: Saved transcript to {alignments_csv}
+    ==================================================
+    """)
+    print("""
+    ==================================================
+    PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript 
+    --------------------------------------------------
+    """)
+    if 'alignment' in df_alignments.keys():
+        print(f'transcripts are already aligned')
+    else:
+        print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')
+        alignments = gsa(transcript, df_alignments['transcript'].tolist())
+
+        df_alignments['alignment'] = [a['text'] for a in alignments]
+        df_alignments['text_start'] = [a['start'] for a in alignments]
+        df_alignments['text_end'] = [a['end'] for a in alignments]
+
+        if target_dir:
+            print(f'saving alignments to {join(target_dir, alignments_csv)}')
+            df_alignments.to_csv(join(target_dir, alignments_csv))
+    print(f"""
+    --------------------------------------------------
+    STAGE #4 COMPLETED
+    ==================================================
+    """)
+    return df_alignments, transcript
 
 
 def preprocess(audio_path, transcript_path, language=None):
@@ -86,7 +188,7 @@ def vad(audio_bytes, sample_rate):
     return voiced_segments
 
 
-def asr_keras(voiced_segments, language, sample_rate, keras_path, lm_path):
+def asr_keras(voiced_segments, language, sample_rate, keras_path, lm_path, gpu):
     """
     Pipeline Stage 3: Automatic Speech Recognition (ASR) with Keras
     This stage takes a list of voiced segments and transcribes it using a simplified, self-trained Keras model
@@ -98,19 +200,25 @@ def asr_keras(voiced_segments, language, sample_rate, keras_path, lm_path):
     :param lm_path: absolute path to binary file containing KenLM n-gram Language Model
     :return: a list of transcripts for the voiced segments
     """
+    if gpu:
+        create_keras_session(gpu)
+
     keras_model = load_keras_model(keras_path)
     lm, lm_vocab = load_lm_and_vocab(lm_path)
 
-    batch_generator = VoiceSegmentsBatchGenerator(voiced_segments, sample_rate=sample_rate, batch_size=16, language=language)
+    batch_generator = VoiceSegmentsBatchGenerator(voiced_segments, sample_rate=sample_rate, batch_size=16,
+                                                  language=language)
     decoder_greedy = BestPathDecoder(keras_model, language)
     decoder_beam = BeamSearchDecoder(keras_model, language)
     df_inferences = infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, language, lm, lm_vocab)
     transcripts = extract_best_transcript(df_inferences)
 
+    K.clear_session()
+
     return transcripts
 
 
-def asr_ds(voiced_segments, sample_rate, ds_path, ds_alphabet_path, lm_path, ds_trie_path):
+def asr_ds(voiced_segments, sample_rate, ds_path, ds_alphabet_path, lm_path, ds_trie_path, gpu=None):
     """
     Pipeline Stage 3: Automatic Speech Recognition (ASR) with DeepSpeech
     This stage takes a list of voiced segments and transcribes it using using a pre-trained DeepSpeech (DS) model
@@ -122,6 +230,9 @@ def asr_ds(voiced_segments, sample_rate, ds_path, ds_alphabet_path, lm_path, ds_
     :param ds_trie_path: absolute path to file containing trie
     :return: a list of transcripts for the voiced segments
     """
+    if gpu:
+        os.environ['CUDA_VISIBLE_DEVICES'] = gpu
+
     ds = load_ds_model(ds_path, alphabet_path=ds_alphabet_path, lm_path=lm_path, trie_path=ds_trie_path)
     print('transcribing segments using DeepSpeech model')
     progress = tqdm(voiced_segments, unit=' segments')
@@ -130,6 +241,8 @@ def asr_ds(voiced_segments, sample_rate, ds_path, ds_alphabet_path, lm_path, ds_
         transcript = ds.stt(voiced_segment.audio, sample_rate).strip()
         progress.set_description(transcript)
         transcripts.append(transcript)
+
+    os.environ['CUDA_VISIBLE_DEVICES'] = ''
     return transcripts
 
 
@@ -145,4 +258,4 @@ def gsa(transcript, partial_transcripts):
     """
     inference = ' '.join(partial_transcripts)
     beginnings = reduce(lambda x, y: x + [len(y) + x[-1] + 1], partial_transcripts[:-1], [0])
-    return needle_wunsch(transcript, inference, beginnings)
+    return needle_wunsch(transcript + ' ', inference, beginnings)

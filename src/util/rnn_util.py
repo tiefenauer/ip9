@@ -29,10 +29,10 @@ def save_model(model, target_dir):
         json_file.write(model.to_json())
 
 
-def load_ds_model(model_path, alphabet_path, n_features=26, n_context=9, beam_width=500, lm_path=None,
-                  trie_path=None, lm_weight=1.75, valid_word_count_weight=1.00):
-    print(f'loading DeepSpeech model from {ds_path}, using alphabet at {ds_alphabet_path}, '
-          f'LM at {lm_path} and trie at {ds_trie_path}')
+def load_ds_model(model_path, alphabet_path, lm_path=None, trie_path=None, n_features=26, n_context=9, beam_width=500,
+                  lm_weight=1.75, valid_word_count_weight=1.00):
+    print(f'loading DeepSpeech model from {model_path}, using alphabet at {alphabet_path}, '
+          f'LM at {lm_path} and trie at {trie_path}')
     ds = Model(model_path, n_features, n_context, alphabet_path, beam_width)
     if lm_path and trie_path:
         ds.enableDecoderWithLM(alphabet_path, lm_path, trie_path, lm_weight, valid_word_count_weight)

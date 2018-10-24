@@ -3,13 +3,18 @@ Utility functions for end-to-end tasks
 """
 import json
 import os
-from os.path import join, relpath, basename, exists, pardir, dirname
+from os.path import join, relpath, basename, exists, pardir, dirname, abspath
 from pathlib import Path
 from shutil import copyfile
 
+import numpy as np
+import pandas as pd
 from bs4 import BeautifulSoup
+from pattern3.metrics import levenshtein_similarity
 
 from constants import ROOT_DIR
+from util.audio_util import frame_to_ms
+from util.lm_util import ler_norm
 
 ASSETS_DIR = join(ROOT_DIR, 'assets')
 ASSETS_FILES = [
@@ -26,11 +31,7 @@ ASSETS_FILES = [
 ]
 
 
-def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, df_stats, demo_id=None):
-    if not demo_id:
-        demo_id = basename(audio_src_path)
-    print(f'assigned demo id: {demo_id}.')
-
+def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, df_stats):
     audio_dst_path = join(target_dir, 'audio.mp3')
     copyfile(audio_src_path, audio_dst_path)
     print(f'saved audio to {audio_dst_path}')
@@ -46,6 +47,7 @@ def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, df
         json.dump(json_data, f, indent=2)
     print(f'saved alignment information to {alignment_json_path}')
 
+    demo_id = basename(target_dir)
     update_index(target_dir, demo_id)
     demo_path = create_demo_index(target_dir, demo_id, audio_dst_path, transcript_path, transcript, df_transcripts,
                                   df_stats)
@@ -68,7 +70,7 @@ def create_alignment_json(df_transcripts):
 def create_demo_index(target_dir, demo_id, audio_path, transcript_path, transcript, df_transcripts, df_stats):
     template_path = join(ASSETS_DIR, '_template.html')
     soup = BeautifulSoup(open(template_path), 'html.parser')
-    soup.title.string = 'Some Title'
+    soup.title.string = demo_id
     soup.find(id='demo_title').string = f'Forced Alignment for {demo_id}'
     soup.find(id='target').string = transcript.replace('\n', ' ')
 
@@ -123,3 +125,75 @@ def update_index(target_dir, demo_id):
 
 def create_url(demo_path, target_dir):
     return 'https://ip8.tiefenauer.info:8888/' + relpath(demo_path, Path(target_dir).parent).replace(os.sep, '/')
+
+
+def create_alignments_dataframe(voiced_segments, transcripts, sample_rate):
+    alignments = []
+    for i, (voice_segment, transcript) in enumerate(zip(voiced_segments, transcripts)):
+        audio_start = frame_to_ms(voice_segment.start_frame, sample_rate)
+        audio_end = frame_to_ms(voice_segment.end_frame, sample_rate)
+        alignments.append([transcript, audio_start, audio_end])
+
+    df_alignments = pd.DataFrame(alignments, columns=['transcript', 'audio_start', 'audio_end'])
+    df_alignments.index.name = 'id'
+    return df_alignments
+
+
+def query_asr_params(args):
+    """
+    Helper function to query ASR model from user if not set in args
+    """
+    gpu = None
+    if not args.gpu:
+        args.gpu = input('Enter GPU to use (leave blank for all GPUs): ')
+        if args.gpu:
+            print(f'GPU set to {gpu}')
+            gpu = args.gpu
+
+    while not args.keras_path:
+        args.keras_path = input('Enter path to directory containing Keras model (*.h5) or leave blank to use DS: ')
+
+    ds_path = abspath(args.ds_path)
+    if not exists(ds_path):
+        raise ValueError(f'ERROR: DeepSpeech model not found at {ds_path}')
+
+    if not args.ds_alpha_path:
+        raise ValueError('ERROR: alphabet path must be specified when using DeepSpeech model')
+
+    ds_alpha_path = abspath(args.ds_alpha_path)
+    if not exists(ds_alpha_path):
+        raise ValueError(f'ERROR: alphabet not found at {ds_alpha_path}')
+
+    ds_trie_path = abspath(args.ds_trie_path)
+    if not exists(ds_trie_path):
+        raise ValueError(f'ERROR: Trie not found at {ds_trie_path}')
+
+    while not args.ds_path:
+        args.ds_path = input('Enter path to directory containing DeepSpeech model (*.pbmm): ')
+
+    keras_path = abspath(args.keras_path)
+    if not exists(keras_path):
+        raise ValueError(f'ERROR: Keras model not found at {keras_path}')
+
+    while not args.lm_path:
+        args.lm_path = input('Enter path to binary file of KenLM n-gram model. Leave blank for no LM: ')
+        if args.lm_path and not exists(abspath(args.lm_path)):
+            raise ValueError(f'ERROR: LM not found at {abspath(args.lm_path)}')
+
+    lm_path = abspath(args.lm_path)
+    return keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, gpu
+
+
+def calculate_stats(df_alignments):
+    ground_truths = df_alignments['transcript'].values
+    alignments = df_alignments['alignment'].values
+
+    ler_avg = np.mean([ler_norm(gt, al) for gt, al in zip(ground_truths, alignments)])
+    similarity_avg = np.mean([levenshtein_similarity(gt, al) for gt, al in zip(ground_truths, alignments)])
+
+    data = [
+        ['average LER', str(ler_avg)],
+        ['average Levenshtein similarity', str(similarity_avg)],
+    ]
+    df_stats = pd.DataFrame(data=data, columns=['metric', 'value'])
+    return df_stats

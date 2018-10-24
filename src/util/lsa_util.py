@@ -150,7 +150,7 @@ def needle_wunsch(str_1, str_2, beginnings, match_score=10, mismatch_score=-5, g
     while i > 0 and j > 0:
         if j - 1 in beginnings:
             beginnings.remove(j - 1)
-            start = snap_to_closest_word_boundary(i, str_1)
+            start = snap_to_closest_word_boundary(i - 1, str_1)
             alignments.insert(0, {'start': start, 'end': end, 'text': str_1[start:end]})
             end = start - 1
 
@@ -196,8 +196,8 @@ def needle_wunsch(str_1, str_2, beginnings, match_score=10, mismatch_score=-5, g
 
 def snap_to_closest_word_boundary(ix, text):
     left, right = 0, 0
-    while ix - left > 0 and text[ix - left] != ' ':
+    while ix - left > 0 and text[ix - left - 1] != ' ':
         left += 1
     while ix + right < len(text) and text[ix + right] != ' ':
         right += 1
-    return ix - left + 1 if left <= right else ix + right + 1
+    return max(ix - left, 0) if left <= right else min(ix + right + 1, len(text))

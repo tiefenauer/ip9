@@ -115,8 +115,6 @@ def setup(date_time):
 
     args.decoder = args.decoder.split(',')
 
-    create_keras_session(args.gpu)
-
     return target_dir
 
 
@@ -146,6 +144,7 @@ def create_model(target_dir, opt, dropouts, language):
 
 
 def train_model(model, language, target_dir, num_minutes=None):
+    create_keras_session(args.gpu)
     print("Creating data batch generators")
     data_train = CSVBatchGenerator(args.train_files, lang=language, sort=True, n_batches=args.train_batches,
                                    batch_size=args.batch_size, num_minutes=num_minutes, use_synth=args.use_synth)

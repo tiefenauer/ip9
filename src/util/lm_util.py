@@ -24,7 +24,7 @@ def ler_norm(ground_truth, prediction):
     """
     Calculates the normalized LER by dividing the LER by the length of the longer string. The result will be in [0,1]
     """
-    return ler(ground_truth, prediction) / float(len(ground_truth))
+    return ler(ground_truth, prediction) / float(max(len(ground_truth), 1))
 
 
 def wer_norm(ground_truth, prediction):

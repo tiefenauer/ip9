@@ -2,7 +2,6 @@
 Utility functions for LSA stage
 """
 import itertools
-from functools import reduce
 
 import numpy as np
 from pattern3.metrics import levenshtein_similarity
@@ -38,12 +37,6 @@ def align(voice_segments, transcript, printout=False):
         with open(printout, 'w', encoding='utf-8') as f:
             f.writelines('\n'.join(lines))
     return alignments
-
-
-def align_globally(transcript, partial_transcripts):
-    inference = ' '.join(partial_transcripts)
-    beginnings = reduce(lambda x, y: x + [len(y) + x[-1] + 1], partial_transcripts[:-1], [0])
-    return needle_wunsch(transcript, inference, beginnings)
 
 
 def smith_waterman(a, b, match_score=3, gap_cost=2):

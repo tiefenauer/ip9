@@ -11,17 +11,6 @@ lm_uses = ['lm_n', 'lm_y']
 metrics = ['WER', 'LER', 'WER_raw', 'LER_raw']
 
 
-def infer_batches_deepspeech(voiced_segments, rate, model):
-    print('transcribing segments using DeepSpeech model')
-    progress = tqdm(voiced_segments, unit=' segments')
-    transcripts = []
-    for voiced_segment in progress:
-        transcript = model.stt(voiced_segment.audio, rate).strip()
-        progress.set_description(transcript)
-        transcripts.append(transcript)
-    return transcripts
-
-
 def infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, language, lm, vocab):
     batch_generator.cur_index = 0  # reset index
     batch_size = batch_generator.batch_size

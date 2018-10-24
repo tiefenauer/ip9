@@ -10,20 +10,6 @@ import soundfile as sf
 from webrtcvad import Vad
 
 from corpus.alignment import Voice
-from util.audio_util import ms_to_frames
-
-
-def webrtc_voice(audio, rate, aggressiveness=3):
-    voiced_frames = webrtc_split(audio, rate, aggressiveness=aggressiveness)
-    for voice_frames, voice_rate in voiced_frames:
-        voice_bytes = b''.join([f.bytes for f in voice_frames])
-        voice_audio = np.frombuffer(voice_bytes, dtype=np.int16)
-
-        start_time = voice_frames[0].timestamp
-        end_time = (voice_frames[-1].timestamp + voice_frames[-1].duration)
-        start_frame = ms_to_frames(start_time * 1000, rate)
-        end_frame = ms_to_frames(end_time * 1000, rate)
-        yield Voice(voice_audio, voice_rate, start_frame, end_frame)
 
 
 def librosa_voice(audio, rate, top_db=30, limit=None):

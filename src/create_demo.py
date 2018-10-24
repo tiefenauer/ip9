@@ -1,24 +1,16 @@
 import argparse
-from os import remove, makedirs
+from os import makedirs
 from os.path import abspath, exists, splitext, join, dirname, basename
 
-import langdetect
 import numpy as np
 import pandas as pd
 from pattern3.metrics import levenshtein_similarity
 
-from core.batch_generator import VoiceSegmentsBatchGenerator
-from core.decoder import BestPathDecoder, BeamSearchDecoder
-from util.asr_util import infer_batches_keras, infer_batches_deepspeech, \
-    extract_best_transcript
-from util.audio_util import to_wav, read_pcm16_wave, frame_to_ms
-from util.lm_util import load_lm_and_vocab, ler_norm
+from pipeline import preprocess, vad, asr_keras, gsa, asr_ds
+from util.audio_util import frame_to_ms
+from util.lm_util import ler_norm
 from util.log_util import create_args_str, print_dataframe
-from util.lsa_util import align_globally
-from util.pipeline_util import create_demo
-from util.rnn_util import load_keras_model, load_ds_model
-from util.string_util import normalize
-from util.vad_util import webrtc_voice
+from util.pipeline_util import create_demo_files
 
 parser = argparse.ArgumentParser(description="""
     Evaluate the performance of a pipeline by calculating the following values for each entry in a test set:
@@ -62,13 +54,82 @@ def main(args):
 
     print(f'all artefacts will be saved to {target_dir}')
 
-    audio_bytes, rate, transcript, lang = preprocess(audio_path, trans_path, lang)
-    segments = vad(audio_bytes, rate)
-    df_alignments = asr(lang, segments, rate, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, target_dir)
-    df_alignments = gsa(transcript, df_alignments, target_dir)
+    print("""
+    ==================================================
+    PIPELINE STAGE #1 (preprocessing): Converting audio to 16-bit PCM wave and normalizing transcript 
+    --------------------------------------------------
+    """)
+    audio_bytes, sample_rate, transcript, lang = preprocess(audio_path, trans_path, lang)
+    print(f"""
+    --------------------------------------------------
+    STAGE #1 COMPLETED: Got {len(audio_bytes)} audio samples and {len(transcript)} labels
+    ==================================================
+    """)
+
+    print("""
+    ==================================================
+    PIPELINE STAGE #2 (VAD): splitting input audio into voiced segments 
+    --------------------------------------------------
+    """)
+    voiced_segments = vad(audio_bytes, sample_rate)
+    print(f"""
+    --------------------------------------------------
+    STAGE #2 COMPLETED: Got {len(voiced_segments)} segments.
+    ==================================================
+    """)
+
+    print("""
+    ==================================================
+    PIPELINE STAGE #3 (ASR): transcribing voice segments using simplified Keras-model
+    --------------------------------------------------
+    """)
+    alignments_csv = join(target_dir, 'alignments.csv')
+    if exists(alignments_csv):
+        print(f'found inferences from previous run in {alignments_csv}')
+        df_alignments = pd.read_csv(alignments_csv, header=0, index_col=0).replace(np.nan, '')
+    else:
+        if ds_path:
+            print(f'using DeepSpeech model at {ds_path}')
+            transcripts = asr_ds(voiced_segments, sample_rate, ds_path, ds_alpha_path, lm_path, ds_trie_path)
+        else:
+            print(f'using simplified Keras model at {keras_path}')
+            transcripts = asr_keras(voiced_segments, lang, sample_rate, keras_path, lm_path)
+
+        df_alignments = create_alignments_dataframe(voiced_segments, transcripts, sample_rate)
+        print(f'saving alignments to {alignments_csv}')
+        df_alignments.to_csv(alignments_csv)
+    df_alignments.replace(np.nan, '', regex=True, inplace=True)
+    print(f"""
+    --------------------------------------------------
+    STAGE #3 COMPLETED: Saved transcript to {alignments_csv}
+    ==================================================
+    """)
+
+    print("""
+    ==================================================
+    PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript 
+    --------------------------------------------------
+    """)
+    if 'alignment' in df_alignments.keys():
+        print(f'transcripts are already aligned')
+    else:
+        print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')
+        alignments = gsa(transcript, df_alignments['transcript'].tolist())
+
+        df_alignments['alignment'] = [a['text'] for a in alignments]
+        df_alignments['text_start'] = [a['start'] for a in alignments]
+        df_alignments['text_end'] = [a['end'] for a in alignments]
+
+        print(f'saving alignments to {alignments_csv}')
+        df_alignments.to_csv(alignments_csv)
+    print(f"""
+    --------------------------------------------------
+    STAGE #4 COMPLETED
+    ==================================================
+    """)
 
     df_stats = calculate_stats(df_alignments)
-    create_demo(target_dir, audio_path, transcript, df_alignments, df_stats, demo_id=run_id)
+    create_demo_files(target_dir, audio_path, transcript, df_alignments, df_stats, demo_id=run_id)
 
     print()
     print_dataframe(df_stats)
@@ -153,136 +214,16 @@ def setup(args):
     return args.language, audio_path, transcript_path, keras_model_path, ds_model_path, ds_alphabet_path, ds_trie_path, lm_path, run_id, target_dir
 
 
-def preprocess(audio_path, transcript_path, language=None):
-    print("""
-    ==================================================
-    PIPELINE STAGE #1 (preprocessing): Converting audio to 16-bit PCM wave and normalizing transcript 
-    ==================================================
-    """)
-
-    extension = splitext(audio_path)[-1]
-    if extension not in ['.wav', '.mp3']:
-        raise ValueError(f'ERROR: can only handle MP3 and WAV files!')
-
-    if extension == '.mp3':
-        print(f'converting {audio_path}')
-        tmp_file = 'tmp.wav'
-        to_wav(audio_path, tmp_file)
-        audio_bytes, rate = read_pcm16_wave(tmp_file)
-        remove(tmp_file)
-    else:
-        audio_bytes, rate = read_pcm16_wave(audio_path)
-
-    if rate is not 16000:
-        print(f'Resampling from {rate}Hz to 16.000Hz/mono')
-        # audio, rate = librosa.load(audio_path, sr=16000, mono=True)
-        tmp_file = 'tmp.wav'
-        to_wav(audio_path, tmp_file)
-        # write_pcm16_wave(tmp_file, audio, rate)
-        audio_bytes, rate = read_pcm16_wave(tmp_file)
-        remove(tmp_file)
-
-    with open(transcript_path, 'r') as f:
-        transcript = normalize(f.read(), language)
-
-    if not language:
-        language = langdetect.detect(transcript)
-        print(f'detected language from transcript: {language}')
-
-    print(f"""
-    ==================================================
-    STAGE #1 COMPLETED: Got {len(audio_bytes)} audio samples and {len(transcript)} labels
-    ==================================================
-    """)
-    return audio_bytes, rate, transcript, language
-
-
-def vad(audio, rate):
-    print("""
-    ==================================================
-    PIPELINE STAGE #2 (VAD): splitting input audio into voiced segments 
-    ==================================================
-    """)
-    voiced_segments = list(webrtc_voice(audio, rate))
-    print(f"""
-    ==================================================
-    STAGE #2 COMPLETED: Got {len(voiced_segments)} segments.
-    ==================================================
-    """)
-    return voiced_segments
-
-
-def asr(language, voiced_segments, rate, keras_path, ds_path, ds_alphabet_path, ds_trie_path, lm_path, target_dir):
-    print("""
-    ==================================================
-    PIPELINE STAGE #3 (ASR): transcribing voice segments 
-    ==================================================
-    """)
-    alignments_csv = join(target_dir, 'alignments.csv')
-    if exists(alignments_csv):
-        print(f'found inferences from previous run in {alignments_csv}')
-        return pd.read_csv(alignments_csv, header=0, index_col=0)
-
-    if ds_path:
-        print(f'loading DeepSpeech model from {ds_path}, using alphabet at {ds_alphabet_path}, '
-              f'LM at {lm_path} and trie at {ds_trie_path}')
-        ds_model = load_ds_model(ds_path, alphabet_path=ds_alphabet_path, lm_path=lm_path, trie_path=ds_trie_path)
-        transcripts = infer_batches_deepspeech(voiced_segments, rate, ds_model)
-    else:
-        print(f'loading Keras model from {keras_path}')
-        keras_model = load_keras_model(keras_path)
-        lm, lm_vocab = load_lm_and_vocab(args.lm_path)
-
-        batch_generator = VoiceSegmentsBatchGenerator(voiced_segments, sample_rate=rate, batch_size=16,
-                                                      language=language)
-        decoder_greedy = BestPathDecoder(keras_model, language)
-        decoder_beam = BeamSearchDecoder(keras_model, language)
-        df_inferences = infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, language, lm, lm_vocab)
-        transcripts = extract_best_transcript(df_inferences)
-
-    columns = ['transcript', 'audio_start', 'audio_end']
-    df_alignments = pd.DataFrame(index=range(len(transcripts)), columns=columns)
+def create_alignments_dataframe(voiced_segments, transcripts, sample_rate):
+    alignments = []
     for i, (voice_segment, transcript) in enumerate(zip(voiced_segments, transcripts)):
-        audio_start = frame_to_ms(voice_segment.start_frame, rate)
-        audio_end = frame_to_ms(voice_segment.end_frame, rate)
-        df_alignments.loc[i] = [transcript, audio_start, audio_end]
+        audio_start = frame_to_ms(voice_segment.start_frame, sample_rate)
+        audio_end = frame_to_ms(voice_segment.end_frame, sample_rate)
+        alignments.append([transcript, audio_start, audio_end])
 
+    df_alignments = pd.DataFrame(alignments, columns=['transcript', 'audio_start', 'audio_end'])
     df_alignments.index.name = 'id'
-    df_alignments.to_csv(alignments_csv)
-
-    print(f"""
-    ==================================================
-    STAGE #3 COMPLETED: Saved transcript to {alignments_csv}
-    ==================================================
-    """)
     return df_alignments
-
-
-def gsa(transcript, df_alignments, target_dir):
-    print("""
-    ==================================================
-    PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript 
-    ==================================================
-    """)
-    if 'alignment' in df_alignments.keys():
-        print(f'transcripts are already aligned')
-        return df_alignments.replace(np.nan, '', regex=True)
-
-    print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')
-    alignments = align_globally(transcript, df_alignments['transcript'].tolist())
-    df_alignments['alignment'] = [a['text'] for a in alignments]
-    df_alignments['text_start'] = [a['start'] for a in alignments]
-    df_alignments['text_end'] = [a['end'] for a in alignments]
-
-    transcripts_csv = join(target_dir, 'transcripts.csv')
-    df_alignments.to_csv(transcripts_csv)
-
-    print(f"""
-    ==================================================
-    STAGE #4 COMPLETED: Added alignments to {transcripts_csv}
-    ==================================================
-    """)
-    return df_alignments.replace(np.nan, '', regex=True)
 
 
 def calculate_stats(df_alignments):

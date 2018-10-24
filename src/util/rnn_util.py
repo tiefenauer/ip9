@@ -31,6 +31,8 @@ def save_model(model, target_dir):
 
 def load_ds_model(model_path, alphabet_path, n_features=26, n_context=9, beam_width=500, lm_path=None,
                   trie_path=None, lm_weight=1.75, valid_word_count_weight=1.00):
+    print(f'loading DeepSpeech model from {ds_path}, using alphabet at {ds_alphabet_path}, '
+          f'LM at {lm_path} and trie at {ds_trie_path}')
     ds = Model(model_path, n_features, n_context, alphabet_path, beam_width)
     if lm_path and trie_path:
         ds.enableDecoderWithLM(alphabet_path, lm_path, trie_path, lm_weight, valid_word_count_weight)
@@ -44,6 +46,7 @@ def load_keras_model(root_path, opt=None):
     :param opt: optimizer to use (optional if model is loaded from HDF5 file
     :return: the compiled model
     """
+    print(f'loading Keras model from {root_path}')
     get_custom_objects().update({"clipped_relu": clipped_relu})
     get_custom_objects().update({"ctc": ctc})
 

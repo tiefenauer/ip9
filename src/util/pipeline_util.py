@@ -26,7 +26,7 @@ ASSETS_FILES = [
 ]
 
 
-def create_demo(target_dir, audio_src_path, transcript, df_transcripts, df_stats, demo_id=None):
+def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, df_stats, demo_id=None):
     if not demo_id:
         demo_id = basename(audio_src_path)
     print(f'assigned demo id: {demo_id}.')

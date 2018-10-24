@@ -69,7 +69,7 @@ class ReportCallback(callbacks.Callback):
             print("shuffling validation data")
             self.data_valid.shuffle_entries()
 
-        print(f'validating epoch {epoch+1} using best-path and beam search decoding')
+        print(f'validating epoch {epoch+1} (training on {self.num_minutes} minutes)')
         df_inferences = infer_batches_keras(self.data_valid, self.decoder_greedy, self.decoder_beam, self.language,
                                             self.lm, self.lm_vocab)
 

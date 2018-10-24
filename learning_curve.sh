@@ -28,7 +28,7 @@ For each amount of training data a separate training run is started. A unique ru
 lc_run_id="learning_run_$(uuidgen)"
 lm=''
 lm_vocab=''
-language=''
+language='en'
 train_files=''
 valid_files=''
 test_files=''

@@ -87,7 +87,7 @@ def main(date_time):
 
     print(f'creating {args.optimizer.upper()} optimizer for model')
     if args.optimizer == 'adam':
-        opt = Adam(lr=args.learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-8, clipnorm=5)
+        opt = Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, decay=0.01)
     else:
         opt = SGD(lr=args.learning_rate, decay=1e-6, momentum=0.9, nesterov=True, clipnorm=5)
     model = create_model(target_dir, opt, args.dropouts, args.language)

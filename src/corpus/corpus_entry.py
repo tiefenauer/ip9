@@ -19,16 +19,8 @@ class CorpusEntry(Audible):
     _audio = None
     _rate = None
 
-    def __init__(self, wav_name, segments, raw_path='', parms=None):
-        """
-        Create a new corpus entry
-        :param wav_name: path to the audio file (will be read on-the-fly)
-        :param segments: list of speech- and pause-segments
-        :param full_transcript: string containing the full transcript (if available) if not set, the concatenated
-                                transcripts of the segments will be used as full transcript
-        :param raw_path: path to the directory containing the raw data from which this entry was constructed
-        :param parms: dictionary containing arbitrary paths
-        """
+    def __init__(self, subset, audio_):
+
         if parms is None:
             parms = {}
         self.corpus = None

@@ -18,7 +18,7 @@ from corpus.corpus import ReadyLinguaCorpus
 from corpus.corpus_entry import CorpusEntry
 from corpus.corpus_segment import SpeechSegment
 from util.audio_util import resample_frame, to_wav
-from util.corpus_util import save_corpus, find_file_by_suffix
+from util.corpus_util import find_file_by_suffix
 from util.log_util import log_setup, create_args_str
 from util.string_util import create_filename
 

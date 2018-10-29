@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
-from copy import deepcopy
 from datetime import timedelta
+from os.path import getmtime
 
+import pandas as pd
 from tabulate import tabulate
-from tqdm import tqdm
 
-from util.corpus_util import filter_corpus_entry_by_subset_prefix
+from corpus.corpus_entry import CorpusEntry
 
 
 class Corpus(ABC):
@@ -13,126 +13,84 @@ class Corpus(ABC):
     Base class for corpora
     """
 
-    def __init__(self, corpus_entries):
+    def __init__(self, corpus_id, name, df_path):
         """
         Create a new corpus holding a list of corpus entries
-        :param name: unique corpus name
-        :param corpus_entries: list of CorpusEntry instances
-        :param root_path: path to directory holding the audio files for the corpus entries
+        :param corpus_id: unique ID
+        :param df_path: path to CSV file
         """
-        for corpus_entry in corpus_entries:
-            corpus_entry.corpus = self
-        self.corpus_entries = corpus_entries
-        self.root_path = None  # must be set when saving/loading
-        self.creation_date = None  # must be set when saving/loading
+        self.corpus_id = corpus_id
+        self.name = name
+        self.df_path = df_path
+        self.df_entries = pd.read_csv(df_path)
 
-    @property
-    @abstractmethod
-    def _name(self):
-        raise NotImplementedError
+    def entries(self):
+        return [CorpusEntry(row) for row in self.df_entries.iterrows()]
 
-    def __iter__(self):
-        for corpus_entry in self.corpus_entries:
-            yield corpus_entry
-
-    def __getitem__(self, val):
-        # access by index
-        if isinstance(val, int) or isinstance(val, slice):
-            return self.corpus_entries[val]
-        # access by id
-        if isinstance(val, str):
-            return next(iter([corpus_entry for corpus_entry in self.corpus_entries if corpus_entry.id == val]), None)
-        return None
+    def segments(self, numeric=None):
+        if numeric is True:
+            return [seg for entry in self.entries() for seg in entry.speech_segments_numeric]
+        elif numeric is False:
+            return [seg for entry in self.entries() for seg in entry.speech_segments_not_numeric]
+        return [seg for entry in self.entries() for seg in entry]
 
     def __len__(self):
-        return len(self.corpus_entries)
-
-    def __call__(self, *args, **kwargs):
-        languages = kwargs['languages'] if 'languages' in kwargs else self.languages
-        include_numeric = kwargs['include_numeric'] if 'include_numeric' in kwargs else True
-        print(f'filtering languages={languages}')
-        entries = [entry for entry in self.corpus_entries if entry.language in languages]
-        print(f'found {len(entries)} entries for languages {languages}')
-
-        if not include_numeric:
-            print(f'filtering out speech segments with numbers in transcript')
-            entries = [entry(include_numeric=include_numeric) for entry in tqdm(entries, unit=' entries')]
-
-        _copy = deepcopy(self)
-        _copy.corpus_entries = entries
-        return _copy
-
-    @property
-    def name(self):
-        languages = ', '.join(self.languages)
-        return self._name + f' (languages: {languages})'
-
-    @property
-    def languages(self):
-        return sorted(set(lang for lang in (corpus_entry.language for corpus_entry in self.corpus_entries)))
+        return len(self.df_entries.index)
 
     @property
     def keys(self):
-        return sorted([corpus_entry.id for corpus_entry in self.corpus_entries])
+        return sorted([corpus_entry.id for corpus_entry in self.entries()])
 
     @abstractmethod
     def train_dev_test_split(self, include_numeric=False):
-        """return training-, validation- and test-set
+        """
+        return training -, validation - and test - set
         Since these sets are constructed
         """
         pass
 
     def summary(self):
-        print('')
-        print(f'Corpus: {self.name}')
-        print(self.root_path)
-        print(f'Creation date: {self.creation_date}')
-        print()
-        table = {}
-        t_entries = n_speeches_total = length_speeches_total = duration_total = 0
+        creation_date = getmtime(self.df_path)
+        print(f"""
+        Corpus: {self.name} (id={self.corpus_id})
+        File: {self.df_path}
+        Creation date: {creation_date}
+        # entries: {len(self.df_entries.index)}
+        """)
+        print('-------------------------------------')
 
-        # stats per language
-        for lang in self.languages:
-            entries = [entry for entry in self.corpus_entries if entry.language == lang]
-            n_entries = len(entries)
-            t_entries += n_entries
+        segments_all = self.segments()
+        segments_numeric = self.segments(numeric=True)
+        segments_not_numeric = self.segments(numeric=False)
 
-            speech_segments = [segment for entry in entries for segment in entry]
-            n_speeches = len(speech_segments)
-            length_speeches = sum(segment.audio_length for segment in speech_segments)
-            n_speeches_total += n_speeches
-            length_speeches_total += length_speeches
+        n_total, n_numeric, n_not_numeric = len(segments_all), len(segments_numeric), len(segments_not_numeric)
 
-            duration = sum(entry.audio_length for entry in self.corpus_entries if entry.language == lang)
-            duration_total += duration
+        len_total = sum(s.audio_length for s in segments_all)
+        len_numeric = sum(s.audio_length for s in segments_numeric)
+        len_not_numeric = sum(s.audio_length for s in segments_not_numeric)
 
-            table[lang] = (n_entries,
-                           n_speeches, timedelta(seconds=int(length_speeches)),
-                           timedelta(seconds=int(duration)))
-
-        # total over all languages
-        table['total'] = (t_entries,
-                          n_speeches_total, timedelta(seconds=int(length_speeches_total)),
-                          timedelta(seconds=int(duration_total))
-                          )
-        headers = ['lang', '#entries',
-                   '#speech segments', 'speech segments length',
-                   'audio length']
-        print(tabulate([(k,) + v for k, v in table.items()], headers=headers))
+        index = ['#segments', 'total_length', 'avg. length']
+        columns = ['total', 'numeric', 'non-numeric']
+        data = [
+            [n_total, n_numeric, n_not_numeric],
+            [timedelta(seconds=len_total), timedelta(seconds=len_numeric), timedelta(seconds=len_numeric)],
+            [timedelta(seconds=len_total / n_total), timedelta(seconds=len_numeric / n_numeric),
+             timedelta(seconds=len_not_numeric / n_not_numeric)],
+        ]
+        df = pd.DataFrame(index=index, columns=columns, data=data)
+        print(tabulate(df, headers='keys'))
 
 
 class ReadyLinguaCorpus(Corpus, ABC):
 
-    @property
-    def _name(self):
-        return 'ReadyLingua'
+    def __init__(self, df_path):
+        super().__init__('rl', 'ReadyLingua', df_path)
 
     def train_dev_test_split(self, include_numeric=False):
         if include_numeric:
-            segments = [seg for corpus_entry in self.corpus_entries for seg in corpus_entry.speech_segments]
+            segments = [seg for entry in self.entries() for seg in entry.speech_segments]
         else:
-            segments = [seg for corpus_entry in self.corpus_entries
-                               for seg in corpus_entry.speech_segments_not_numeric]
+            segments = [seg for entry in self.entries() for seg in entry.speech_segments_not_numeric]
 
         total_length = sum(segment.audio_length for segment in segments)
         train_split = self.get_index_for_audio_length(segments, total_length * 0.8)
@@ -142,10 +100,10 @@ class ReadyLinguaCorpus(Corpus, ABC):
     @staticmethod
     def get_index_for_audio_length(segments, min_length):
         """
-        get index to split speech segments at a minimum audio length. Index will not split segments of same corpus entry
+        get index to split speech segments at a minimum audio length.Index will not split segments of same corpus entry
         :param segments: list of speech segments
         :param min_length: minimum audio length to split
-        :return: firs index where total length of speech segments is equal or greater to minimum legnth
+        :return: first index where total length of speech segments is equal or greater to minimum legnth
         """
         audio_length = 0
         prev_corpus_entry_id = None
@@ -158,14 +116,13 @@ class ReadyLinguaCorpus(Corpus, ABC):
 
 class LibriSpeechCorpus(Corpus):
 
-    @property
-    def _name(self):
-        return 'LibriSpeech'
+    def __init__(self, df_path):
+        super().__init__('ls', 'LibriSpeech', df_path)
 
     def train_dev_test_split(self, include_numeric=False):
-        train_entries = filter_corpus_entry_by_subset_prefix(self.corpus_entries, 'train-')
-        dev_entries = filter_corpus_entry_by_subset_prefix(self.corpus_entries, 'dev-')
-        test_entries = filter_corpus_entry_by_subset_prefix(self.corpus_entries, ['test-', 'unknown'])
+        train_entries = filter_corpus_entry_by_subset_prefix(self.entries(), 'train-')
+        dev_entries = filter_corpus_entry_by_subset_prefix(self.entries(), 'dev-')
+        test_entries = filter_corpus_entry_by_subset_prefix(self.entries(), ['test-', 'unknown'])
 
         if include_numeric:
             train_set = [seg for corpus_entry in train_entries for seg in corpus_entry.speech_segments]
@@ -177,3 +134,11 @@ class LibriSpeechCorpus(Corpus):
             test_set = [seg for corpus_entry in test_entries for seg in corpus_entry.speech_segments_not_numeric]
 
         return train_set, dev_set, test_set
+
+
+def filter_corpus_entry_by_subset_prefix(corpus_entries, prefixes):
+    if isinstance(prefixes, str):
+        prefixes = [prefixes]
+    return [corpus_entry for corpus_entry in corpus_entries
+            if corpus_entry.subset
+            and any(corpus_entry.subset.startswith(prefix) for prefix in prefixes)]

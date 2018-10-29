@@ -9,8 +9,9 @@ where:
     -a|--lm_vocab <path>                     path to file containing the vocabulary of the LM specified by -lm.
                                              The file must contain the words used for training delimited by space (no newlines)
     -i|--language <string>                   The language to train on ('en' or 'de'). This will determine the number of labels and therefore the model architecture. (default: en)
-    -t|--train_files <path>                  one or more comma-separated paths to CSV files containing the corpus files to use for training
-    -v|--valid_files <path>                  one or more comma-separated paths to CSV files containing the corpus files to use for validation
+    -t|--train_files <path>                  one or more comma-separated paths to CSV files containing the samples to use for training
+    -v|--valid_files <path>                  one or more comma-separated paths to CSV files containing the samples to use for validation
+    -z|--test_files <path>                   one or more comma-separated paths to CSV files contatining the samples to use for testing
     -g|--gpu <int>                           GPU to use
     -b|--batch_size <int>                    batch size (default: 16)
     -e|--epochs <int>                        number of epochs to train (default: 30)
@@ -28,9 +29,10 @@ lc_run_id="learning_run_$(uuidgen)"
 lm=''
 lm_vocab=''
 language='en'
-train_files='/media/D1/readylingua-en/readylingua-en-train.csv'
-valid_files='/media/D1/readylingua-en/readylingua-en-dev.csv'
-target_dir='/home/daniel_tiefenauer/learning_curve_0'
+train_files=''
+valid_files=''
+test_files=''
+target_dir=''
 gpu=''
 batch_size='16'
 epochs='30'
@@ -81,6 +83,11 @@ case $key in
     ;;
     -v|--valid_files)
     valid_files="$2"
+    shift
+    shift
+    ;;
+    -z|--test_files)
+    test_files="$2"
     shift
     shift
     ;;
@@ -145,6 +152,7 @@ lm_vocab        = ${lm_vocab}
 language        = ${language}
 train_files     = ${train_files}
 valid_files     = ${valid_files}
+test_files      = ${test_files}
 gpu             = ${gpu}
 batch_size      = ${batch_size}
 epochs          = ${epochs}
@@ -166,6 +174,7 @@ cd ./src/
 for minutes in 1 10 100 1000
 do
     run_id="${minutes}_min"
+    model_dir="${lc_result_dir}/${run_id}"
 
     echo "
     #################################################################################################
@@ -173,7 +182,8 @@ do
      learning run id: $lc_run_id
      run id: $run_id
      target subdirectory: $lc_result_dir
-    #################################################################################################
+     model directory: $model_dir
+    -------------------------------------------------------------------------------------------------
     "
 
     python3 run-train.py \
@@ -195,8 +205,23 @@ do
         2>&1 | tee ${lc_result_dir}/${run_id}.log # write to stdout and log file
 
     echo "
-    #################################################################################################
-     Finished $run_id
+    -------------------------------------------------------------------------------------------------
+     Testing model in $model_dir
+     using samples from $test_files
+    -------------------------------------------------------------------------------------------------
+    "
+    python3 run-test.py \
+        --model_dir ${model_dir} \
+        --test_files ${test_files} \
+        --lm ${lm} \
+        --lm_vocab ${lm_vocab} \
+        --language ${language} \
+        --gpu ${gpu}
+
+    echo "
+    -------------------------------------------------------------------------------------------------
+     Finished training $run_id
+     Model and test results saved in $model_dir
     #################################################################################################
     "
 done

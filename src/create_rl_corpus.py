@@ -16,7 +16,7 @@ from tqdm import tqdm
 from constants import RL_TARGET, RL_SOURCE
 from corpus.corpus import ReadyLinguaCorpus
 from corpus.corpus_entry import CorpusEntry
-from corpus.corpus_segment import SpeechSegment
+from corpus.corpus_segment import Segment
 from util.audio_util import resample_frame, to_wav
 from util.corpus_util import find_file_by_suffix
 from util.log_util import log_setup, create_args_str
@@ -210,10 +210,10 @@ def create_segments(index_file, transcript_file, original_sample_rate, language)
         end_text = speech_meta['end_text'] + 1  # komische Indizierung
 
         seg_transcript = transcript[start_text:end_text]
-        segments.append(SpeechSegment(start_frame=start_frame,
-                                      end_frame=end_frame,
-                                      transcript=seg_transcript,
-                                      language=language))
+        segments.append(Segment(start_frame=start_frame,
+                                end_frame=end_frame,
+                                transcript=seg_transcript,
+                                language=language))
 
     return segments
 

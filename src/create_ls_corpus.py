@@ -50,18 +50,24 @@ def main():
     print(f'Done! Corpus with {len(corpus)} entries saved to {corpus_file}')
 
 
-def create_corpus(source_path, target_path, max_entries=None):
-    if not exists(source_path):
-        print(f"ERROR: Source directory {source_path} does not exist!")
+def create_corpus(source_dir, target_dir, max_entries=None):
+    if not exists(source_dir):
+        print(f"ERROR: Source directory {source_dir} does not exist!")
         exit(0)
-    if not exists(target_path):
-        print(f'creating target directory {target_path} as it does not exist yet')
-        makedirs(target_path)
+    if not exists(target_dir):
+        print(f'creating target directory {target_dir} as it does not exist yet')
+        makedirs(target_dir)
 
-    return create_librispeech_corpus(source_dir=source_path, target_dir=target_path, max_entries=max_entries)
+    corpus_entries = create_corpus_entries(source_dir=source_dir, target_dir=target_dir, max_entries=max_entries)
+
+    columns = ['subset', 'audio_file', 'start_frame', 'end_frame', 'transcript']
+    corpus = pd.DataFrame(corpus_entries, columns=columns)
+    corpus_index = join(target_dir, 'index.csv')
+    corpus.to_csv(corpus_index)
+    return corpus, corpus_index
 
 
-def create_librispeech_corpus(source_dir, target_dir, max_entries):
+def create_corpus_entries(source_dir, target_dir, max_entries):
     audio_root = join(source_dir, 'audio')
     books_root = join(source_dir, 'books')
 
@@ -154,10 +160,7 @@ def create_librispeech_corpus(source_dir, target_dir, max_entries):
             transcript = segment['transcript']
             corpus_entries.append([subset, audio_file, start_frame, end_frame, transcript])
 
-    corpus = pd.DataFrame(corpus_entries, columns=['subset', 'audio_file', 'start_frame', 'end_frame', 'transcript'])
-    corpus_index = join(target_dir, 'index.csv')
-    corpus.to_csv(corpus_index)
-    return corpus, corpus_index
+    return corpus_entries
 
 
 def collect_chapter_meta(chapters_file):

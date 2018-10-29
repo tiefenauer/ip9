@@ -1,13 +1,14 @@
 from copy import deepcopy
 from datetime import timedelta
-from os.path import join
-from random import randint
+from os.path import join, splitext
+from pathlib import Path
 
-import numpy as np
 import soundfile as sf
+from pydub.utils import mediainfo
 from tabulate import tabulate
 
 from corpus.audible import Audible
+from corpus.corpus_segment import Segment
 
 
 class CorpusEntry(Audible):
@@ -19,31 +20,30 @@ class CorpusEntry(Audible):
     _audio = None
     _rate = None
 
-    def __init__(self, subset, audio_):
+    def __init__(self, corpus, wav_name, df_segments):
+        self.corpus = corpus
+        self.language = self.corpus.language
 
-        if parms is None:
-            parms = {}
-        self.corpus = None
         self.wav_name = wav_name
 
-        for segment in segments:
-            segment.corpus_entry = self
-        self.speech_segments = segments
+        self.id = splitext(wav_name)[0]
+        self.audio_path = join(self.corpus.root_path, self.wav_name)
+        self.transcript_path = join(self.corpus.root_path, self.id + '.txt')
 
-        self.raw_path = raw_path
-        self.name = parms['name'] if 'name' in parms else ''
-        self.id = parms['id'] if 'id' in parms else str(randint(1, 999999))
-        self.language = parms['language'] if 'language' in parms else 'N/A'
-        self.chapter_id = parms['chapter_id'] if 'chapter_id' in parms else 'N/A'
-        self.speaker_id = parms['speaker_id'] if 'speaker_id' in parms else 'N/A'
-        self.original_sampling_rate = parms['rate'] if 'rate' in parms else 'N/A'
-        self.original_channels = parms['channels'] if 'channels' in parms else 'N/A'
-        self.subset = parms['subset'] if 'subset' in parms else 'N/A'
-        self.media_info = parms['media_info'] if 'media_info' in parms else {}
+        self.media_info = mediainfo(self.audio_path)
+        self.segments = self.create_segments(df_segments)
+
+    def create_segments(self, df):
+        return [Segment(language=self.language,
+                        start_frame=row['start_frame'],
+                        end_frame=row['end_frame'],
+                        transcript=row['transcript'],
+                        corpus_entry=self)
+                for (_, row) in df.iterrows()]
 
     @property
-    def audio_path(self):
-        return join(self.corpus.root_path, self.wav_name)
+    def transcript(self):
+        return Path(self.transcript_path).read_text()
 
     @property
     def audio(self):
@@ -51,10 +51,6 @@ class CorpusEntry(Audible):
             return self._audio
         self._audio, self._rate = sf.read(self.audio_path, dtype='int16')
         return self._audio
-
-    @audio.setter
-    def audio(self, audio):
-        self._audio = audio.astype(np.float32)
 
     @property
     def rate(self):
@@ -64,31 +60,19 @@ class CorpusEntry(Audible):
         return self._rate
 
     def __iter__(self):
-        for segment in self.speech_segments:
+        for segment in self.segments:
             yield segment
 
     def __getitem__(self, item):
-        return self.speech_segments[item]
+        return self.segments[item]
 
     @property
     def speech_segments_numeric(self):
-        return [segment for segment in self.speech_segments if segment.contains_numeric]
+        return [segment for segment in self.segments if segment.contains_numeric]
 
     @property
     def speech_segments_not_numeric(self):
-        return [segment for segment in self.speech_segments if not segment.contains_numeric]
-
-    @property
-    def transcript(self):
-        return '\n'.join(segment.transcript for segment in self.speech_segments)
-
-    @property
-    def text(self):
-        return '\n'.join(segment.text for segment in self.speech_segments)
-
-    @property
-    def audio_length(self):
-        return float(self.media_info['duration'])
+        return [segment for segment in self.segments if not segment.contains_numeric]
 
     def __getstate__(self):
         # prevent caches from being pickled

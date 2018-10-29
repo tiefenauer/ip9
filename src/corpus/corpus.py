@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
-from os.path import getmtime
+from os.path import getmtime, dirname
 
+import numpy as np
 import pandas as pd
 from tabulate import tabulate
 
@@ -13,33 +14,44 @@ class Corpus(ABC):
     Base class for corpora
     """
 
-    def __init__(self, corpus_id, name, df_path):
+    def __init__(self, corpus_id, name, language, df_path):
         """
         Create a new corpus holding a list of corpus entries
         :param corpus_id: unique ID
         :param df_path: path to CSV file
         """
+        self.language = language
         self.corpus_id = corpus_id
         self.name = name
         self.df_path = df_path
-        self.df_entries = pd.read_csv(df_path)
+        self.root_path = dirname(self.df_path)
+        self.entries = self.create_entries(pd.read_csv(df_path))
 
-    def entries(self):
-        return [CorpusEntry(row) for row in self.df_entries.iterrows()]
+    def create_entries(self, df):
+        return [CorpusEntry(self, audio_file, segments) for audio_file, segments in df.groupby('audio_file')]
 
     def segments(self, numeric=None):
         if numeric is True:
-            return [seg for entry in self.entries() for seg in entry.speech_segments_numeric]
+            return [seg for entry in self.entries for seg in entry.speech_segments_numeric]
         elif numeric is False:
-            return [seg for entry in self.entries() for seg in entry.speech_segments_not_numeric]
-        return [seg for entry in self.entries() for seg in entry]
+            return [seg for entry in self.entries for seg in entry.speech_segments_not_numeric]
+        return [seg for entry in self.entries for seg in entry]
 
     def __len__(self):
-        return len(self.df_entries.index)
+        return len(self.entries)
+
+    def __getitem__(self, val):
+        # access by index
+        if isinstance(val, int) or isinstance(val, slice):
+            return self.entries[val]
+        # access by id
+        if isinstance(val, str):
+            return next(iter([entry for entry in self.entries if entry.id == val]), None)
+        return None
 
     @property
     def keys(self):
-        return sorted([corpus_entry.id for corpus_entry in self.entries()])
+        return sorted([corpus_entry.id for corpus_entry in self.entries])
 
     @abstractmethod
     def train_dev_test_split(self, include_numeric=False):
@@ -55,27 +67,24 @@ class Corpus(ABC):
         Corpus: {self.name} (id={self.corpus_id})
         File: {self.df_path}
         Creation date: {creation_date}
-        # entries: {len(self.df_entries.index)}
+        # entries: {len(self.entries)}
         """)
         print('-------------------------------------')
 
-        segments_all = self.segments()
-        segments_numeric = self.segments(numeric=True)
-        segments_not_numeric = self.segments(numeric=False)
+        total = np.array([seg.audio_length for seg in self.segments()])
+        numeric = np.array([seg.audio_length for seg in self.segments(numeric=True)])
+        not_numeric = np.array([seg.audio_length for seg in self.segments(numeric=False)])
 
-        n_total, n_numeric, n_not_numeric = len(segments_all), len(segments_numeric), len(segments_not_numeric)
+        total_mean = total.mean() if total.size else 0
+        numeric_mean = numeric.mean() if numeric.size else 0
+        not_numeric_mean = not_numeric.mean() if not_numeric.size else 0
 
-        len_total = sum(s.audio_length for s in segments_all)
-        len_numeric = sum(s.audio_length for s in segments_numeric)
-        len_not_numeric = sum(s.audio_length for s in segments_not_numeric)
-
-        index = ['#segments', 'total_length', 'avg. length']
+        index = ['#segments', 'length', 'avg. length']
         columns = ['total', 'numeric', 'non-numeric']
         data = [
-            [n_total, n_numeric, n_not_numeric],
-            [timedelta(seconds=len_total), timedelta(seconds=len_numeric), timedelta(seconds=len_numeric)],
-            [timedelta(seconds=len_total / n_total), timedelta(seconds=len_numeric / n_numeric),
-             timedelta(seconds=len_not_numeric / n_not_numeric)],
+            [len(total), len(numeric), len(not_numeric)],
+            [timedelta(seconds=total.sum()), timedelta(seconds=numeric.sum()), timedelta(seconds=not_numeric.sum())],
+            [timedelta(seconds=total_mean), timedelta(seconds=numeric_mean), timedelta(seconds=not_numeric_mean)]
         ]
         df = pd.DataFrame(index=index, columns=columns, data=data)
         print(tabulate(df, headers='keys'))
@@ -83,14 +92,14 @@ class Corpus(ABC):
 
 class ReadyLinguaCorpus(Corpus, ABC):
 
-    def __init__(self, df_path):
-        super().__init__('rl', 'ReadyLingua', df_path)
+    def __init__(self, language, df_path):
+        super().__init__('rl', 'ReadyLingua', language, df_path)
 
     def train_dev_test_split(self, include_numeric=False):
         if include_numeric:
-            segments = [seg for entry in self.entries() for seg in entry.speech_segments]
+            segments = [seg for entry in self.entries for seg in entry.speech_segments]
         else:
-            segments = [seg for entry in self.entries() for seg in entry.speech_segments_not_numeric]
+            segments = [seg for entry in self.entries for seg in entry.speech_segments_not_numeric]
 
         total_length = sum(segment.audio_length for segment in segments)
         train_split = self.get_index_for_audio_length(segments, total_length * 0.8)
@@ -117,12 +126,12 @@ class ReadyLinguaCorpus(Corpus, ABC):
 class LibriSpeechCorpus(Corpus):
 
     def __init__(self, df_path):
-        super().__init__('ls', 'LibriSpeech', df_path)
+        super().__init__('ls', 'LibriSpeech', 'en', df_path)
 
     def train_dev_test_split(self, include_numeric=False):
-        train_entries = filter_corpus_entry_by_subset_prefix(self.entries(), 'train-')
-        dev_entries = filter_corpus_entry_by_subset_prefix(self.entries(), 'dev-')
-        test_entries = filter_corpus_entry_by_subset_prefix(self.entries(), ['test-', 'unknown'])
+        train_entries = filter_corpus_entry_by_subset_prefix(self.entries, 'train-')
+        dev_entries = filter_corpus_entry_by_subset_prefix(self.entries, 'dev-')
+        test_entries = filter_corpus_entry_by_subset_prefix(self.entries, ['test-', 'unknown'])
 
         if include_numeric:
             train_set = [seg for corpus_entry in train_entries for seg in corpus_entry.speech_segments]

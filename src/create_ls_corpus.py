@@ -1,9 +1,9 @@
 # Create ReadyLingua Corpus
 import argparse
 import logging
-import math
 import re
-import sys
+from multiprocessing import cpu_count
+from multiprocessing.pool import Pool
 from os import makedirs, walk
 from os.path import exists, splitext, join, basename, pardir, abspath
 
@@ -46,118 +46,118 @@ args = parser.parse_args()
 def main():
     print(create_args_str(args))
     print(f'Processing files from {args.source} and saving them in {args.target}')
-    corpus, corpus_file = create_corpus(args.source, args.target, args.max_entries)
-    print(f'Done! Corpus with {len(corpus)} entries saved to {corpus_file}')
+    df_corpus, corpus_file = create_corpus(args.source, args.target, args.max_entries)
+    print(f'Done! Corpus with {len(df_corpus)} entries saved to {corpus_file}')
 
 
-def create_corpus(source_path, target_path, max_entries=None):
-    if not exists(source_path):
-        print(f"ERROR: Source directory {source_path} does not exist!")
+def create_corpus(source_dir, target_dir, max_entries=None):
+    if not exists(source_dir):
+        print(f"ERROR: Source directory {source_dir} does not exist!")
         exit(0)
-    if not exists(target_path):
-        print(f'creating target directory {target_path} as it does not exist yet')
-        makedirs(target_path)
+    if not exists(target_dir):
+        print(f'creating target directory {target_dir} as it does not exist yet')
+        makedirs(target_dir)
 
-    return create_librispeech_corpus(source_dir=source_path, target_dir=target_path, max_entries=max_entries)
+    with Pool(processes=cpu_count() - 1) as p:
+        audio_root = join(source_dir, 'audio')
+        books_root = join(source_dir, 'books')
+
+        chapters_file = find_file_by_suffix(audio_root, 'CHAPTERS.TXT')
+        chapters = collect_chapter_meta(chapters_file)
+
+        books = collect_book_texts(books_root)
+        directories = [root for root, subdirs, files in walk(audio_root) if not subdirs][:max_entries]
+
+        map_args = [(directory, target_dir, chapters, books) for directory in directories]
+        corpus_entries = tqdm(p.map(create_corpus_entry, map_args), total=len(map_args))
+
+    df_corpus = pd.DataFrame(corpus_entries, columns=['subset', 'audio_file', 'start_frame', 'end_frame', 'transcript'])
+    corpus_index = join(target_dir, 'index.csv')
+    df_corpus.to_csv(corpus_index)
+
+    return df_corpus, corpus_index
 
 
-def create_librispeech_corpus(source_dir, target_dir, max_entries):
-    audio_root = join(source_dir, 'audio')
-    books_root = join(source_dir, 'books')
+def create_corpus_entry(source_dir, target_dir, chapters, books):
+    chapter_id = basename(source_dir)
+    speaker_id = basename(abspath(join(source_dir, pardir)))
 
-    chapters_file = find_file_by_suffix(audio_root, 'CHAPTERS.TXT')
-    chapter_meta = collect_chapter_meta(chapters_file)
+    if chapter_id not in chapters:
+        print(f'WARNING: no chapter information for chapter {chapter_id}. Skipping corpus entry...')
+        return []
 
-    book_texts = collect_book_texts(books_root)
+    book_id = chapters[chapter_id]['book_id']
+    if not book_id:
+        print(f'WARNING: no book text available for chapter {chapter_id}. Skipping corpus entry...')
+        return []
 
-    directories = [root for root, subdirs, files in walk(audio_root) if not subdirs][:max_entries]
-    progress = tqdm(directories, total=min(len(directories), max_entries or math.inf), file=sys.stderr, unit='entries')
+    segments_file = find_file_by_suffix(source_dir, f'{speaker_id}-{chapter_id}.seg.txt')
+    if not segments_file:
+        log.warning(f'no segmentation found at {segments_file}. Skipping corpus entry...')
+        return []
 
-    corpus_entries = []
-    for source_dir in progress:
-        progress.set_description(f'{source_dir:{100}}')
+    transcript_file = find_file_by_suffix(source_dir, f'{speaker_id}-{chapter_id}.trans.txt')
+    if not transcript_file:
+        log.warn(f'no transcript found at {transcript_file}. Skipping corpus entry...')
+        return []
 
-        chapter_id = basename(source_dir)
-        speaker_id = basename(abspath(join(source_dir, pardir)))
+    mp3_file = find_file_by_suffix(source_dir, f'{chapter_id}.mp3')
+    if not mp3_file:
+        log.warn(f'no MP3 file found at {mp3_file}. Skipping corpus entry...')
+        return []
 
-        if chapter_id not in chapter_meta:
-            print(f'WARNING: no chapter information for chapter {chapter_id}. Skipping corpus entry...')
-            break
+    segments = create_segments(segments_file, transcript_file)
 
-        book_id = chapter_meta[chapter_id]['book_id']
-        if not book_id:
-            print(f'WARNING: no book text available for chapter {chapter_id}. Skipping corpus entry...')
-            break
-
-        segments_file = find_file_by_suffix(source_dir, f'{speaker_id}-{chapter_id}.seg.txt')
-        if not segments_file:
-            log.warning(f'no segmentation found at {segments_file}. Skipping corpus entry...')
-            break
-
-        transcript_file = find_file_by_suffix(source_dir, f'{speaker_id}-{chapter_id}.trans.txt')
-        if not transcript_file:
-            log.warn(f'no transcript found at {transcript_file}. Skipping corpus entry...')
-            break
-
-        mp3_file = find_file_by_suffix(source_dir, f'{chapter_id}.mp3')
-        if not mp3_file:
-            log.warn(f'no MP3 file found at {mp3_file}. Skipping corpus entry...')
-            break
-
-        segments = create_segments(segments_file, transcript_file)
-
-        # crop/resample audio
-        wav_file = join(target_dir, basename(splitext(mp3_file)[0] + ".wav"))
-        if not exists(wav_file) or args.overwrite:
-            to_wav(mp3_file, wav_file)
-            crop_start = min(segment['start_frame'] for segment in segments)
-            crop_end = max(segment['end_frame'] for segment in segments)
-            audio, rate = sf.read(wav_file, start=crop_start, stop=crop_end)
-            sf.write(wav_file, audio, rate, 'PCM_16')
-
-            for segment in segments:
-                segment['start_frame'] -= crop_start
-                segment['end_frame'] -= crop_start
-
-        # write full transcript
-        with open(join(target_dir, f'{chapter_id}.txt'), 'w') as f:
-            book_text = normalize(book_texts[book_id], 'en')
-            first_transcript = segments[0]['transcript']
-            if first_transcript in book_text:
-                text_start = book_text.index(first_transcript)
-            else:
-                text_start = 0
-                # try to find the first transcript by searching the maximum substring from the left
-                for i in range(1, len(first_transcript) - 1):
-                    if first_transcript[:i] not in book_text:
-                        text_start = book_text.index(first_transcript[:i - 1])
-                        break
-
-            last_transcript = segments[-1]['transcript']
-            if last_transcript in book_text:
-                text_end = book_text.index(last_transcript) + len(last_transcript)
-            else:
-                # try to find last transcript by searching maximum substring from the right
-                text_end = len(book_text) - 1
-                for i in range(1, len(last_transcript) - 1):
-                    if last_transcript[-i:] not in book_text:
-                        text_end = book_text.index(last_transcript[-i + 1:]) + i - 1
-                        break
-
-            f.write(book_text[text_start:text_end])
+    # crop/resample audio
+    wav_file = join(target_dir, basename(splitext(mp3_file)[0] + ".wav"))
+    if not exists(wav_file) or args.overwrite:
+        to_wav(mp3_file, wav_file)
+        crop_start = min(segment['start_frame'] for segment in segments)
+        crop_end = max(segment['end_frame'] for segment in segments)
+        audio, rate = sf.read(wav_file, start=crop_start, stop=crop_end)
+        sf.write(wav_file, audio, rate, 'PCM_16')
 
         for segment in segments:
-            subset = chapter_meta[chapter_id]['subset']
-            audio_file = basename(wav_file)
-            start_frame = segment['start_frame']
-            end_frame = segment['end_frame']
-            transcript = segment['transcript']
-            corpus_entries.append([subset, audio_file, start_frame, end_frame, transcript])
+            segment['start_frame'] -= crop_start
+            segment['end_frame'] -= crop_start
 
-    corpus = pd.DataFrame(corpus_entries, columns=['subset', 'audio_file', 'start_frame', 'end_frame', 'transcript'])
-    corpus_index = join(target_dir, 'index.csv')
-    corpus.to_csv(corpus_index)
-    return corpus, corpus_index
+    # write full transcript
+    with open(join(target_dir, f'{chapter_id}.txt'), 'w') as f:
+        book_text = normalize(books[book_id], 'en')
+        first_transcript = segments[0]['transcript']
+        if first_transcript in book_text:
+            text_start = book_text.index(first_transcript)
+        else:
+            text_start = 0
+            # try to find the first transcript by searching the maximum substring from the left
+            for i in range(1, len(first_transcript) - 1):
+                if first_transcript[:i] not in book_text:
+                    text_start = book_text.index(first_transcript[:i - 1])
+                    break
+
+        last_transcript = segments[-1]['transcript']
+        if last_transcript in book_text:
+            text_end = book_text.index(last_transcript) + len(last_transcript)
+        else:
+            # try to find last transcript by searching maximum substring from the right
+            text_end = len(book_text) - 1
+            for i in range(1, len(last_transcript) - 1):
+                if last_transcript[-i:] not in book_text:
+                    text_end = book_text.index(last_transcript[-i + 1:]) + i - 1
+                    break
+
+        f.write(book_text[text_start:text_end])
+
+    corpus_entries = []
+    for segment in segments:
+        subset = chapters[chapter_id]['subset']
+        audio_file = basename(wav_file)
+        start_frame = segment['start_frame']
+        end_frame = segment['end_frame']
+        transcript = segment['transcript']
+        corpus_entries.append([subset, audio_file, start_frame, end_frame, transcript])
+
+    return corpus_entries
 
 
 def collect_chapter_meta(chapters_file):

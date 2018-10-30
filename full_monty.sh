@@ -9,7 +9,7 @@ read gpu
 
 echo "training on ${corpus} corpus using GPU ${gpu} for all training runs!"
 
-if [[ ${gpu} = '' ]]; then
+if [[ ${corpus} = 'ls' ]]; then
     ./lc_cv_en_ds.sh ${gpu}
     ./lc_cv_en_ds_adam.sh ${gpu}
     ./lc_cv_en_ds_dropouts.sh ${gpu}
@@ -19,7 +19,7 @@ if [[ ${gpu} = '' ]]; then
     ./lc_cv_en_timit_adam.sh ${gpu}
     ./lc_cv_en_timit_dropouts.sh ${gpu}
     ./lc_cv_en_timit_dropouts_adam.sh ${gpu}
-else
+elif [[ ${corpus} = 'rl' ]]; then
     ./lc_rl_de_wiki.sh ${gpu}
     ./lc_rl_de_wiki_adam.sh ${gpu}
     ./lc_rl_de_wiki_dropouts.sh ${gpu}
@@ -28,4 +28,6 @@ else
     ./lc_rl_de_wiki_synth_adam.sh ${gpu}
     ./lc_rl_de_wiki_synth_dropouts.sh ${gpu}
     ./lc_rl_de_wiki_synth_dropouts_adam.sh ${gpu}
+else
+    echo "invalid value $corpus for corpus"
 fi

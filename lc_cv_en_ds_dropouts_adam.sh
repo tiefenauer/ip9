@@ -3,8 +3,8 @@ gpu=$1
 if [[ ${gpu} = '' ]]; then
     echo "Enter GPU # to use for training"
     read gpu
-    echo "using GPU #${gpu} for all training runs!"
 fi
+echo "using GPU #${gpu} for all training runs!"
 
 ./learning_curve.sh --run_id lc_cv_en_ds_dropouts_adam \
                     --destination /media/D1/daniel.tiefenauer/_runs/ \

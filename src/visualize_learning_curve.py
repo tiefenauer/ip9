@@ -15,6 +15,7 @@ import pandas as pd
 
 parser = argparse.ArgumentParser()
 parser.add_argument('source_dir', type=str, help='root directory containing output', nargs='?')
+parser.add_argument('-s', '--silent', action='store_true', help='(optional) whether to suppress showing plots')
 args = parser.parse_args()
 
 
@@ -31,7 +32,8 @@ def main(args):
     fig_wer.savefig(join(source_dir, 'wer.png'))
     fig_ler.savefig(join(source_dir, 'ler.png'))
 
-    plt.show()
+    if not args.silent:
+        plt.show()
 
 
 def plot_loss(df_losses):

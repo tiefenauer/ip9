@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+gpu=$1
+if [[ ${gpu} = '' ]]; then
+    echo "Enter GPU # to use for training"
+    read gpu
+    echo "using GPU #${gpu} for all training runs!"
+fi
+
 ./learning_curve.sh --run_id lc_rl_de_wiki_dropouts_adam \
                     --destination /media/D1/daniel.tiefenauer/_runs/ \
                     --train_files /media/D1/daniel.tiefenauer/corpora/readylingua-de/readylingua-de-train.csv \
@@ -9,4 +16,5 @@
                     --epochs 30 \
                     --language de \
                     --dropouts \
-                    --optimizer adam
+                    --optimizer adam \
+                    --gpu ${gpu}

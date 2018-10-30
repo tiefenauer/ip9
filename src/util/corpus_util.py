@@ -84,7 +84,7 @@ def find_file_by_suffix(dir, suffix):
     :param suffix: suffix to use
     :return: name of first found file or None if directory does not contain any file with given suffix
     """
-    return next(iter(join(dir, file) for file in listdir(dir) if file.lower().endswith(suffix.lower())), None)
+    return next(iter(fn for fn in listdir(dir) if fn.lower().endswith(suffix.lower())), None)
 
 
 def filter_corpus_entry_by_subset_prefix(corpus_entries, prefixes):

@@ -170,10 +170,11 @@ def filter_corpus_entry_by_subset_prefix(corpus_entries, prefixes):
 
 def filter_df(df, lang=None, subset=None, numeric=None):
     result = df
-    print(lang, numeric, subset)
     result = result[result.apply(lambda s: subset in ['all', None] or s['subset'].startswith(subset), axis=1)]
-    result = result[result.apply(create_filter('language', lang), axis=1)]
-    result = result[result.apply(create_filter('numeric', numeric), axis=1)]
+    if not result.empty:
+        result = result[result.apply(create_filter('language', lang), axis=1)]
+    if not result.empty:
+        result = result[result.apply(create_filter('numeric', numeric), axis=1)]
     return result
 
 

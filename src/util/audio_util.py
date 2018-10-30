@@ -6,6 +6,7 @@ import subprocess
 import wave
 
 import librosa
+import soundfile as sf
 import numpy as np
 from librosa.effects import time_stretch, pitch_shift
 from pydub import AudioSegment
@@ -41,6 +42,27 @@ def crop_to_segments(audio, rate, segments):
     return audio[crop_start:crop_end], rate, segments
 
 
+def crop_and_resample(audio_src, audio_dst, segments):
+    """
+    Crop audio signal to match a list of segments. Leading audio frames will be cut off (cropped) until the start frame
+    of the first segment. Trailing audio frames will be cut off from the end frame of the last segment.
+    Segment start and end frames will be shifted to make up for the cropping
+    :param audio_src: source audio file (any format)
+    :param audio_dst: target audio file (WAV, PCM 16bit LE, mono)
+    :param segments:
+    :return:
+    """
+    to_wav(audio_src, audio_dst)
+    crop_start = min(segment['start_frame'] for segment in segments)
+    crop_end = max(segment['end_frame'] for segment in segments)
+    audio, rate = sf.read(audio_dst, start=crop_start, stop=crop_end)
+    sf.write(audio_dst, audio, rate, 'PCM_16')
+
+    for segment in segments:
+        segment['start_frame'] -= crop_start
+        segment['end_frame'] -= crop_start
+
+
 def calculate_crop(segments):
     crop_start = min(segment.start_frame for segment in segments)
     crop_end = max(segment.end_frame for segment in segments)
@@ -62,8 +84,8 @@ def write_pcm16_wave(path, audio, sample_rate):
         wf.writeframes(audio)
 
 
-def resample_frame(audio_frame, old_sampling_rate=44100, new_sampling_rate=16000):
-    return int(audio_frame * new_sampling_rate // old_sampling_rate)
+def resample_frame(audio_frame, src_rate=44100, target_rate=16000):
+    return int(audio_frame * target_rate // src_rate)
 
 
 def seconds_to_frame(time_s, sampling_rate=16000):

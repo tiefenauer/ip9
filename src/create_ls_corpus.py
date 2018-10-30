@@ -1,6 +1,5 @@
 # Create ReadyLingua Corpus
 import argparse
-import logging
 import math
 import re
 import sys
@@ -8,24 +7,16 @@ from os import makedirs, walk
 from os.path import exists, splitext, join, basename, pardir, abspath
 
 import pandas as pd
-import soundfile as sf
 from tabulate import tabulate
 from tqdm import tqdm
 from unidecode import unidecode
 
 from constants import LS_SOURCE, LS_TARGET
-from util.audio_util import seconds_to_frame, to_wav
+from util.audio_util import seconds_to_frame, crop_and_resample
 from util.corpus_util import find_file_by_suffix
-from util.log_util import log_setup, create_args_str
+from util.log_util import create_args_str
 from util.string_util import normalize
 
-logfile = 'create_ls_corpus.log'
-log_setup(filename=logfile)
-log = logging.getLogger(__name__)
-
-# -------------------------------------------------------------
-# CLI arguments
-# -------------------------------------------------------------
 parser = argparse.ArgumentParser(description="""Create LibriSpeech corpus from raw files""")
 parser.add_argument('-f', '--file', help='Dummy argument for Jupyter Notebook compatibility')
 parser.add_argument('-s', '--source', default=LS_SOURCE,
@@ -58,16 +49,16 @@ def create_corpus(source_dir, target_dir, max_entries=None):
         print(f'creating target directory {target_dir} as it does not exist yet')
         makedirs(target_dir)
 
-    corpus_entries = create_corpus_entries(source_dir=source_dir, target_dir=target_dir, max_entries=max_entries)
+    entries = create_segments(source_dir=source_dir, target_dir=target_dir, max_entries=max_entries)
 
     columns = ['subset', 'audio_file', 'start_frame', 'end_frame', 'transcript']
-    corpus = pd.DataFrame(corpus_entries, columns=columns)
+    corpus = pd.DataFrame(entries, columns=columns)
     corpus_index = join(target_dir, 'index.csv')
     corpus.to_csv(corpus_index)
     return corpus, corpus_index
 
 
-def create_corpus_entries(source_dir, target_dir, max_entries):
+def create_segments(source_dir, target_dir, max_entries):
     audio_root = join(source_dir, 'audio')
     books_root = join(source_dir, 'books')
 
@@ -79,7 +70,7 @@ def create_corpus_entries(source_dir, target_dir, max_entries):
     directories = [root for root, subdirs, files in walk(audio_root) if not subdirs][:max_entries]
     progress = tqdm(directories, total=min(len(directories), max_entries or math.inf), file=sys.stderr, unit='entries')
 
-    corpus_entries = []
+    segments = []
     for source_dir in progress:
         progress.set_description(f'{source_dir:{100}}')
 
@@ -97,7 +88,7 @@ def create_corpus_entries(source_dir, target_dir, max_entries):
 
         segments_file = find_file_by_suffix(source_dir, f'{speaker_id}-{chapter_id}.seg.txt')
         if not segments_file:
-            log.warning(f'no segmentation found at {segments_file}. Skipping corpus entry...')
+            print(f'no segmentation found at {segments_file}. Skipping corpus entry...')
             break
 
         transcript_file = find_file_by_suffix(source_dir, f'{speaker_id}-{chapter_id}.trans.txt')
@@ -110,25 +101,17 @@ def create_corpus_entries(source_dir, target_dir, max_entries):
             log.warn(f'no MP3 file found at {mp3_file}. Skipping corpus entry...')
             break
 
-        segments = create_segments(segments_file, transcript_file)
+        segment_infos = extract_segment_info(segments_file, transcript_file)
 
         # crop/resample audio
         wav_file = join(target_dir, basename(splitext(mp3_file)[0] + ".wav"))
         if not exists(wav_file) or args.overwrite:
-            to_wav(mp3_file, wav_file)
-            crop_start = min(segment['start_frame'] for segment in segments)
-            crop_end = max(segment['end_frame'] for segment in segments)
-            audio, rate = sf.read(wav_file, start=crop_start, stop=crop_end)
-            sf.write(wav_file, audio, rate, 'PCM_16')
-
-            for segment in segments:
-                segment['start_frame'] -= crop_start
-                segment['end_frame'] -= crop_start
+            crop_and_resample(mp3_file, wav_file, segment_infos)
 
         # write full transcript
         with open(join(target_dir, f'{chapter_id}.txt'), 'w') as f:
             book_text = normalize(book_texts[book_id], 'en')
-            first_transcript = segments[0]['transcript']
+            first_transcript = segment_infos[0]['transcript']
             if first_transcript in book_text:
                 text_start = book_text.index(first_transcript)
             else:
@@ -139,7 +122,7 @@ def create_corpus_entries(source_dir, target_dir, max_entries):
                         text_start = book_text.index(first_transcript[:i - 1])
                         break
 
-            last_transcript = segments[-1]['transcript']
+            last_transcript = segment_infos[-1]['transcript']
             if last_transcript in book_text:
                 text_end = book_text.index(last_transcript) + len(last_transcript)
             else:
@@ -152,15 +135,15 @@ def create_corpus_entries(source_dir, target_dir, max_entries):
 
             f.write(book_text[text_start:text_end])
 
-        for segment in segments:
+        for segment_info in segment_infos:
             subset = chapter_meta[chapter_id]['subset']
             audio_file = basename(wav_file)
-            start_frame = segment['start_frame']
-            end_frame = segment['end_frame']
-            transcript = segment['transcript']
-            corpus_entries.append([subset, audio_file, start_frame, end_frame, transcript])
+            start_frame = segment_info['start_frame']
+            end_frame = segment_info['end_frame']
+            transcript = segment_info['transcript']
+            segments.append([subset, audio_file, start_frame, end_frame, transcript])
 
-    return corpus_entries
+    return segments
 
 
 def collect_chapter_meta(chapters_file):
@@ -213,7 +196,7 @@ def collect_book_texts(books_root):
     return book_texts
 
 
-def create_segments(segments_file, transcript_file):
+def extract_segment_info(segments_file, transcript_file):
     segment_texts = {}
     with open(transcript_file, 'r') as f_transcript:
         for line in f_transcript.readlines():

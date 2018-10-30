@@ -30,7 +30,7 @@ def generate_speech_segments(corpus):
     :param corpus: a corpus
     :return: generator as specified above
     """
-    return ((corpus_entry.subset, seg) for corpus_entry in corpus for seg in corpus_entry.speech_segments_not_numeric)
+    return ((corpus_entry.subset, seg) for corpus_entry in corpus for seg in corpus_entry.segments_not_numeric)
 
 
 def precompute_features(corpus, feature_type, target_file, limit=None):

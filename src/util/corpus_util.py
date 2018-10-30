@@ -8,11 +8,11 @@ from constants import LS_TARGET, RL_TARGET
 from corpus.corpus import ReadyLinguaCorpus, LibriSpeechCorpus
 
 
-def get_corpus(corpus_id):
+def get_corpus(corpus_id, language='en'):
     corpus_root = get_corpus_root(corpus_id)
     corpus_index = join(corpus_root, 'index.csv')
     if corpus_id == 'rl':
-        corpus = ReadyLinguaCorpus(corpus_index)
+        corpus = ReadyLinguaCorpus(corpus_index, language)
     else:
         corpus = LibriSpeechCorpus(corpus_index)
     return corpus

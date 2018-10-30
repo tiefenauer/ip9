@@ -1,34 +1,23 @@
 # Create ReadyLingua Corpus
 import argparse
-import logging
 import math
 import os
 import sys
-import wave
+from collections import Counter
 from os import makedirs, walk
-from os.path import exists, join
+from os.path import exists, join, splitext, basename
 from pathlib import Path
 
+import pandas as pd
 from lxml import etree
-from pydub.utils import mediainfo
 from tqdm import tqdm
 
 from constants import RL_TARGET, RL_SOURCE
-from corpus.corpus import ReadyLinguaCorpus
-from corpus.corpus_entry import CorpusEntry
-from corpus.corpus_segment import Segment
-from util.audio_util import resample_frame, to_wav
+from util.audio_util import resample_frame, crop_and_resample
 from util.corpus_util import find_file_by_suffix
-from util.log_util import log_setup, create_args_str
-from util.string_util import create_filename
+from util.log_util import create_args_str
+from util.string_util import create_filename, normalize
 
-logfile = 'create_rl_corpus.log'
-log_setup(filename=logfile)
-log = logging.getLogger(__name__)
-
-# -------------------------------------------------------------
-# Constants, defaults and env-vars
-# -------------------------------------------------------------
 LANGUAGES = {  # mapping from folder names to language code
     'Deutsch': 'de',
     'Englisch': 'en',
@@ -53,11 +42,6 @@ parser.add_argument('-o', '--overwrite', default=False, action='store_true',
 args = parser.parse_args()
 
 
-# -------------------------------------------------------------
-# Other values
-# -------------------------------------------------------------
-# currently none
-
 def main():
     print(create_args_str(args))
     print(f'Processing files from {args.source_root} and saving them in {args.target_root}')
@@ -65,103 +49,140 @@ def main():
     print(f'Done! Corpus with {len(corpus)} entries saved to {corpus_file}')
 
 
-def create_corpus(source_root, target_root, max_entries=None):
-    if not exists(source_root):
-        print(f"ERROR: Source root {source_root} does not exist!")
+def create_corpus(source_dir, target_dir, max_entries=None):
+    if not exists(source_dir):
+        print(f"ERROR: Source root {source_dir} does not exist!")
         exit(0)
-    if not exists(target_root):
-        makedirs(target_root)
+    if not exists(target_dir):
+        makedirs(target_dir)
 
-    return create_readylingua_corpus(source_root, target_root, max_entries)
+    df_entries = create_entries(source_dir, target_dir, max_entries)
+
+    corpus_index = join(target_dir, 'index.csv')
+    df_entries.to_csv(corpus_index)
+    return df_entries, corpus_index
 
 
-def create_readylingua_corpus(source_root, target_root, max_entries):
+def create_entries(source_dir, target_dir, max_entries):
     """ Iterate through all leaf directories that contain the audio and the alignment files """
-    log.info('Collecting files')
-    corpus_entries = []
+    print('Collecting files')
 
-    directories = [root for root, subdirs, files in walk(source_root)
+    directories = [root for root, subdirs, files in walk(source_dir)
                    if not subdirs  # only include leaf directories
                    and not root.endswith(os.sep + 'old')  # '/old' leaf-folders are considered not reliable
-                   and not os.sep + 'old' + os.sep in root]  # also exclude /old/ non-leaf folders
+                   and not os.sep + 'old' + os.sep in root][:max_entries]  # also exclude /old/ non-leaf folders
 
+    segments = []
     progress = tqdm(directories, total=min(len(directories), max_entries or math.inf), file=sys.stderr, unit='entries')
+    for source_dir in progress:
+        progress.set_description(f'{source_dir:{100}}')
 
-    for raw_path in progress:
-        if max_entries and len(corpus_entries) >= max_entries:
-            break
+        audio_file, transcript_file, segmentation_file, index_file = collect_files(source_dir)
 
-        progress.set_description(f'{raw_path:{100}}')
-
-        files = collect_files(raw_path)
-        if not files:
-            log.warning(f'Skipping directory (not all files found): {raw_path}')
+        if not all(file is not None and len(file.strip()) > 0 for file in
+                   [audio_file, transcript_file, segmentation_file, index_file]):
+            print(f'Skipping directory (not all files found): {source_dir}')
             continue
 
-        parms = collect_corpus_entry_parms(raw_path, files)
+        entry_id, entry_name, language, rate = collect_corpus_entry_parms(source_dir, index_file, audio_file)
 
-        segmentation_file = join(raw_path, files['segmentation'])
-        index_file = join(raw_path, files['index'])
-        transcript_file = join(raw_path, files['text'])
+        segment_infos = extract_segment_info(index_file, transcript_file, rate)
 
-        segments = create_segments(index_file, transcript_file, parms['rate'], parms['language'])
+        wav_file = join(target_dir, entry_id + ".wav")
+        if not exists(wav_file) or args.overwrite:
+            crop_and_resample(audio_file, wav_file, segment_infos)
 
-        # Resample and crop audio
-        audio_dst = join(target_root, parms['id'] + ".wav")
-        if not exists(audio_dst) or args.overwrite:
-            audio_src = join(raw_path, files['audio'])
-            to_wav(audio_src, audio_dst)
-            # audio, rate = librosa.load(audio_src, sr=16000, mono=True)
-            # audio, rate, segments, crop_to_segments(audio, rate, segments)
-            # sf.write(audio_dst, audio, rate, subtype='PCM_16')
-        parms['media_info'] = mediainfo(audio_dst)
+        # write full transcript
+        with open(transcript_file) as f_src, open(join(target_dir, f'{entry_id}.txt'), 'w') as f_dst:
+            transcript = normalize(f_src.read(), language)
+            f_dst.write(transcript)
 
-        # Create corpus entry
-        corpus_entry = CorpusEntry(audio_dst, segments, raw_path=raw_path, parms=parms)
-        corpus_entries.append(corpus_entry)
+        for segment_info in segment_infos:
+            subset = ''
+            audio_file = basename(wav_file)
+            start_frame = segment_info['start_frame']
+            end_frame = segment_info['end_frame']
+            duration = (end_frame - start_frame) / 16000
+            transcript = normalize(segment_info['transcript'], language)
+            segments.append([language, subset, audio_file, start_frame, end_frame, duration, transcript])
 
-    corpus = ReadyLinguaCorpus(corpus_entries)
-    corpus_file = save_corpus(corpus, target_root)
-    return corpus, corpus_file
+    """
+    because ReadyLingua data is not pre-partitioned into train-/dev-/test-data this needs to be done after all
+    corpus entries and segments are known
+    """
+    df = pd.DataFrame(segments, columns=['language', 'subset', 'audio_file', 'start_frame', 'end_frame', 'duration',
+                                         'transcript'])
+    total_audio = df.groupby(['language'])['duration'].sum().to_dict()
+    audio_per_language = Counter()
+
+    for (language, audio_file), df_segments in df.groupby(['language', 'audio_file']):
+        audio_per_language[language] += df_segments['duration'].sum()
+        if audio_per_language[language] > 0.8 * total_audio[language]:
+            subset = 'dev'
+        elif audio_per_language[language] > 0.9 * total_audio[language]:
+            subset = 'test'
+        else:
+            subset = 'train'
+        df.loc[(df['language'].isin([language]) & df['audio_file'].isin([audio_file])), 'subset'] = subset
+
+    return df
 
 
-def collect_files(directory):
-    project_file = find_file_by_suffix(directory, ' - Project.xml')
+def collect_files(source_dir):
+    project_file = find_file_by_suffix(source_dir, ' - Project.xml')
     if project_file:
-        audio_file, text_file, segmentation_file, index_file = parse_project_file(join(directory, project_file))
+        audio_file, transcript_file, segmentation_file, index_file = parse_project_file(join(source_dir, project_file))
     else:
-        audio_file, text_file, segmentation_file, index_file = scan_content_dir(directory)
+        audio_file, transcript_file, segmentation_file, index_file = scan_content_dir(source_dir)
 
-    files = {'audio': audio_file, 'text': text_file, 'segmentation': segmentation_file, 'index': index_file}
+    # check if files are set
+    if not audio_file:
+        print('WARNING: audio file is not set')
+        return None, None, None, None
+    if not transcript_file:
+        print('WARNING: transcript file is not set')
+        return None, None, None, None
+    if not segmentation_file:
+        print('WARNING: segmentation file is not set')
+        return None, None, None, None
+    if not index_file:
+        print('WARNING: index file is not set')
+        return None, None, None, None
 
-    # check if all file names were found
-    for attribute_name, file_name in files.items():
-        if not file_name:
-            log.warning(f'File \'{attribute_name}\' is not set')
-            return None
+    audio_file = join(source_dir, audio_file)
+    transcript_file = join(source_dir, transcript_file)
+    segmentation_file = join(source_dir, segmentation_file)
+    index_file = join(source_dir, index_file)
 
     # check if files exist
-    for file_name in files.values():
-        path = Path(directory, file_name)
-        if not path.exists():
-            log.warning(f'File does not exist: {path}')
-            return None
+    if not exists(audio_file):
+        print(f'WARNING: file {audio_file} does not exist')
+        return None, None, None, None
+    if not exists(transcript_file):
+        print(f'WARNING: file {transcript_file} does not exist')
+        return None, None, None, None
+    if not exists(segmentation_file):
+        print(f'WARNING: file {segmentation_file} does not exist')
+        return None, None, None, None
+    if not exists(index_file):
+        print(f'WARNING: file {index_file} does not exist')
+        return None, None, None, None
 
-    return files
+    return audio_file, transcript_file, segmentation_file, index_file
 
 
 def parse_project_file(project_file):
     doc = etree.parse(project_file)
     for element in ['AudioFiles/Name', 'TextFiles/Name', 'SegmentationFiles/Name', 'IndexFiles/Name']:
         if doc.find(element) is None:
-            log.warning(f'Invalid project file (missing element \'{element}\'): {project_file}')
+            print(f'Invalid project file (missing element \'{element}\'): {project_file}')
             return None, None, None, None
 
     audio_file = doc.find('AudioFiles/Name').text
-    text_file = doc.find('TextFiles/Name').text
+    transcript_file = doc.find('TextFiles/Name').text
     segmentation_file = doc.find('SegmentationFiles/Name').text
     index_file = doc.find('IndexFiles/Name').text
-    return audio_file, text_file, segmentation_file, index_file
+    return audio_file, transcript_file, segmentation_file, index_file
 
 
 def scan_content_dir(content_dir):
@@ -172,30 +193,22 @@ def scan_content_dir(content_dir):
     return audio_file, text_file, segmentation_file, index_file
 
 
-def collect_corpus_entry_parms(directory, files):
-    index_file_path = join(directory, files['index'])
-    audio_file_path = join(directory, files['audio'])
-    folders = directory.split(os.sep)
-
-    # find name and create id
-    corpus_entry_name = folders[-1]
-    corpus_entry_id = create_filename(files['audio'].split('.wav')[0])
+def collect_corpus_entry_parms(directory, index_file, audio_file):
+    entry_name = basename(directory)
+    entry_id = create_filename(splitext(basename(audio_file))[0])
 
     # find language
-    lang = [folder for folder in folders if folder in LANGUAGES.keys()]
+    lang = [folder for folder in directory.split(os.sep) if folder in LANGUAGES.keys()]
     language = LANGUAGES[lang[0]] if lang else 'unknown'
 
     # find sampling rate
-    doc = etree.parse(index_file_path)
+    doc = etree.parse(index_file)
     rate = int(doc.find('SamplingRate').text)
 
-    # find number of channels
-    channels = wave.open(audio_file_path, 'rb').getnchannels()
-
-    return {'id': corpus_entry_id, 'name': corpus_entry_name, 'language': language, 'rate': rate, 'channels': channels}
+    return entry_id, entry_name, language, rate
 
 
-def create_segments(index_file, transcript_file, original_sample_rate, language):
+def extract_segment_info(index_file, transcript_file, sampling_rate):
     # segmentation = collect_segmentation(segmentation_file)
     speeches = collect_speeches(index_file)
     transcript = Path(transcript_file).read_text(encoding='utf-8')
@@ -204,16 +217,13 @@ def create_segments(index_file, transcript_file, original_sample_rate, language)
     segments = []
     for speech_meta in speeches:
         # re-calculate original frame values to resampled values
-        start_frame = resample_frame(speech_meta['start_frame'], old_sampling_rate=original_sample_rate)
-        end_frame = resample_frame(speech_meta['end_frame'], old_sampling_rate=original_sample_rate)
+        start_frame = resample_frame(speech_meta['start_frame'], src_rate=sampling_rate)
+        end_frame = resample_frame(speech_meta['end_frame'], src_rate=sampling_rate)
         start_text = speech_meta['start_text']
         end_text = speech_meta['end_text'] + 1  # komische Indizierung
 
         seg_transcript = transcript[start_text:end_text]
-        segments.append(Segment(start_frame=start_frame,
-                                end_frame=end_frame,
-                                transcript=seg_transcript,
-                                language=language))
+        segments.append({'start_frame': start_frame, 'end_frame': end_frame, 'transcript': seg_transcript})
 
     return segments
 
@@ -239,9 +249,26 @@ def collect_speeches(index_file):
         start_frame = int(element.find('AudioStartPos').text)
         end_frame = int(element.find('AudioEndPos').text)
 
-        speech = {'start_frame': start_frame, 'end_frame': end_frame, 'start_text': start_text, 'end_text': end_text}
+        speech = {'start_frame': start_frame, 'end_frame': end_frame, 'start_text': start_text,
+                  'end_text': end_text}
         speeches.append(speech)
     return sorted(speeches, key=lambda s: s['start_frame'])
+
+
+def get_index_for_audio_length(segments, min_length):
+    """
+    get index to split speech segments at a minimum audio length.Index will not split segments of same corpus entry
+    :param segments: list of speech segments
+    :param min_length: minimum audio length to split
+    :return: first index where total length of speech segments is equal or greater to minimum legnth
+    """
+    audio_length = 0
+    prev_corpus_entry_id = None
+    for ix, segment in enumerate(segments):
+        audio_length += segment.audio_length
+        if audio_length > min_length and segment.corpus_entry.id is not prev_corpus_entry_id:
+            return ix
+        prev_corpus_entry_id = segment.corpus_entry.id
 
 
 if __name__ == '__main__':

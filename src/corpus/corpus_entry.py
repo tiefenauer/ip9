@@ -20,11 +20,11 @@ class CorpusEntry(Audible):
     _audio = None
     _rate = None
 
-    def __init__(self, corpus, wav_name, df_segments):
+    def __init__(self, corpus, subset, wav_name, df_segments):
         self.corpus = corpus
-        self.language = self.corpus.language
-
+        self.subset = subset
         self.wav_name = wav_name
+        self.language = self.corpus.language
 
         self.id = splitext(wav_name)[0]
         self.audio_path = join(self.corpus.root_path, self.wav_name)
@@ -67,11 +67,11 @@ class CorpusEntry(Audible):
         return self.segments[item]
 
     @property
-    def speech_segments_numeric(self):
+    def segments_numeric(self):
         return [segment for segment in self.segments if segment.contains_numeric]
 
     @property
-    def speech_segments_not_numeric(self):
+    def segments_not_numeric(self):
         return [segment for segment in self.segments if not segment.contains_numeric]
 
     def __getstate__(self):
@@ -85,7 +85,7 @@ class CorpusEntry(Audible):
         if not kwargs or 'include_numeric' not in kwargs or kwargs['include_numeric'] is True:
             return self
         _copy = deepcopy(self)
-        segments = self.speech_segments_not_numeric
+        segments = self.segments_not_numeric
         _copy.speech_segments = segments
         _copy.name = self.name + f' ==> only segments without numeric values'
         return _copy
@@ -96,14 +96,14 @@ class CorpusEntry(Audible):
         print('Audio Path: '.ljust(30) + self.wav_name)
         print('')
         total_length = sum(seg.audio_length for seg in self.speech_segments)
-        l_sp_num = sum(seg.audio_length for seg in self.speech_segments_numeric)
-        l_sp_nnum = sum(seg.audio_length for seg in self.speech_segments_not_numeric)
+        l_sp_num = sum(seg.audio_length for seg in self.segments_numeric)
+        l_sp_nnum = sum(seg.audio_length for seg in self.segments_not_numeric)
         table = {
             '#speech segments': (len(self.speech_segments), timedelta(seconds=total_length)),
             '#speech segments with numbers in transcript': (
-                len(self.speech_segments_numeric), timedelta(seconds=l_sp_num)),
+                len(self.segments_numeric), timedelta(seconds=l_sp_num)),
             '#speech segments without numbers in transcript': (
-                len(self.speech_segments_not_numeric), timedelta(seconds=l_sp_nnum))
+                len(self.segments_not_numeric), timedelta(seconds=l_sp_nnum))
         }
         headers = ['# ', 'hh:mm:ss']
         print(tabulate([(k,) + v for k, v in table.items()], headers=headers))

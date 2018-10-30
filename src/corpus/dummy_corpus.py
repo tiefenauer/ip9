@@ -16,7 +16,7 @@ class DummyCorpus(object):
 
     def __iter__(self):
         for repeat_sample in chain.from_iterable(repeat(self.repeat_samples, self.times)):
-            segments_with_text = [speech for speech in repeat_sample.speech_segments_not_numeric
+            segments_with_text = [speech for speech in repeat_sample.segments_not_numeric
                                   if speech.text and len(speech.audio) > 0]
             if self.num_segments:
                 segments_with_text = segments_with_text[:self.num_segments]

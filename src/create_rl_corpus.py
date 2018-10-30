@@ -8,17 +8,15 @@ from os import makedirs, walk
 from os.path import exists, join, splitext, basename
 from pathlib import Path
 
+import pandas as pd
 from lxml import etree
 from tqdm import tqdm
 
 from constants import RL_TARGET, RL_SOURCE
-from corpus.corpus import ReadyLinguaCorpus
-from corpus.corpus_entry import CorpusEntry
-from corpus.corpus_segment import Segment
 from util.audio_util import resample_frame, crop_and_resample
-from util.corpus_util import find_file_by_suffix, save_corpus
+from util.corpus_util import find_file_by_suffix
 from util.log_util import create_args_str
-from util.string_util import create_filename, normalize
+from util.string_util import create_filename, normalize, contains_numeric
 
 LANGUAGES = {  # mapping from folder names to language code
     'Deutsch': 'de',
@@ -58,14 +56,14 @@ def create_corpus(source_dir, target_dir, max_entries=None):
     if not exists(target_dir):
         makedirs(target_dir)
 
-    entries = create_entries(source_dir, target_dir, max_entries)
-    corpus = ReadyLinguaCorpus(entries)
-    corpus_index = save_corpus(corpus, target_dir)
+    df = create_segments(source_dir, target_dir, max_entries)
+    index_file = join(target_dir, 'index.csv')
+    df.to_csv(index_file)
 
-    return corpus, corpus_index
+    return df, index_file
 
 
-def create_entries(source_dir, target_dir, max_entries):
+def create_segments(source_dir, target_dir, max_entries):
     """ Iterate through all leaf directories that contain the audio and the alignment files """
     print('Collecting files')
 
@@ -74,8 +72,7 @@ def create_entries(source_dir, target_dir, max_entries):
                    and not root.endswith(os.sep + 'old')  # '/old' leaf-folders are considered not reliable
                    and not os.sep + 'old' + os.sep in root][:max_entries]  # also exclude /old/ non-leaf folders
 
-    entries = []
-    total_audio = Counter()
+    segments = []
     progress = tqdm(directories, total=min(len(directories), max_entries or math.inf), file=sys.stderr, unit='entries')
     for source_dir in progress:
         progress.set_description(f'{source_dir:{100}}')
@@ -87,42 +84,50 @@ def create_entries(source_dir, target_dir, max_entries):
             print(f'Skipping directory (not all files found): {source_dir}')
             continue
 
-        entry_id, entry_name, language, rate = collect_corpus_entry_parms(source_dir, index_file, audio_file)
+        entry_id, entry_name, lang, rate = collect_corpus_entry_parms(source_dir, index_file, audio_file)
 
-        segments = create_segments(index_file, transcript_file, rate, language)
+        segment_infos = extract_segment_infos(index_file, transcript_file, rate, lang)
 
         wav_file = join(target_dir, entry_id + ".wav")
         if not exists(wav_file) or args.overwrite:
-            crop_and_resample(audio_file, wav_file, segments)
+            crop_and_resample(audio_file, wav_file, segment_infos)
 
         # write full transcript
         with open(transcript_file) as f_src, open(join(target_dir, f'{entry_id}.txt'), 'w') as f_dst:
-            transcript = normalize(f_src.read(), language)
+            transcript = normalize(f_src.read(), lang)
             f_dst.write(transcript)
 
-        # Create corpus entry
-        audio_file = basename(wav_file)
-        entry = CorpusEntry(subset='n/a', language=language, wav_name=audio_file, segments=segments)
-        entries.append(entry)
+        # create segment
+        for segment_info in segment_infos:
+            subset = 'n/a'  # must be set after all segments have been processed
+            audio_file = basename(wav_file)
+            start_frame = segment_info['start_frame']
+            end_frame = segment_info['end_frame']
+            transcript = segment_info['transcript']
+            duration = (end_frame - start_frame) / rate
+            numeric = contains_numeric(transcript)
+            segments.append([entry_id, subset, lang, audio_file, start_frame, end_frame, duration, transcript, numeric])
 
-        total_audio[language] += sum((s.end_frame - s.start_frame) / 16000 for s in segments)
+    columns = ['entry_id', 'subset', 'language', 'audio_file', 'start_frame', 'end_frame', 'duration', 'transcript', 'numeric']
+    df = pd.DataFrame(segments, columns=columns)
 
     """
     because ReadyLingua data is not pre-partitioned into train-/dev-/test-data this needs to be done after all
     corpus entries and segments are known
     """
+    total_audio = df.groupby('language')['duration'].sum().to_dict()
     audio_per_language = Counter()
-    for entry in entries:
-        if audio_per_language[entry.language] > 0.9 * total_audio[entry.language]:
+    for (id, lang), df_entry in df.groupby(['entry_id', 'language']):
+        if audio_per_language[lang] > 0.9 * total_audio[lang]:
             subset = 'test'
-        elif audio_per_language[entry.language] > 0.8 * total_audio[entry.language]:
+        elif audio_per_language[lang] > 0.8 * total_audio[lang]:
             subset = 'dev'
         else:
             subset = 'train'
-        entry.subset = subset
-        audio_per_language[entry.language] += sum((s.end_frame - s.start_frame) / 16000 for s in entry.segments)
+        df.loc[df['entry_id'] == id, 'subset'] = subset
+        audio_per_language[lang] += df_entry['duration'].sum()
 
-    return entries
+    return df
 
 
 def collect_files(source_dir):
@@ -205,24 +210,24 @@ def collect_corpus_entry_parms(directory, index_file, audio_file):
     return entry_id, entry_name, language, rate
 
 
-def create_segments(index_file, transcript_file, sampling_rate, language):
+def extract_segment_infos(index_file, transcript_file, src_rate, language):
     # segmentation = collect_segmentation(segmentation_file)
     speeches = collect_speeches(index_file)
-    full_transcript = Path(transcript_file).read_text(encoding='utf-8')
+    transcript = Path(transcript_file).read_text(encoding='utf-8')
 
     # merge information from index file (speech parts) with segmentation information
-    segments = []
+    segment_infos = []
     for speech_meta in speeches:
-        # re-calculate original frame values to resampled values
-        start_frame = resample_frame(speech_meta['start_frame'], src_rate=sampling_rate)
-        end_frame = resample_frame(speech_meta['end_frame'], src_rate=sampling_rate)
         start_text = speech_meta['start_text']
         end_text = speech_meta['end_text'] + 1  # komische Indizierung
-        transcript = normalize(full_transcript[start_text:end_text], language)
 
-        segments.append(Segment(start_frame=start_frame, end_frame=end_frame, transcript=transcript, language=language))
+        segment_infos.append({
+            'start_frame': resample_frame(speech_meta['start_frame'], src_rate=src_rate),
+            'end_frame': resample_frame(speech_meta['end_frame'], src_rate=src_rate),
+            'transcript': normalize(transcript[start_text:end_text], language)
+        })
 
-    return segments
+    return segment_infos
 
 
 def collect_segmentation(segmentation_file):

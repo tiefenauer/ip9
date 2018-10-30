@@ -1,12 +1,13 @@
 from copy import deepcopy
 from datetime import timedelta
-from os.path import join, splitext
+from os.path import join
 from pathlib import Path
 
 import soundfile as sf
 from tabulate import tabulate
 
 from corpus.audible import Audible
+from corpus.corpus_segment import Segment
 
 
 class CorpusEntry(Audible):
@@ -18,17 +19,21 @@ class CorpusEntry(Audible):
     _audio = None
     _rate = 16000
 
-    def __init__(self, subset, language, wav_name, segments):
+    def __init__(self, entry_id, corpus, subset, language, wav_name, df_segments):
+        self.id = entry_id
+        self.corpus = corpus
         self.subset = subset
         self.language = language
         self.wav_name = wav_name
-        self.corpus = None
+        self.segments = self.create_segments_from_df(df_segments)
 
-        self.id = splitext(wav_name)[0]
-
-        for segment in segments:
-            segment.corpus_entry = self
-        self.segments = segments
+    def create_segments_from_df(self, df_segments):
+        segments = []
+        df_segments = df_segments.loc[:,('start_frame', 'end_frame', 'duration', 'transcript', 'language', 'numeric')]
+        for i, (start_frame, end_frame, duration, transcript, language, numeric) in df_segments.iterrows():
+            segment = Segment(self, start_frame, end_frame, duration, transcript, language, numeric)
+            segments.append(segment)
+        return segments
 
     @property
     def audio_path(self):

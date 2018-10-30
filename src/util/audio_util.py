@@ -29,14 +29,14 @@ def crop_and_resample(audio_src, audio_dst, segments):
     :return:
     """
     to_wav(audio_src, audio_dst)
-    crop_start = min(segment.start_frame for segment in segments)
-    crop_end = max(segment.end_frame for segment in segments)
+    crop_start = min(segment['start_frame'] for segment in segments)
+    crop_end = max(segment['end_frame'] for segment in segments)
     audio, rate = sf.read(audio_dst, start=crop_start, stop=crop_end)
     sf.write(audio_dst, audio, rate, 'PCM_16')
 
     for segment in segments:
-        segment.start_frame -= crop_start
-        segment.end_frame -= crop_start
+        segment['start_frame'] -= crop_start
+        segment['end_frame'] -= crop_start
 
 
 def calculate_crop(segments):

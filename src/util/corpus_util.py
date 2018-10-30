@@ -1,46 +1,44 @@
 """
 Utility functions to work with corpora
 """
-import gzip
-import pickle
-from datetime import datetime
 from os import listdir
 from os.path import join, isdir, abspath, exists, isfile, pardir
 
+import pandas as pd
+
 from constants import LS_TARGET, RL_TARGET
+from corpus.corpus import ReadyLinguaCorpus, LibriSpeechCorpus
 
 
-def get_corpus(corpus_id_or_path, lang=None):
-    corpus_root = get_corpus_root(corpus_id_or_path)
-    corpus = load_corpus(corpus_root)
-    corpus.root_path = corpus_root
-    if lang:
-        corpus = corpus(languages=[lang])
-    return corpus
+def get_corpus(corpus_id_or_file):
+    corpus_root = get_corpus_root(corpus_id_or_file)
+    df_path = join(corpus_root, 'index.csv')
+    if corpus_id_or_file == 'rl':
+        return ReadyLinguaCorpus(df_path)
+    return LibriSpeechCorpus(df_path)
 
 
 def get_corpus_root(corpus_id_or_path):
     if corpus_id_or_path in ['ls', 'rl']:
-        return get_corpus_root_by_id(corpus_id_or_path)
-    return get_corpus_root_by_path(corpus_id_or_path)
+        return get_corpus_file_by_id(corpus_id_or_path)
+    return get_corpus_path(corpus_id_or_path)
 
 
-def get_corpus_root_by_id(corpus_id):
-    env_mapping = {'rl': {'name': 'RL_TARGET', 'value': RL_TARGET}, 'ls': {'name': 'LS_TARGET', 'value': LS_TARGET}}
-    if corpus_id not in env_mapping.keys():
+def get_corpus_file_by_id(corpus_id):
+    id_map = {'rl': {'name': 'RL_TARGET', 'value': RL_TARGET}, 'ls': {'name': 'LS_TARGET', 'value': LS_TARGET}}
+    if corpus_id not in id_map.keys():
         raise ValueError(f'unknown corpus id: {corpus_id}')
-    env_var = env_mapping[corpus_id]
-    env_var_name = env_var['name']
-    corpus_root = env_var['value']
-    if not corpus_root:
-        raise ValueError(f'corpus with id {corpus_id} requested but environment variable {env_var_name} not set')
-    if not isdir(corpus_root) and not isfile(corpus_root):
+    var_name = id_map[corpus_id]['name']
+    var_value = id_map[corpus_id]['value']
+    if not var_value:
+        raise ValueError(f'corpus with id {corpus_id} requested but environment variable {var_name} not set')
+    if not isdir(var_value) and not isfile(var_value):
         raise ValueError(
-            f'corpus with id {corpus_id} requested but entironment variable {env_var_name} points to an invalid location at {env_var_name}')
-    return get_corpus_root_by_path(corpus_root)
+            f'corpus with id {corpus_id} requested but variable {var_name} points to an invalid location at {var_name}')
+    return get_corpus_path(var_value)
 
 
-def get_corpus_root_by_path(corpus_path):
+def get_corpus_path(corpus_path):
     if isdir(corpus_path) and not exists(corpus_path):
         raise ValueError(f'corpus from directory path requested but directory {corpus_path} does not exist!')
     if isfile(corpus_path):
@@ -48,33 +46,6 @@ def get_corpus_root_by_path(corpus_path):
             raise ValueError(f'corpus from file path requested but file {corpus_path} does not exist!')
         corpus_path = pardir(corpus_path)
     return abspath(corpus_path)
-
-
-def load_corpus(corpus_root):
-    corpus_file = join(corpus_root, 'index')
-    print(f'loading {corpus_file} ...')
-    if corpus_file.endswith('.gz'):
-        with gzip.open(corpus_file, 'rb') as corpus_f:
-            corpus = pickle.loads(corpus_f.read())
-    else:
-        with open(corpus_file, 'rb') as corpus_f:
-            corpus = pickle.load(corpus_f)
-    print(f'...done! Loaded {corpus.name}: {len(corpus)} corpus entries')
-    return corpus
-
-
-def save_corpus(corpus, target_root, gzip=False):
-    corpus.root_path = target_root
-    corpus.creation_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    corpus_file = join(target_root, 'index')
-    if gzip:
-        corpus_file += '.gz'
-        with gzip.open(corpus_file, 'wb') as f:
-            f.write(pickle.dumps(corpus))
-    else:
-        with open(corpus_file, 'wb') as f:
-            pickle.dump(corpus, f)
-    return corpus_file
 
 
 def find_file_by_suffix(dir, suffix):

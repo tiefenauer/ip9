@@ -16,7 +16,7 @@ class CorpusEntry(Audible):
 
     # cache audio and rate
     _audio = None
-    _rate = None
+    _rate = 16000
 
     def __init__(self, subset, language, wav_name, segments):
         self.subset = subset
@@ -54,7 +54,7 @@ class CorpusEntry(Audible):
 
     @property
     def audio_length(self):
-        return len(self.audio) / float(self.rate)
+        return sum([s.audio_length for s in self.segments])
 
     @property
     def transcript(self):

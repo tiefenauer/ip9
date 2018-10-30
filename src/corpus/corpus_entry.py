@@ -4,11 +4,9 @@ from os.path import join, splitext
 from pathlib import Path
 
 import soundfile as sf
-from pydub.utils import mediainfo
 from tabulate import tabulate
 
 from corpus.audible import Audible
-from corpus.corpus_segment import Segment
 
 
 class CorpusEntry(Audible):
@@ -20,30 +18,25 @@ class CorpusEntry(Audible):
     _audio = None
     _rate = None
 
-    def __init__(self, corpus, subset, wav_name, df_segments):
-        self.corpus = corpus
+    def __init__(self, subset, language, wav_name, segments):
         self.subset = subset
+        self.language = language
         self.wav_name = wav_name
-        self.language = self.corpus.language
+        self.corpus = None
 
         self.id = splitext(wav_name)[0]
-        self.audio_path = join(self.corpus.root_path, self.wav_name)
-        self.transcript_path = join(self.corpus.root_path, self.id + '.txt')
 
-        self.media_info = mediainfo(self.audio_path)
-        self.segments = self.create_segments(df_segments)
-
-    def create_segments(self, df):
-        return [Segment(language=self.language,
-                        start_frame=row['start_frame'],
-                        end_frame=row['end_frame'],
-                        transcript=row['transcript'],
-                        corpus_entry=self)
-                for (_, row) in df.iterrows()]
+        for segment in segments:
+            segment.corpus_entry = self
+        self.segments = segments
 
     @property
-    def transcript(self):
-        return Path(self.transcript_path).read_text()
+    def audio_path(self):
+        return join(self.corpus.root_path, self.wav_name)
+
+    @property
+    def transcript_path(self):
+        return join(self.corpus.root_path, self.id + '.txt')
 
     @property
     def audio(self):
@@ -58,6 +51,14 @@ class CorpusEntry(Audible):
             return self._rate
         self._audio, self._rate = sf.read(self.audio_path, dtype='int16')
         return self._rate
+
+    @property
+    def audio_length(self):
+        return len(self.audio) / float(self.rate)
+
+    @property
+    def transcript(self):
+        return Path(self.transcript_path).read_text()
 
     def __iter__(self):
         for segment in self.segments:
@@ -86,20 +87,23 @@ class CorpusEntry(Audible):
             return self
         _copy = deepcopy(self)
         segments = self.segments_not_numeric
-        _copy.speech_segments = segments
+        _copy.segments = segments
         _copy.name = self.name + f' ==> only segments without numeric values'
         return _copy
 
     def summary(self):
         print('')
         print('Corpus Entry: '.ljust(30) + f'{self.name} (id={self.id})')
+        print(f'subset: {self.subset}')
+        print(f'language: {self.language}')
         print('Audio Path: '.ljust(30) + self.wav_name)
+        print(f'duration: {timedelta(seconds=self.audio_length)}')
         print('')
-        total_length = sum(seg.audio_length for seg in self.speech_segments)
+        total_length = sum(seg.audio_length for seg in self.segments)
         l_sp_num = sum(seg.audio_length for seg in self.segments_numeric)
         l_sp_nnum = sum(seg.audio_length for seg in self.segments_not_numeric)
         table = {
-            '#speech segments': (len(self.speech_segments), timedelta(seconds=total_length)),
+            '#speech segments': (len(self.segments), timedelta(seconds=total_length)),
             '#speech segments with numbers in transcript': (
                 len(self.segments_numeric), timedelta(seconds=l_sp_num)),
             '#speech segments without numbers in transcript': (
@@ -108,12 +112,3 @@ class CorpusEntry(Audible):
         headers = ['# ', 'hh:mm:ss']
         print(tabulate([(k,) + v for k, v in table.items()], headers=headers))
         print('')
-        print(f'duration: {timedelta(seconds=self.audio_length)}')
-        print(f'raw path: {self.raw_path}')
-        print(f'raw sampling rate: {self.original_sampling_rate}')
-        print(f'raw #channels: {self.original_channels}')
-        print(f'language: {self.language}')
-        print(f'chapter ID: {self.chapter_id}')
-        print(f'speaker_ID: {self.speaker_id}')
-        print(f'subset membership: {self.subset}')
-        print(f'media info: {self.media_info}')

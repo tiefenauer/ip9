@@ -6,8 +6,8 @@ import subprocess
 import wave
 
 import librosa
-import soundfile as sf
 import numpy as np
+import soundfile as sf
 from librosa.effects import time_stretch, pitch_shift
 from pydub import AudioSegment
 
@@ -16,30 +16,6 @@ log = logging.getLogger(__name__)
 
 def to_wav(mp3_path, wav_path):
     subprocess.call(['sox', mp3_path, '-r', '16000', '-b', '16', '-c', '1', wav_path])
-
-
-def crop_to_segments(audio, rate, segments):
-    """
-    Crop audio signal to match a list of segments. Leading audio frames will be cut off (cropped) until the start frame
-    of the first segment. Trailing audio frames will be cut off from the end frame of the last segment.
-    Segment start and end frames will be shifted to make up for the cropping
-
-    :param audio: numpy ndarray
-        audio signal as numpy array
-    :param rate: int
-        sampling rate
-    :param segments: [corpus.corpus_segment.Segment]
-        segments to use for cropping (no sorting needed)
-    :return: cropped audio, sampling rate and shifted segments
-    """
-    crop_start = min(segment.start_frame for segment in segments)
-    crop_end = max(segment.end_frame for segment in segments)
-
-    for segment in segments:
-        segment.start_frame -= crop_start
-        segment.end_frame -= crop_start
-
-    return audio[crop_start:crop_end], rate, segments
 
 
 def crop_and_resample(audio_src, audio_dst, segments):
@@ -53,14 +29,14 @@ def crop_and_resample(audio_src, audio_dst, segments):
     :return:
     """
     to_wav(audio_src, audio_dst)
-    crop_start = min(segment['start_frame'] for segment in segments)
-    crop_end = max(segment['end_frame'] for segment in segments)
+    crop_start = min(segment.start_frame for segment in segments)
+    crop_end = max(segment.end_frame for segment in segments)
     audio, rate = sf.read(audio_dst, start=crop_start, stop=crop_end)
     sf.write(audio_dst, audio, rate, 'PCM_16')
 
     for segment in segments:
-        segment['start_frame'] -= crop_start
-        segment['end_frame'] -= crop_start
+        segment.start_frame -= crop_start
+        segment.end_frame -= crop_start
 
 
 def calculate_crop(segments):

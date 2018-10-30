@@ -4,7 +4,7 @@ from python_speech_features import mfcc
 
 from corpus.audible import Audible
 from util.audio_util import ms_to_frames
-from util.string_util import normalize, contains_numeric
+from util.string_util import contains_numeric
 
 
 class Segment(Audible):
@@ -17,12 +17,12 @@ class Segment(Audible):
     _mel_specgram = None
     _mfcc = None
 
-    def __init__(self, language, start_frame, end_frame, transcript, corpus_entry):
+    def __init__(self, start_frame, end_frame, transcript, language):
         self.language = language
         self.start_frame = start_frame
         self.end_frame = end_frame
         self.transcript = transcript.strip() if transcript else ''
-        self.corpus_entry = corpus_entry
+        self.corpus_entry = None  # must be set by enclosing corpus entry
 
     @property
     def contains_numeric(self):
@@ -45,8 +45,7 @@ class Segment(Audible):
 
     @property
     def audio_length(self):
-        sample_rate = int(float(self.corpus_entry.media_info['sample_rate']))
-        return (self.end_frame - self.start_frame) / sample_rate
+        return (self.end_frame - self.start_frame) / self.corpus_entry.rate
 
     def audio_features(self, feature_type):
         if feature_type == 'mfcc':

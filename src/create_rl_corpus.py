@@ -208,7 +208,7 @@ def collect_corpus_entry_parms(directory, index_file, audio_file):
 def create_segments(index_file, transcript_file, sampling_rate, language):
     # segmentation = collect_segmentation(segmentation_file)
     speeches = collect_speeches(index_file)
-    transcript = Path(transcript_file).read_text(encoding='utf-8')
+    full_transcript = Path(transcript_file).read_text(encoding='utf-8')
 
     # merge information from index file (speech parts) with segmentation information
     segments = []
@@ -218,7 +218,7 @@ def create_segments(index_file, transcript_file, sampling_rate, language):
         end_frame = resample_frame(speech_meta['end_frame'], src_rate=sampling_rate)
         start_text = speech_meta['start_text']
         end_text = speech_meta['end_text'] + 1  # komische Indizierung
-        transcript = normalize(transcript[start_text:end_text], language)
+        transcript = normalize(full_transcript[start_text:end_text], language)
 
         segments.append(Segment(start_frame=start_frame, end_frame=end_frame, transcript=transcript, language=language))
 

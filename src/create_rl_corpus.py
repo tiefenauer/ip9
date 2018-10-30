@@ -26,9 +26,6 @@ LANGUAGES = {  # mapping from folder names to language code
     'Spanisch': 'es'
 }
 
-# -------------------------------------------------------------
-# CLI arguments
-# -------------------------------------------------------------
 parser = argparse.ArgumentParser(description="""Create ReadyLingua corpus from raw files""")
 parser.add_argument('-f', '--file', help='Dummy argument for Jupyter Notebook compatibility')
 parser.add_argument('-s', '--source_root', default=RL_SOURCE,
@@ -104,7 +101,7 @@ def create_segments(source_dir, target_dir, max_entries):
             start_frame = segment_info['start_frame']
             end_frame = segment_info['end_frame']
             transcript = segment_info['transcript']
-            duration = (end_frame - start_frame) / rate
+            duration = (end_frame - start_frame) / 16000
             numeric = contains_numeric(transcript)
             segments.append([entry_id, subset, lang, audio_file, start_frame, end_frame, duration, transcript, numeric])
 

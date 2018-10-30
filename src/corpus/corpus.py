@@ -1,6 +1,7 @@
 from abc import ABC
 from copy import deepcopy
 from datetime import timedelta
+from itertools import product
 from os.path import getmtime
 from time import ctime
 
@@ -109,42 +110,35 @@ Creation date: {ctime(self.creation_date)}
         """)
         index = pd.MultiIndex.from_product([
             self.languages + ['all'],
-            ['numeric', 'non-numeric', 'total'],
+            ['numeric', 'non-numeric', 'all'],
             ['samples', 'audio', 'Ø audio']
         ])
         columns = ['train', 'dev', 'test', 'total']
         df_stats = pd.DataFrame(index=index, columns=columns)
 
         def abs_perc_string(seconds, total_seconds):
-            percent = seconds / total_seconds if total_seconds > 0 else 0
+            percent = 100 * seconds / total_seconds if total_seconds > 0 else 0
             return f'{timedelta(seconds=seconds)} ({percent:.2f}%)'
 
-        for lang in self.languages:
+        num_map = {True: 'numeric', False: 'non-numeric', None: 'all'}
+        for lang, num, in product(self.languages + ['all'], num_map.keys()):
 
-            for subset in columns:
-                df_sub = filter_df(self.df, lang=lang, subset=subset)
-                df_sub_num = filter_df(df_sub, numeric=True)
-                df_sub_nnum = filter_df(df_sub, numeric=False)
+            for subset in ['train', 'dev', 'test']:
+                df_total = filter_df(self.df, lang=lang, subset=None, numeric=num)
+                df_sub = filter_df(self.df, lang=lang, subset=subset, numeric=num)
 
-                df_stats.loc[(lang, 'numeric', 'samples'), subset] = abs_perc_string(len(df_sub_num), len(df_sub))
-                df_stats.loc[(lang, 'non-numeric', 'samples'), subset] = abs_perc_string(len(df_sub_nnum), len(df_sub))
-                df_stats.loc[(lang, 'total', 'samples'), subset] = len(df_sub)
+                df_stats.loc[(lang, num_map[num], 'samples'), subset] = abs_perc_string(len(df_sub), len(df_total))
+                df_stats.loc[(lang, num_map[num], 'samples'), 'total'] = abs_perc_string(len(df_total), len(df_total))
 
-                s_num_sum = df_sub_num['duration'].sum()
-                s_nnum_sum = df_sub_nnum['duration'].sum()
-                s_all_sum = df_sub['duration'].sum()
+                s_num_sum = df_sub['duration'].sum()
+                s_tot_sum = df_total['duration'].sum()
+                df_stats.loc[(lang, num_map[num], 'audio'), subset] = abs_perc_string(s_num_sum, s_tot_sum)
+                df_stats.loc[(lang, num_map[num], 'audio'), 'total'] = abs_perc_string(s_tot_sum, s_tot_sum)
 
-                df_stats.loc[(lang, 'numeric', 'audio'), subset] = abs_perc_string(s_num_sum, s_all_sum)
-                df_stats.loc[(lang, 'non-numeric', 'audio'), subset] = abs_perc_string(s_nnum_sum, s_all_sum)
-                df_stats.loc[(lang, 'total', 'audio'), subset] = timedelta(seconds=s_all_sum)
-
-                s_num_mean = df_sub_num['duration'].mean() if df_sub_num['duration'].any() else 0
-                s_nnum_mean = df_sub_nnum['duration'].mean() if df_sub_num['duration'].any() else 0
-                s_all_mean = df_sub['duration'].mean() if df_sub_num['duration'].any() else 0
-
-                df_stats.loc[(lang, 'numeric', 'Ø audio'), subset] = abs_perc_string(s_num_mean, s_all_mean)
-                df_stats.loc[(lang, 'non-numeric', 'Ø audio'), subset] = abs_perc_string(s_nnum_mean, s_all_mean)
-                df_stats.loc[(lang, 'total', 'Ø audio'), subset] = timedelta(seconds=s_all_mean)
+                s_num_mean = df_sub['duration'].mean() if df_sub['duration'].any() else 0
+                s_tot_mean = df_total['duration'].mean() if df_total['duration'].any() else 0
+                df_stats.loc[(lang, num_map[num], 'Ø audio'), subset] = timedelta(seconds=s_num_mean)
+                df_stats.loc[(lang, num_map[num], 'Ø audio'), 'total'] = timedelta(seconds=s_tot_mean)
 
         with pd.option_context('display.max_rows', None,
                                'display.max_columns', None,
@@ -176,11 +170,12 @@ def filter_corpus_entry_by_subset_prefix(corpus_entries, prefixes):
 
 def filter_df(df, lang=None, subset=None, numeric=None):
     result = df
-    result = result[result.apply(lambda s: subset in [None, 'total'] or s['subset'].startswith(subset), axis=1)]
+    print(lang, numeric, subset)
+    result = result[result.apply(lambda s: subset in ['all', None] or s['subset'].startswith(subset), axis=1)]
     result = result[result.apply(create_filter('language', lang), axis=1)]
     result = result[result.apply(create_filter('numeric', numeric), axis=1)]
     return result
 
 
 def create_filter(key, value):
-    return lambda s: value is None or s[key] is value
+    return lambda s: value in ['all', None] or s[key] is value

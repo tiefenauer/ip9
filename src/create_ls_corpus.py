@@ -78,27 +78,27 @@ def create_segments(source_dir, target_dir, max_entries):
 
         if chapter_id not in chapter_meta:
             print(f'WARNING: no chapter information for chapter {chapter_id}. Skipping corpus entry...')
-            break
+            continue
 
         book_id = chapter_meta[chapter_id]['book_id']
         if not book_id:
             print(f'WARNING: no book text available for chapter {chapter_id}. Skipping corpus entry...')
-            break
+            continue
 
         segments_file = find_file_by_suffix(source_dir, f'{speaker_id}-{chapter_id}.seg.txt')
         if not segments_file:
             print(f'no segmentation found at {segments_file}. Skipping corpus entry...')
-            break
+            continue
 
         transcript_file = find_file_by_suffix(source_dir, f'{speaker_id}-{chapter_id}.trans.txt')
         if not transcript_file:
             print(f'no transcript found at {transcript_file}. Skipping corpus entry...')
-            break
+            continue
 
         mp3_file = find_file_by_suffix(source_dir, f'{chapter_id}.mp3')
         if not mp3_file:
             print(f'no MP3 file found at {mp3_file}. Skipping corpus entry...')
-            break
+            continue
 
         segment_infos = extract_segment_infos(segments_file, transcript_file)
 

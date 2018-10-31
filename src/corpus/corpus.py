@@ -108,39 +108,66 @@ File:          {self.df_path}
 Creation date: {ctime(self.creation_date)}
 # entries:     {len(self.entries)}    
         """)
-        index = pd.MultiIndex.from_product([
-            self.languages + ['all'],
-            ['numeric', 'non-numeric', 'all'],
-            ['samples', 'audio', 'Ø audio']
-        ])
-        columns = ['train', 'dev', 'test', 'total']
-        df_stats = pd.DataFrame(index=index, columns=columns)
 
         def abs_perc_string(value, total, unit=None):
             percent = 100 * value / total if total > 0 else 0
             value = timedelta(seconds=value) if unit == 's' else value
             return f'{value} ({percent:.2f}%)'
 
-        num_map = {True: 'numeric', False: 'non-numeric', None: 'all'}
-        for lang, num, in product(self.languages + ['all'], num_map.keys()):
-            df_total = filter_df(self.df, lang=lang, subset=None, numeric=num)
-            s_tot_sum = df_total['duration'].sum()
+        def create_rows(df_total):
+            df_train = df_total[df_total['subset'] == 'train']
+            df_dev = df_total[df_total['subset'] == 'dev']
+            df_test = df_total[df_total['subset'] == 'test']
+
+            n_all = abs_perc_string(len(df_total), len(df_total))
+            n_train = abs_perc_string(len(df_train), len(df_total))
+            n_dev = abs_perc_string(len(df_dev), len(df_total))
+            n_test = abs_perc_string(len(df_test), len(df_total))
+
+            s_all_sum = df_total['duration'].sum()
+            s_train_sum = df_train['duration'].sum()
+            s_dev_sum = df_dev['duration'].sum()
+            s_test_sum = df_test['duration'].sum()
+
+            audio_all = abs_perc_string(s_all_sum, s_all_sum, unit='s')
+            audio_train = abs_perc_string(s_train_sum, s_all_sum, unit='s')
+            audio_dev = abs_perc_string(s_dev_sum, s_all_sum, unit='s')
+            audio_test = abs_perc_string(s_test_sum, s_all_sum, unit='s')
+
             s_tot_mean = df_total['duration'].mean() if df_total['duration'].any() else 0
+            s_train_mean = df_train['duration'].mean() if df_train['duration'].any() else 0
+            s_dev_mean = df_dev['duration'].mean() if df_dev['duration'].any() else 0
+            s_test_mean = df_test['duration'].mean() if df_test['duration'].any() else 0
 
-            df_stats.loc[(lang, num_map[num], 'samples'), 'total'] = abs_perc_string(len(df_total), len(df_total))
-            df_stats.loc[(lang, num_map[num], 'audio'), 'total'] = abs_perc_string(s_tot_sum, s_tot_sum, unit='s')
-            df_stats.loc[(lang, num_map[num], 'Ø audio'), 'total'] = timedelta(seconds=s_tot_mean)
+            audio_all_av = timedelta(seconds=s_tot_mean)
+            audio_train_av = timedelta(seconds=s_train_mean)
+            audio_dev_av = timedelta(seconds=s_dev_mean)
+            audio_test_av = timedelta(seconds=s_test_mean)
 
-            for subset in ['train', 'dev', 'test']:
-                df_sub = filter_df(self.df, lang=lang, subset=subset, numeric=num)
-                s_num_sum = df_sub['duration'].sum()
-                s_num_mean = df_sub['duration'].mean() if df_sub['duration'].any() else 0
+            return [
+                [n_train, n_dev, n_test, n_all],
+                [audio_train, audio_dev, audio_test, audio_all],
+                [audio_train_av, audio_dev_av, audio_test_av, audio_all_av]
+            ]
 
-                df_stats.loc[(lang, num_map[num], 'samples'), subset] = abs_perc_string(len(df_sub), len(df_total))
-                df_stats.loc[(lang, num_map[num], 'audio'), subset] = abs_perc_string(s_num_sum, s_tot_sum, unit='s')
-                df_stats.loc[(lang, num_map[num], 'Ø audio'), subset] = timedelta(seconds=s_num_mean)
+        num_map = {True: 'numeric', False: 'non-numeric', None: 'all'}
 
+        data = []
+        for lang, num, in product(self.languages + [None], num_map.keys()):
+            df_tot = self.df
+            if lang:
+                df_tot = df_tot[df_tot['language'] == lang]
+            if num:
+                df_tot = df_tot[df_tot['numeric'] == num]
+            data += create_rows(df_tot)
 
+        index = pd.MultiIndex.from_product([
+            self.languages + ['all'],
+            ['numeric', 'non-numeric', 'all'],
+            ['samples', 'audio', 'Ø audio']
+        ])
+        columns = ['train', 'dev', 'test', 'total']
+        df_stats = pd.DataFrame(data=data, index=index, columns=columns)
         with pd.option_context('display.max_rows', None,
                                'display.max_columns', None,
                                'display.width', 1000,

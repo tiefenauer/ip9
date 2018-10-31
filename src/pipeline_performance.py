@@ -52,11 +52,12 @@ args = parser.parse_args()
 def main(args):
     print(create_args_str(args))
     demo_files, target_dir, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, gpu = setup(args)
-    print(f'processing {len(demo_files)}. All results will be written to {target_dir}')
+    num_files = len(demo_files)
+    print(f'processing {num_files}. All results will be written to {target_dir}')
 
     stats = []
     for i, (audio_file, transcript_file) in enumerate(demo_files):
-        print(f'Evaluating pipeline on {audio_file}')
+        print(f'{i}/{num_files}: Evaluating pipeline on {audio_file}')
         run_id = splitext(basename(audio_file))[0]
         target_dir_ds = join(target_dir, run_id + '_ds')
         print(f'Using DS model at {ds_path}, saving results in {target_dir_ds}')
@@ -83,10 +84,10 @@ def main(args):
         create_demo_files(target_dir_keras, audio_file, transcript, ds_alignments_keras, df_stats_keras)
         print('-----------------------------------------------------------------')
 
-        for row in df_stats_ds.iterrows():
+        for ix, row in df_stats_ds.iterrows():
             stats.append([keras_path, len(transcript)] + row.tolist())
 
-        for row in df_stats_keras.iterrows():
+        for ix, row in df_stats_keras.iterrows():
             stats.append([ds_path, len(transcript)] + row.tolist())
 
     df = pd.DataFrame(stats, columns=['engine', 'transcript_length', 'LER', 'similarity'])

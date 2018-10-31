@@ -14,62 +14,65 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 parser = argparse.ArgumentParser()
-parser.add_argument('source_dir', type=str, help='root directory containing output')
+parser.add_argument('source_dir', type=str, help='root directory containing output', nargs='?')
+parser.add_argument('-s', '--silent', action='store_true', help='(optional) whether to suppress showing plots')
 args = parser.parse_args()
 
 
 def main(args):
     source_dir = setup(args)
-    df_losses, df_metrics = collect_data(source_dir)
+    df_losses = collect_loss(source_dir)
+    df_metrics = collect_metrics(source_dir)
 
-    fig_loss, _ = plot_losses(df_losses)
-    fig_best, fig_beam, _, _ = plot_metrics(df_metrics)
+    fig_loss, _ = plot_loss(df_losses)
+    fig_wer, *_ = plot_metric(df_metrics, 'wer')
+    fig_ler, *_ = plot_metric(df_metrics, 'ler')
 
-    fig_loss.savefig(join(source_dir, 'losses.png'))
-    fig_best.savefig(join(source_dir, 'metrics_greedy.png'))
-    fig_beam.savefig(join(source_dir, 'metrics_beam.png'))
+    fig_loss.savefig(join(source_dir, 'loss.png'))
+    fig_wer.savefig(join(source_dir, 'wer.png'))
+    fig_ler.savefig(join(source_dir, 'ler.png'))
 
-    plt.show()
-
-
-def plot_losses(df_losses):
-    fig, axes = plt.subplots(ncols=2, nrows=2, sharex=True, sharey=True, figsize=(14, 9))
-    plot_to_subplots(df_losses['CTC_train'], axes, ['r--'] * 4)
-    plot_to_subplots(df_losses['CTC_val'], axes, ['r-'] * 4)
-
-    [ax.legend(['training', 'validation']) for ax in axes.flatten()]
-    [ax.set_xlabel('epochs') for ax in axes.flatten()]
-    [ax.set_ylabel('CTC loss') for ax in axes.flatten()]
-
-    fig.tight_layout()
-    return fig, axes
+    if not args.silent:
+        plt.show()
 
 
-def plot_metrics(df_metrics):
-    fig_best, axes_best = plot_metric(df_metrics, 'greedy')
-    fig_beam, axes_beam = plot_metric(df_metrics, 'beam')
-    return fig_best, fig_beam, axes_best, axes_beam
+def plot_loss(df_losses):
+    fig, ax = plt.subplots(figsize=(14, 7))
 
+    legend = [f'{mins} ({train_valid})' for train_valid in ['training', 'validation'] for mins in
+              ['1 min', '10 mins', '100 mins', '1000 mins']]
+    styles = [color + line for (line, color) in itertools.product(['-', '--'], list('rgbm'))]
 
-def plot_metric(df_metrics, decoding_strategy):
-    df_wer = df_metrics['WER', decoding_strategy, 'lm_n']
-    df_wer_lm = df_metrics['WER', decoding_strategy, 'lm_y']
-    df_ler = df_metrics['LER', decoding_strategy, 'lm_n']
-    df_ler_lm = df_metrics['LER', decoding_strategy, 'lm_y']
-
-    fig, axes = plt.subplots(ncols=2, nrows=2, sharex=True, sharey=True, figsize=(14, 9))
-
-    plot_to_subplots(df_wer, axes, ['r--'] * 4)
-    plot_to_subplots(df_wer_lm, axes, ['r-'] * 4)
-    plot_to_subplots(df_ler, axes, ['b--'] * 4)
-    plot_to_subplots(df_ler_lm, axes, ['b-'] * 4)
-
-    [ax.legend(['WER', ' WER + LM', 'LER', ' LER + LM']) for ax in axes.flatten()]
-    [ax.set_xlabel('epoch') for ax in axes.flatten()]
-    [ax.set_ylabel('WER/LER') for ax in axes.flatten()]
+    plot_df(df_losses, ax=ax, styles=styles, legend=legend, ylabel='loss', title='CTC-Loss')
 
     fig.tight_layout()
-    return fig, axes
+    return fig, ax
+
+
+def plot_metric(df_metrics, metric):
+    metric = metric.upper()
+    df_greedy = df_metrics[metric, 'greedy']
+    df_beam = df_metrics[metric, 'beam']
+
+    fig, (ax_greedy, ax_beam) = plt.subplots(1, 2, figsize=(14, 7), sharey=True)
+
+    legend = [f'{mins}{lm_use}' for lm_use in ['', '+LM'] for mins in ['1 min', '10 mins', '100 mins', '1000 mins']]
+    styles = [color + line for (line, color) in itertools.product(['-', '--'], list('rgbm'))]
+
+    plot_df(df_greedy, ax=ax_greedy, styles=styles, legend=legend, ylabel=metric, title='best-path decoding')
+    plot_df(df_beam, ax=ax_beam, styles=styles, legend=legend, ylabel=metric, title='beam search decoding')
+
+    fig.tight_layout()
+    fig.suptitle(metric)
+    return fig, ax_greedy, ax_beam
+
+
+def plot_df(df, ax, styles, legend, ylabel, title):
+    df.plot(style=styles, ax=ax)
+    ax.set_xlabel('epoch')
+    ax.set_ylabel(ylabel)
+    ax.legend(legend)
+    ax.set_title(title)
 
 
 def plot_to_subplots(df, axes, styles):
@@ -88,13 +91,7 @@ def setup(args):
     return source_dir
 
 
-def collect_data(source_dir):
-    df_losses = collect_losses(source_dir)
-    df_metrics = collect_metrics(source_dir)
-    return df_losses, df_metrics
-
-
-def collect_losses(source_dir):
+def collect_loss(source_dir):
     columns = [
         ['CTC_train', 'CTC_val'],
         ['1_min', '10_min', '100_min', '1000_min']
@@ -118,15 +115,15 @@ def collect_metrics(source_dir):
         lm_uses,
         ['1_min', '10_min', '100_min', '1000_min']
     ])
+    df_metric = pd.DataFrame(columns=columns)
 
-    df_ler_wer = pd.DataFrame(columns=columns)
     for subdir_name in get_immediate_subdirectories(source_dir):
         for minutes, ler_wer_csv in map_files_to_minutes(join(source_dir, subdir_name), 'model_', '.csv').items():
             df = pd.read_csv(ler_wer_csv, header=[0, 1, 2], index_col=0)
             for m, d, l in itertools.product(metrics, decoding_strategies, lm_uses):
-                df_ler_wer[m, d, l, f'{minutes}_min'] = df[m, d, l]
-    df_ler_wer.index += 1
-    return df_ler_wer
+                df_metric[m, d, l, f'{minutes}_min'] = df[m, d, l]
+    df_metric.index += 1
+    return df_metric
 
 
 def map_files_to_minutes(root_dir, prefix, suffix):

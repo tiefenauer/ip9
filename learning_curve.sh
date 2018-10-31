@@ -166,8 +166,8 @@ optimizer       = ${optimizer}
 if [[ ${gpu} = '' ]]; then
     echo "Enter GPU # to use for training"
     read gpu
-    echo "using GPU #${gpu} for all training runs!"
 fi
+echo "using GPU #${gpu} for all training runs!"
 
 cd ./src/
 

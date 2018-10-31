@@ -2,7 +2,7 @@ import argparse
 from os.path import abspath, exists
 
 from util.log_util import create_args_str
-from util.pipeline_util import visualize_performance
+from util.visualization_util import visualize_pipeline_performance
 
 parser = argparse.ArgumentParser(description="""Visualize the performance of a pipelins""")
 parser.add_argument('csv', type=str, nargs='?',
@@ -14,7 +14,7 @@ args = parser.parse_args()
 def main(args):
     print(create_args_str(args))
     df_path, silent = setup(args)
-    visualize_performance(df_path, silent)
+    visualize_pipeline_performance(df_path, silent)
 
 
 def setup(args):

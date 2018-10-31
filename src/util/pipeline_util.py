@@ -9,11 +9,7 @@ from shutil import copyfile
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from bs4 import BeautifulSoup
-
-sns.set()
-from matplotlib import pyplot as plt
 from pattern3.metrics import levenshtein_similarity
 
 from constants import ROOT_DIR
@@ -201,37 +197,3 @@ def calculate_stats(df_alignments):
     similarity_avg = np.mean([levenshtein_similarity(gt, al) for gt, al in zip(ground_truths, alignments)])
 
     return pd.DataFrame([[ler_avg, similarity_avg]], columns=['LER', 'similarity'])
-
-
-def visualize_performance(df_path, silent=False):
-    target_dir = dirname(df_path)
-    fig, (ax_ler, ax_similarity, ax_correlation) = plt.subplots(1, 3, figsize=(14, 5))
-
-    df = pd.read_csv(df_path)
-
-    colors = 'bg'
-    parms = {}
-    for i, engine_id in enumerate(df.engine_id.unique()):
-        parms[engine_id] = {}
-        parms[engine_id]['color'] = colors[i]
-        parms[engine_id]['label'] = engine_id
-
-    for (engine_id, engine_path), df_engine in df.groupby(['engine_id', 'engine_path']):
-        color = parms[engine_id]['color']
-        label = parms[engine_id]['label']
-
-        df_engine.plot.scatter(x='transcript_length', y='LER', c=color, label=label, ax=ax_ler)
-        df_engine.plot.scatter(x='transcript_length', y='similarity', c=color, label=label, ax=ax_similarity)
-        df_engine.plot.scatter(x='LER', y='similarity', c=color, label=label, ax=ax_correlation)
-
-    fig.suptitle('Comparing transcript length against WER and Levenshtein similarity')
-    ax_ler.set_title('LER (lower is better)')
-    ax_similarity.set_title('Levenshtein similarity (higher is better)')
-    ax_correlation.set_title('Correlation between LER and similarity')
-
-    ax_ler.set_xlabel('transcript length (characters)')
-    ax_similarity.set_xlabel('transcript length (characters)')
-    # fig.tight_layout()
-    fig.savefig(join(target_dir, f'performance.png'))
-    if not silent:
-        plt.show()

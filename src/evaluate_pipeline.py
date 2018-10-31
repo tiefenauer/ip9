@@ -8,7 +8,8 @@ import pandas as pd
 from pipeline import pipeline
 from util.corpus_util import get_corpus
 from util.log_util import create_args_str
-from util.pipeline_util import query_asr_params, calculate_stats, create_demo_files, visualize_performance
+from util.pipeline_util import query_asr_params, calculate_stats, create_demo_files
+from util.visualization_util import visualize_pipeline_performance
 
 parser = argparse.ArgumentParser(description="""
     Evaluate the performance of a pipeline by calculating the following values for each entry in a test set:
@@ -93,7 +94,8 @@ def main(args):
     df = pd.DataFrame(stats, columns=['engine_id', 'engine_path', 'transcript_length', 'LER', 'similarity'])
     performance_csv = join(target_dir, 'pipeline_performance.csv')
     df.to_csv(performance_csv)
-    visualize_performance(performance_csv, silent=True)
+
+    visualize_pipeline_performance(performance_csv, silent=True)
 
 
 def setup(args):

@@ -113,10 +113,12 @@ Creation date: {ctime(self.creation_date)}
 
         def abs_perc_string(value, total, unit=None):
             percent = 100 * value / total if total > 0 else 0
-            value = timedelta(seconds=value) if unit == 's' else value
+            if unit == 's':
+                delta = timedelta(seconds=value)
+                value = delta - timedelta(microseconds=delta.microseconds)
             return f'{value} ({percent:.2f}%)'
 
-        def create_rows(df_total):
+        def create_row(df_total):
             df_train = df_total[df_total['subset'] == 'train']
             df_dev = df_total[df_total['subset'] == 'dev']
             df_test = df_total[df_total['subset'] == 'test']
@@ -147,33 +149,30 @@ Creation date: {ctime(self.creation_date)}
             audio_test_av = timedelta(seconds=s_test_mean)
 
             return [
-                [n_train, n_dev, n_test, n_all],
-                [audio_train, audio_dev, audio_test, audio_all],
-                [audio_train_av, audio_dev_av, audio_test_av, audio_all_av]
+                n_all, audio_all, audio_all_av,
+                n_train, audio_train, audio_train_av,
+                n_dev, audio_dev, audio_dev_av,
+                n_test, audio_test, audio_test_av
             ]
 
         data = []
-        for lang, numeric, in product(self.languages + [None], [True, False, None]):
+        for lang, numeric, in product(self.languages + [None], [None, True, False]):
             df_tot = self.df
             if lang:
                 df_tot = df_tot[df_tot['language'] == lang]
-            if numeric:
+            if numeric is not None:
                 df_tot = df_tot[df_tot['numeric'] == numeric]
-            data += create_rows(df_tot)
+            data.append(create_row(df_tot))
 
-        index = pd.MultiIndex.from_product([
-            self.languages + ['all'],
-            ['numeric', 'non-numeric', 'all'],
-            ['samples', 'audio', 'Ø audio']
-        ])
-        columns = ['train', 'dev', 'test', 'total']
+        index = pd.MultiIndex.from_product([self.languages + ['all'], ['all', 'numeric', 'non-numeric']])
+        columns = pd.MultiIndex.from_product([['total', 'train', 'dev', 'test'], ['samples', 'audio', 'Ø audio']])
         df_stats = pd.DataFrame(data=data, index=index, columns=columns)
         with pd.option_context('display.max_rows', None,
                                'display.max_columns', None,
                                'display.width', 1000,
                                'colheader_justify', 'center',
                                'display.max_colwidth', -1):
-            print(df_stats)
+            print(df_stats.T)
 
 
 class ReadyLinguaCorpus(Corpus, ABC):

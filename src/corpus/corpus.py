@@ -156,7 +156,8 @@ Creation date: {ctime(self.creation_date)}
             ]
 
         data = []
-        for lang, numeric, in product(self.languages + [None], [None, True, False]):
+        languages = self.languages + [None] if len(self.languages) > 1 else self.languages
+        for lang, numeric, in product(languages, [None, True, False]):
             df_tot = self.df
             if lang:
                 df_tot = df_tot[df_tot['language'] == lang]
@@ -164,7 +165,8 @@ Creation date: {ctime(self.creation_date)}
                 df_tot = df_tot[df_tot['numeric'] == numeric]
             data.append(create_row(df_tot))
 
-        index = pd.MultiIndex.from_product([self.languages + ['all'], ['all', 'numeric', 'non-numeric']])
+        languages = self.languages + ['all'] if len(self.languages) > 1 else self.languages
+        index = pd.MultiIndex.from_product([languages, ['all', 'numeric', 'non-numeric']])
         columns = pd.MultiIndex.from_product([['total', 'train', 'dev', 'test'], ['samples', 'audio', 'Ø audio']])
         df_stats = pd.DataFrame(data=data, index=index, columns=columns)
         with pd.option_context('display.max_rows', None,

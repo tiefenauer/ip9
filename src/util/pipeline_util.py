@@ -148,31 +148,37 @@ def query_asr_params(args):
     gpu = query_gpu(args.gpu)
 
     keras_path = None
-    if not not args.keras_path and not args.ds_path:
+    if not args.keras_path and not args.ds_path:
         args.keras_path = input('Enter path to directory containing Keras model (*.h5) or leave blank to use DS: ')
     if args.keras_path:
         keras_path = abspath(args.keras_path)
         if not exists(keras_path):
             raise ValueError(f'ERROR: Keras model not found at {keras_path}')
 
+    ds_path, ds_alpha_path, ds_trie_path = None, None, None
     if not keras_path and not args.ds_path:
         while not args.ds_path:
-            args.ds_path = input('Enter path to directory containing DeepSpeech model (*.pbmm): ')
-    ds_path = abspath(args.ds_path)
+            args.ds_path = input('Enter path to DeepSpeech model (*.pbmm): ')
+        while not args.ds_alpha_path:
+            args.ds_alpha_path = input('Enter path to alphabet file (*.txt): ')
+        while not args.ds_trie_path:
+            args.ds_trie_path = input('Enter path to trie file: ')
+    if args.ds_path:
+        ds_path = abspath(args.ds_path)
+        if not exists(ds_path):
+            raise ValueError(f'ERROR: DS model not found at {ds_path}')
 
-    if not exists(ds_path):
-        raise ValueError(f'ERROR: DeepSpeech model not found at {ds_path}')
+        if not args.ds_alpha_path:
+            raise ValueError('ERROR: alphabet path must be specified when using DeepSpeech model')
+        ds_alpha_path = abspath(args.ds_alpha_path)
+        if not exists(ds_alpha_path):
+            raise ValueError(f'ERROR: alphabet not found at {ds_alpha_path}')
 
-    if not args.ds_alpha_path:
-        raise ValueError('ERROR: alphabet path must be specified when using DeepSpeech model')
-
-    ds_alpha_path = abspath(args.ds_alpha_path)
-    if not exists(ds_alpha_path):
-        raise ValueError(f'ERROR: alphabet not found at {ds_alpha_path}')
-
-    ds_trie_path = abspath(args.ds_trie_path)
-    if not exists(ds_trie_path):
-        raise ValueError(f'ERROR: Trie not found at {ds_trie_path}')
+        if not args.ds_trie_path:
+            raise ValueError('ERROR: trie must be specified when using DeepSpeech model')
+        ds_trie_path = abspath(args.ds_trie_path)
+        if not exists(ds_trie_path):
+            raise ValueError(f'ERROR: Trie not found at {ds_trie_path}')
 
     while not args.lm_path:
         args.lm_path = input('Enter path to binary file of KenLM n-gram model. Leave blank for no LM: ')

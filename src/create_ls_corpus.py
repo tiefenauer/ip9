@@ -77,7 +77,7 @@ def create_segments(source_dir, target_dir, max_entries):
         speaker_id = basename(abspath(join(source_dir, pardir)))
 
         if chapter_id not in chapter_meta:
-            print(f'WARNING: no chapter information for chapter {chapter_id}. Skipping corpus entry...')
+            print(f'WARNING: chapter {chapter_id} unknown or not in train-clean-xxx. Skipping corpus entry...')
             continue
 
         book_id = chapter_meta[chapter_id]['book_id']

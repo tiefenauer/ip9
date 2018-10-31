@@ -24,10 +24,10 @@ parser.add_argument('--source_dir', type=str, required=False,
                          f'Apart from the file extension, both audio and transcript file must have the same name to '
                          f'be identified as a pair.'
                          f'Either this or the --corpus argument must be set.')
-parser.add_argument('--corpus', type=str, choices=['rl', 'ls'], required=False,
-                    help=f'Corpus ID to use for evaluation. If set, this will override the --source_dir argument.'
-                         f'The elements from the training set of the respective corpus will be used for evaluation.'
-                         f'Either this or the --source_dir argument must be set.')
+parser.add_argument('--corpus', type=str, required=False,
+                    help=f'Corpus path or ID to use for evaluation. If set, this will override the --source_dir '
+                         f'argument. The elements from the training set of the respective corpus will be used for '
+                         f'evaluation. Either this or the --source_dir argument must be set.')
 parser.add_argument('--language', type=str, required=False,
                     help='(optional) language to use. Only consiedered in conjunction with --corpus')
 parser.add_argument('--target_dir', type=str, required=False,

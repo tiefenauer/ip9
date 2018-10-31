@@ -23,7 +23,7 @@ parser.add_argument('-s', '--source', default=LS_SOURCE,
                     help=f'(optional) source root directory (default: {LS_SOURCE}')
 parser.add_argument('-t', '--target', default=LS_TARGET,
                     help=f'(optional) target root directory (default: {LS_TARGET})')
-parser.add_argument('-m', '--max_entries', type=int, default=None,
+parser.add_argument('-l', '--limit', type=int, default=None,
                     help='(optional) maximum number of corpus entries to process. Default=None=\'all\'')
 parser.add_argument('-o', '--overwrite', default=False, action='store_true',
                     help='(optional) overwrite existing audio data if already present. If set to true this will '
@@ -37,11 +37,11 @@ args = parser.parse_args()
 def main():
     print(create_args_str(args))
     print(f'Processing files from {args.source} and saving them in {args.target}')
-    corpus, corpus_file = create_corpus(args.source, args.target, args.max_entries)
+    corpus, corpus_file = create_corpus(args.source, args.target, args.limit)
     print(f'Done! Corpus with {len(corpus)} entries saved to {corpus_file}')
 
 
-def create_corpus(source_dir, target_dir, max_entries=None):
+def create_corpus(source_dir, target_dir, limit=None):
     if not exists(source_dir):
         print(f"ERROR: Source directory {source_dir} does not exist!")
         exit(0)
@@ -49,7 +49,7 @@ def create_corpus(source_dir, target_dir, max_entries=None):
         print(f'creating target directory {target_dir} as it does not exist yet')
         makedirs(target_dir)
 
-    df = create_segments(source_dir=source_dir, target_dir=target_dir, max_entries=max_entries)
+    df = create_segments(source_dir=source_dir, target_dir=target_dir, limit=limit)
 
     index_file = join(target_dir, 'index.csv')
     df.to_csv(index_file)
@@ -57,17 +57,17 @@ def create_corpus(source_dir, target_dir, max_entries=None):
     return df, index_file
 
 
-def create_segments(source_dir, target_dir, max_entries):
+def create_segments(source_dir, target_dir, limit):
     audio_root = join(source_dir, 'audio')
     books_root = join(source_dir, 'books')
 
     chapters_file = find_file_by_suffix(audio_root, 'CHAPTERS.TXT')
-    chapter_meta = collect_chapter_meta(chapters_file)
+    chapters = collect_chapter_meta(chapters_file)
 
-    book_texts = collect_book_texts(books_root)
+    books = collect_book_texts(books_root)
 
-    directories = [root for root, subdirs, files in walk(audio_root) if not subdirs][:max_entries]
-    progress = tqdm(directories, total=min(len(directories), max_entries or math.inf), file=sys.stderr, unit='entries')
+    directories = [root for root, subdirs, files in walk(audio_root) if not subdirs and root in chapters.keys()][:limit]
+    progress = tqdm(directories, total=min(len(directories), limit or math.inf), file=sys.stderr, unit='entries')
 
     segments = []
     for source_dir in progress:
@@ -76,11 +76,11 @@ def create_segments(source_dir, target_dir, max_entries):
         chapter_id = basename(source_dir)
         speaker_id = basename(abspath(join(source_dir, pardir)))
 
-        if chapter_id not in chapter_meta:
+        if chapter_id not in chapters:
             print(f'WARNING: chapter {chapter_id} unknown or not in train-clean-xxx. Skipping corpus entry...')
             continue
 
-        book_id = chapter_meta[chapter_id]['book_id']
+        book_id = chapters[chapter_id]['book_id']
         if not book_id:
             print(f'WARNING: no book text available for chapter {chapter_id}. Skipping corpus entry...')
             continue
@@ -109,7 +109,7 @@ def create_segments(source_dir, target_dir, max_entries):
 
         # write full transcript
         with open(join(target_dir, f'{chapter_id}.txt'), 'w') as f:
-            book_text = normalize(book_texts[book_id], 'en')
+            book_text = normalize(books[book_id], 'en')
             first_transcript = segment_infos[0]['transcript']
             if first_transcript in book_text:
                 text_start = book_text.index(first_transcript)
@@ -137,7 +137,7 @@ def create_segments(source_dir, target_dir, max_entries):
         # create segments
         for segment_info in segment_infos:
             entry_id = chapter_id
-            subset = chapter_meta[chapter_id]['subset']
+            subset = chapters[chapter_id]['subset']
             audio_file = basename(wav_file)
             start_frame = segment_info['start_frame']
             end_frame = segment_info['end_frame']

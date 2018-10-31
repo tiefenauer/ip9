@@ -21,9 +21,9 @@ parser.add_argument('--language', type=str, choices=['en', 'de'], required=False
                          'English will use 26 characters from the alphabet, German 29 (+umlauts)')
 parser.add_argument('--lm_path', type=str,
                     help=f'path to directory with KenLM binary model to use for inference')
-parser.add_argument('--trie_path', type=str, required=False,
+parser.add_argument('--ds_trie_path', type=str, required=False,
                     help=f'(optional) path to trie, only used when --ds_model is set')
-parser.add_argument('--alphabet_path', type=str, required=False,
+parser.add_argument('--ds_alpha_path', type=str, required=False,
                     help=f'(optional) path to file containing alphabet, only used when --ds_model is set')
 parser.add_argument('--target_dir', type=str, nargs='?', help=f'path to write stats file to')
 parser.add_argument('--gpu', type=str, required=False, default=None,
@@ -33,12 +33,14 @@ args = parser.parse_args()
 
 def main(args):
     print(create_args_str(args))
-    lang, audio_path, trans_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, target_dir, gpu = setup(args)
+    lang, audio_path, trans_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, target_dir, gpu = setup(
+        args)
 
     print(f'all artefacts will be saved to {target_dir}')
 
-    df_alignments, transcript = pipeline(audio_path, trans_path, lang, keras_path, ds_path, ds_alpha_path, ds_trie_path,
-                                         lm_path, target_dir)
+    df_alignments, transcript, lang = pipeline(audio_path, trans_path, lang,
+                                               keras_path, ds_path, ds_alpha_path, ds_trie_path,
+                                               lm_path, target_dir)
 
     df_stats = calculate_stats(df_alignments)
     create_demo_files(target_dir, audio_path, transcript, df_alignments, df_stats)

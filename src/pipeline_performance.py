@@ -3,7 +3,10 @@ from glob import glob
 from itertools import chain
 from os.path import abspath, splitext, exists, basename, join
 
+import pandas as pd
+
 from pipeline import pipeline
+from util.corpus_util import get_corpus
 from util.log_util import create_args_str
 from util.pipeline_util import query_asr_params, calculate_stats, create_demo_files
 
@@ -25,6 +28,8 @@ parser.add_argument('--corpus', type=str, choices=['rl', 'ls'], required=False,
                     help=f'Corpus ID to use for evaluation. If set, this will override the --source_dir argument.'
                          f'The elements from the training set of the respective corpus will be used for evaluation.'
                          f'Either this or the --source_dir argument must be set.')
+parser.add_argument('--language', type=str, required=False,
+                    help='(optional) language to use. Only consiedered in conjunction with --corpus')
 parser.add_argument('--target_dir', type=str, required=False,
                     help=f'Path to target directory where results will be written. '
                          f'If not set, the source directory will be used.')
@@ -48,28 +53,43 @@ def main(args):
     print(create_args_str(args))
     demo_files, target_dir, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, gpu = setup(args)
 
+    stats = []
     print(f'all results will be written to {target_dir}')
-    for audio_path, txt_path in demo_files:
-        run_id = splitext(basename(audio_path))[0]
+    for audio_file, transcript_file in demo_files:
+        run_id = splitext(basename(audio_file))[0]
         target_dir_ds = join(target_dir, run_id + '_ds')
-        print(f'evaluating pipeline on {audio_path} using DS model at {ds_path}')
+        print(f'evaluating pipeline on {audio_file} using DS model at {ds_path}')
         print(f'saving results in {target_dir_ds}')
         print('-----------------------------------------------------------------')
-        df_alignments_ds, transcript = pipeline(audio_path, trans_path=txt_path, ds_path=ds_path,
-                                                ds_alpha_path=ds_alpha_path, ds_trie_path=ds_trie_path, lm_path=lm_path,
-                                                target_dir=target_dir_ds)
-        df_stats_ds = calculate_stats(df_alignments_ds)
-        create_demo_files(target_dir_ds, audio_path, transcript, df_alignments_ds, df_stats_ds)
+        df_alignments_ds, transcript, language = pipeline(audio_file,
+                                                          transcript_file=transcript_file,
+                                                          ds_path=ds_path,
+                                                          ds_alpha_path=ds_alpha_path,
+                                                          ds_trie_path=ds_trie_path,
+                                                          lm_path=lm_path,
+                                                          target_dir=target_dir_ds)
+        create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
 
         target_dir_keras = join(target_dir, run_id + '_keras')
-        print(f'evaluating pipeline on {audio_path} using Keras model at {keras_path}')
+        print(f'evaluating pipeline on {audio_file} using Keras model at {keras_path}')
         print(f'saving results in {target_dir_keras}')
         print('-----------------------------------------------------------------')
-        ds_alignments_keras, transcript = pipeline(audio_path, trans_path=txt_path, keras_path=keras_path,
-                                                   lm_path=lm_path, target_dir=target_dir_keras)
-        df_stats_keras = calculate_stats(ds_alignments_keras)
-        create_demo_files(target_dir_keras, audio_path, transcript, ds_alignments_keras, df_stats_keras)
+        ds_alignments_keras, transcript, language = pipeline(audio_file,
+                                                             transcript_file=transcript_file,
+                                                             keras_path=keras_path,
+                                                             lm_path=lm_path,
+                                                             target_dir=target_dir_keras)
+        create_demo_files(target_dir_keras, audio_file, transcript, ds_alignments_keras, df_stats_keras)
         print('-----------------------------------------------------------------')
+        df_stats_ds = calculate_stats(df_alignments_ds)
+        for row in df_stats_ds.iterrows():
+            stats.append([keras_path, len(transcript)] + row.tolist())
+        df_stats_keras = calculate_stats(ds_alignments_keras)
+        for row in df_stats_keras.iterrows():
+            stats.append([ds_path, len(transcript)] + row.tolist())
+
+        df = pd.DataFrame(stats, columns=['engine', 'transcript_length', 'LER', 'similarity'])
+        df.to_csv(join(target_dir, 'pipeline_performance.csv'))
 
 
 def setup(args):
@@ -79,16 +99,19 @@ def setup(args):
     if args.corpus and not args.target_dir:
         raise ValueError('ERROR: If --corpus is set the --target_dir argument must be set!')
 
-    source_dir = abspath(args.source_dir)
-    target_dir = abspath(args.target_dir) if args.target_dir else source_dir
-
-    if source_dir:
+    if args.corpus:
+        corpus = get_corpus(args.corpus, args.language)
+        demo_files = [(entry.audio_path, entry.transcript_path) for entry in corpus.test_set()]
+        target_dir = abspath(args.target_dir)
+    else:
+        source_dir = abspath(args.source_dir)
+        target_dir = abspath(args.target_dir) if args.target_dir else source_dir
         demo_files = []
         for audio_file in chain.from_iterable(glob(e) for e in (f'{source_dir}/*.{ext}' for ext in ('mp3', 'wav'))):
-            txt_file = splitext(audio_file)[0] + '.txt'
-            if exists(txt_file):
-                print(f'adding: {basename(audio_file)} / {basename(txt_file)}')
-                demo_files.append((audio_file, txt_file))
+            transcript_file = splitext(audio_file)[0] + '.txt'
+            if exists(transcript_file):
+                print(f'adding: {basename(audio_file)} / {basename(transcript_file)}')
+                demo_files.append((audio_file, transcript_file))
 
     keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, gpu = query_asr_params(args)
     return demo_files, target_dir, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, gpu

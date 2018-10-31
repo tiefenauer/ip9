@@ -10,6 +10,7 @@ from deepspeech import Model
 from keras import backend as K
 from keras.engine.saving import model_from_json, load_model
 from keras.utils import get_custom_objects
+from tensorflow.python.client import device_lib
 
 from core.models import clipped_relu, ctc
 
@@ -80,12 +81,24 @@ def load_keras_model(root_path, opt=None):
 
 
 def create_keras_session(gpu, allow_growth=False, log_device_placement=False):
-    if gpu is None:
-        gpu = input('Enter GPU to use: ')
-        print(f'GPU set to {gpu}')
-
+    gpu = query_gpu(gpu)
     config = tf.ConfigProto(log_device_placement=log_device_placement)
     config.gpu_options.visible_device_list = gpu
     config.gpu_options.allow_growth = allow_growth
     session = tf.Session(config=config)
     K.set_session(session)
+
+
+def query_gpu(gpu):
+    all_gpus = get_available_gpus()
+    if all_gpus and gpu is None:
+        gpu = input('Enter GPU to use (leave blank for all GPUs): ')
+        if not gpu:
+            gpu = ','.join(all_gpus)
+        print(f'GPU set to {gpu}')
+    return gpu
+
+
+def get_available_gpus():
+    local_device_protos = device_lib.list_local_devices()
+    return [x.name for x in local_device_protos if x.device_type == 'GPU']

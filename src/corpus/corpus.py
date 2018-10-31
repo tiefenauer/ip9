@@ -1,12 +1,10 @@
 from abc import ABC
-from copy import deepcopy
 from datetime import timedelta
 from itertools import product
-from os.path import getmtime
+from os.path import getmtime, dirname
 from time import ctime
 
 import pandas as pd
-from tqdm import tqdm
 
 from corpus.corpus_entry import CorpusEntry
 
@@ -16,7 +14,7 @@ class Corpus(ABC):
     Base class for corpora
     """
 
-    def __init__(self, corpus_id, name, df_path):
+    def __init__(self, corpus_id, name, df_path, df=None):
         """
         Create a new corpus holding a list of corpus entries
         :param corpus_id: unique ID
@@ -26,16 +24,14 @@ class Corpus(ABC):
         self.corpus_id = corpus_id
         self._name = name
         self.df_path = df_path
-        self.df = pd.read_csv(df_path)
+        self.df = df if df is not None else pd.read_csv(df_path)
         self.creation_date = getmtime(df_path)
-        self.entries = self.create_entries_from_dataframe(self.df)
+        self.entries = self.create_entries(self.df)
+        self.root_path = dirname(df_path)
 
-    def create_entries_from_dataframe(self, df):
-        entries = []
+    def create_entries(self, df):
         for (entry_id, subset, lang, wav), df_segments in df.groupby(['entry_id', 'subset', 'language', 'audio_file']):
-            entry = CorpusEntry(self, entry_id, subset, lang, wav, df_segments)
-            entries.append(entry)
-        return entries
+            yield CorpusEntry(entry_id, self, subset, lang, wav, df_segments)
 
     def segments(self, numeric=None):
         if numeric is True:
@@ -58,22 +54,20 @@ class Corpus(ABC):
         return None
 
     def __len__(self):
-        return len(self.entries)
+        return len(self.df.index)
 
     def __call__(self, *args, **kwargs):
         languages = kwargs['languages'] if 'languages' in kwargs else self.languages
-        include_numeric = kwargs['include_numeric'] if 'include_numeric' in kwargs else True
         print(f'filtering languages={languages}')
-        entries = [entry for entry in self.entries if entry.language in languages]
-        print(f'found {len(entries)} entries for languages {languages}')
+        df = self.df[self.df['language'].isin(languages)]
 
-        if not include_numeric:
+        numeric = kwargs['numeric'] if 'numeric' in kwargs else False
+        if numeric is False:
             print(f'filtering out speech segments with numbers in transcript')
-            entries = [entry(include_numeric=include_numeric) for entry in tqdm(entries, unit=' entries')]
+            df = df[df['numeric'] == False]
 
-        _copy = deepcopy(self)
-        _copy.entries = entries
-        return _copy
+        self.__init__(self.df_path, df)
+        return self
 
     @property
     def name(self):
@@ -88,14 +82,17 @@ class Corpus(ABC):
     def keys(self):
         return sorted([corpus_entry.id for corpus_entry in self.entries])
 
-    def train_set(self, numeric=None):
-        return self._filter_segments('train', numeric)
+    def train_set(self, numeric=False):
+        df_train = self._filter_segments('train', numeric)
+        return self.create_entries(df_train)
 
-    def dev_set(self, numeric=None):
-        return self._filter_segments('dev', numeric)
+    def dev_set(self, numeric=False):
+        df_dev = self._filter_segments('dev', numeric)
+        return self.create_entries(df_dev)
 
-    def test_set(self, numeric=None):
-        return self._filter_segments('test', numeric)
+    def test_set(self, numeric=False):
+        df_test = self._filter_segments('test', numeric)
+        return self.create_entries(df_test)
 
     def _filter_segments(self, subset, numeric=None):
         df_subset = self.df[self.df['subset'] == subset]
@@ -179,11 +176,11 @@ Creation date: {ctime(self.creation_date)}
 
 class ReadyLinguaCorpus(Corpus, ABC):
 
-    def __init__(self, df_path):
-        super().__init__('rl', 'ReadyLingua', df_path)
+    def __init__(self, df_path, df=None):
+        super().__init__('rl', 'ReadyLingua', df_path, df)
 
 
 class LibriSpeechCorpus(Corpus):
 
-    def __init__(self, df):
-        super().__init__('ls', 'LibriSpeech', df)
+    def __init__(self, df_path, df=None):
+        super().__init__('ls', 'LibriSpeech', df_path, df)

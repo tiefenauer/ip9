@@ -4,18 +4,22 @@ Utility functions to work with corpora
 from os import listdir
 from os.path import join, isdir, abspath, exists, isfile, pardir
 
-import pandas as pd
-
 from constants import LS_TARGET, RL_TARGET
 from corpus.corpus import ReadyLinguaCorpus, LibriSpeechCorpus
 
 
-def get_corpus(corpus_id_or_file):
+def get_corpus(corpus_id_or_file, language=None):
     corpus_root = get_corpus_root(corpus_id_or_file)
     df_path = join(corpus_root, 'index.csv')
-    if corpus_id_or_file == 'rl':
-        return ReadyLinguaCorpus(df_path)
-    return LibriSpeechCorpus(df_path)
+    if corpus_id_or_file == 'rl' or 'readylingua' in corpus_id_or_file:
+        corpus = ReadyLinguaCorpus(df_path)
+    elif corpus_id_or_file == 'ls' or 'librispeech' in corpus_id_or_file:
+        corpus = LibriSpeechCorpus(df_path)
+    else:
+        raise ValueError(f'ERROR: could not determine corpus id from {corpus_id_or_file}')
+    if language:
+        return corpus(languages=[language])
+    return corpus
 
 
 def get_corpus_root(corpus_id_or_path):

@@ -15,6 +15,7 @@ from pattern3.metrics import levenshtein_similarity
 from constants import ROOT_DIR
 from util.audio_util import frame_to_ms
 from util.lm_util import ler_norm
+from util.rnn_util import query_gpu
 
 ASSETS_DIR = join(ROOT_DIR, 'assets')
 ASSETS_FILES = [
@@ -78,7 +79,7 @@ def create_demo_index(target_dir, demo_id, audio_path, transcript_path, transcri
         tr = soup.new_tag('tr')
         for arg in args:
             td = soup.new_tag('td')
-            td.string = arg
+            td.string = str(arg)
             tr.append(td)
         return tr
 
@@ -94,8 +95,9 @@ def create_demo_index(target_dir, demo_id, audio_path, transcript_path, transcri
     metrics_table.append(create_tr('#aligned chars', f'{n_aligned} ({100*n_aligned/n_chars:.3f}%)'))
     metrics_table.append(create_tr('#alignments', f'{n_alignments}'))
 
-    for ix, (metric, value) in df_stats.iterrows():
-        metrics_table.append(create_tr(metric, value))
+    for ix, (ler, similarity) in df_stats.iterrows():
+        metrics_table.append(create_tr('Ø LER', ler))
+        metrics_table.append(create_tr('Ø similarity', similarity))
 
     demo_index_path = join(target_dir, 'index.html')
     with open(demo_index_path, 'w', encoding='utf-8') as f:
@@ -143,17 +145,21 @@ def query_asr_params(args):
     """
     Helper function to query ASR model from user if not set in args
     """
-    gpu = None
-    if not args.gpu:
-        args.gpu = input('Enter GPU to use (leave blank for all GPUs): ')
-        if args.gpu:
-            print(f'GPU set to {gpu}')
-            gpu = args.gpu
+    gpu = query_gpu(args.gpu)
 
-    while not args.keras_path:
+    keras_path = None
+    if not not args.keras_path and not args.ds_path:
         args.keras_path = input('Enter path to directory containing Keras model (*.h5) or leave blank to use DS: ')
+        if args.keras_path:
+            keras_path = abspath(args.keras_path)
+            if not exists(keras_path):
+                raise ValueError(f'ERROR: Keras model not found at {keras_path}')
 
+    if not keras_path and not args.ds_path:
+        while not args.ds_path:
+            args.ds_path = input('Enter path to directory containing DeepSpeech model (*.pbmm): ')
     ds_path = abspath(args.ds_path)
+
     if not exists(ds_path):
         raise ValueError(f'ERROR: DeepSpeech model not found at {ds_path}')
 
@@ -167,13 +173,6 @@ def query_asr_params(args):
     ds_trie_path = abspath(args.ds_trie_path)
     if not exists(ds_trie_path):
         raise ValueError(f'ERROR: Trie not found at {ds_trie_path}')
-
-    while not args.ds_path:
-        args.ds_path = input('Enter path to directory containing DeepSpeech model (*.pbmm): ')
-
-    keras_path = abspath(args.keras_path)
-    if not exists(keras_path):
-        raise ValueError(f'ERROR: Keras model not found at {keras_path}')
 
     while not args.lm_path:
         args.lm_path = input('Enter path to binary file of KenLM n-gram model. Leave blank for no LM: ')
@@ -191,9 +190,4 @@ def calculate_stats(df_alignments):
     ler_avg = np.mean([ler_norm(gt, al) for gt, al in zip(ground_truths, alignments)])
     similarity_avg = np.mean([levenshtein_similarity(gt, al) for gt, al in zip(ground_truths, alignments)])
 
-    data = [
-        ['average LER', str(ler_avg)],
-        ['average Levenshtein similarity', str(similarity_avg)],
-    ]
-    df_stats = pd.DataFrame(data=data, columns=['metric', 'value'])
-    return df_stats
+    return pd.DataFrame([[ler_avg, similarity_avg]], columns=['LER', 'similarity'])

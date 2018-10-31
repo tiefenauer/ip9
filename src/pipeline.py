@@ -23,15 +23,15 @@ from util.string_util import normalize
 from util.vad_util import webrtc_split
 
 
-def pipeline(audio_path, trans_path=None, lang=None, keras_path=None, ds_path=None, ds_alpha_path=None,
+def pipeline(audio_file, transcript_file=None, language=None, keras_path=None, ds_path=None, ds_alpha_path=None,
              ds_trie_path=None, lm_path=None, target_dir=None, gpu=None):
     """
     Forced Alignment using pipeline.
 
-    :param audio_path: path to audio file to align with transcript (wav or mp3)
-    :param trans_path: (optional) path to txt file containing transcript. If not set, a text file with the same name as
+    :param audio_file: path to audio file to align with transcript (wav or mp3)
+    :param transcript_file: (optional) path to txt file containing transcript. If not set, a text file with the same name as
                        the audio file will be searched
-    :param lang: (optional) language of the audio file. If not set, the language will be guessed from the transcript
+    :param language: (optional) language of the audio file. If not set, the language will be guessed from the transcript
     :param keras_path: (optional) path to directory containing Keras model (*.h5)
     :param ds_path: (optional) path to pre-trained DeepSpeech model (*.pbmm). If set, this model will be preferred
                     over Keras model
@@ -50,7 +50,7 @@ def pipeline(audio_path, trans_path=None, lang=None, keras_path=None, ds_path=No
     PIPELINE STAGE #1 (preprocessing): Converting audio to 16-bit PCM wave and normalizing transcript 
     --------------------------------------------------
     """)
-    audio_bytes, sample_rate, transcript, lang = preprocess(audio_path, trans_path, lang)
+    audio_bytes, sample_rate, transcript, language = preprocess(audio_file, transcript_file, language)
     print(f"""
     --------------------------------------------------
     STAGE #1 COMPLETED: Got {len(audio_bytes)} audio samples and {len(transcript)} labels
@@ -82,7 +82,7 @@ def pipeline(audio_path, trans_path=None, lang=None, keras_path=None, ds_path=No
             transcripts = asr_ds(voiced_segments, sample_rate, ds_path, ds_alpha_path, lm_path, ds_trie_path, gpu)
         else:
             print(f'using simplified Keras model at {keras_path}')
-            transcripts = asr_keras(voiced_segments, lang, sample_rate, keras_path, lm_path, gpu)
+            transcripts = asr_keras(voiced_segments, language, sample_rate, keras_path, lm_path, gpu)
 
         df_alignments = create_alignments_dataframe(voiced_segments, transcripts, sample_rate)
         if target_dir:
@@ -117,7 +117,7 @@ def pipeline(audio_path, trans_path=None, lang=None, keras_path=None, ds_path=No
     STAGE #4 COMPLETED
     ==================================================
     """)
-    return df_alignments, transcript
+    return df_alignments, transcript, language
 
 
 def preprocess(audio_path, transcript_path, language=None):
@@ -258,4 +258,4 @@ def gsa(transcript, partial_transcripts):
     """
     inference = ' '.join(partial_transcripts)
     beginnings = reduce(lambda x, y: x + [len(y) + x[-1] + 1], partial_transcripts[:-1], [0])
-    return needle_wunsch(transcript + ' ', inference, beginnings)
+    return needle_wunsch(transcript, inference, beginnings)

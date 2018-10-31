@@ -162,6 +162,7 @@ def collect_chapter_meta(chapters_file):
             subset = result.group('subset')
             if '-clean-' in subset:
                 chapter_id = result.group('chapter')
+                subset = subset.split('-')[0]  # only keep train/dev/test
                 book_id = result.group('book')
                 chapter_meta[chapter_id] = {'subset': subset, 'book_id': book_id}
 

@@ -97,9 +97,11 @@ class Corpus(ABC):
     def test_set(self, numeric=None):
         return self._filter_segments('test', numeric)
 
-    def _filter_segments(self, subset_prefix, numeric=None):
-        df_subset = filter_df(self.df, subset_prefix, numeric)
-        return self.create_entries_from_dataframe(df_subset)
+    def _filter_segments(self, subset, numeric=None):
+        df_subset = self.df[self.df['subset'] == subset]
+        if numeric is None:
+            return df_subset
+        return df_subset[df_subset['numeric'] == numeric]
 
     def summary(self):
         print(f"""
@@ -150,15 +152,13 @@ Creation date: {ctime(self.creation_date)}
                 [audio_train_av, audio_dev_av, audio_test_av, audio_all_av]
             ]
 
-        num_map = {True: 'numeric', False: 'non-numeric', None: 'all'}
-
         data = []
-        for lang, num, in product(self.languages + [None], num_map.keys()):
+        for lang, numeric, in product(self.languages + [None], [True, False, None]):
             df_tot = self.df
             if lang:
                 df_tot = df_tot[df_tot['language'] == lang]
-            if num:
-                df_tot = df_tot[df_tot['numeric'] == num]
+            if numeric:
+                df_tot = df_tot[df_tot['numeric'] == numeric]
             data += create_rows(df_tot)
 
         index = pd.MultiIndex.from_product([
@@ -186,25 +186,3 @@ class LibriSpeechCorpus(Corpus):
 
     def __init__(self, df):
         super().__init__('ls', 'LibriSpeech', df)
-
-
-def filter_corpus_entry_by_subset_prefix(corpus_entries, prefixes):
-    if isinstance(prefixes, str):
-        prefixes = [prefixes]
-    return [corpus_entry for corpus_entry in corpus_entries
-            if corpus_entry.subset
-            and any(corpus_entry.subset.startswith(prefix) for prefix in prefixes)]
-
-
-def filter_df(df, lang=None, subset=None, numeric=None):
-    result = df
-    result = result[result.apply(lambda s: subset in ['all', None] or s['subset'].startswith(subset), axis=1)]
-    if not result.empty:
-        result = result[result.apply(create_filter('language', lang), axis=1)]
-    if not result.empty:
-        result = result[result.apply(create_filter('numeric', numeric), axis=1)]
-    return result
-
-
-def create_filter(key, value):
-    return lambda s: value in ['all', None] or s[key] is value

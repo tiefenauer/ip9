@@ -15,10 +15,16 @@ parser = argparse.ArgumentParser(description="""
 
     The values are averaged through division by the number of entries in the test set.
     """)
-parser.add_argument('--source_dir', type=str, required=True,
-                    help=f'Path to directory containing audio files and transcripts to evaluate on.'
+parser.add_argument('--source_dir', type=str, required=False,
+                    help=f'Path to directory containing pairs of audio files and transcripts to evaluate on.'
                          f'The audio format must be either WAV or MP3. The transcript must be a text file.'
-                         f'Apart from the file extension, both audio and transcript file must have the same name.')
+                         f'Apart from the file extension, both audio and transcript file must have the same name to '
+                         f'be identified as a pair.'
+                         f'Either this or the --corpus argument must be set.')
+parser.add_argument('--corpus', type=str, choices=['rl', 'ls'], required=False,
+                    help=f'Corpus ID to use for evaluation. If set, this will override the --source_dir argument.'
+                         f'The elements from the training set of the respective corpus will be used for evaluation.'
+                         f'Either this or the --source_dir argument must be set.')
 parser.add_argument('--target_dir', type=str, required=False,
                     help=f'Path to target directory where results will be written. '
                          f'If not set, the source directory will be used.')
@@ -67,15 +73,22 @@ def main(args):
 
 
 def setup(args):
+    if not args.source_dir and not args.corpus:
+        raise ValueError('ERROR: Either --source_dir or --corpus must be set!')
+
+    if args.corpus and not args.target_dir:
+        raise ValueError('ERROR: If --corpus is set the --target_dir argument must be set!')
+
     source_dir = abspath(args.source_dir)
     target_dir = abspath(args.target_dir) if args.target_dir else source_dir
 
-    demo_files = []
-    for audio_file in chain.from_iterable(glob(e) for e in (f'{source_dir}/*.{ext}' for ext in ('mp3', 'wav'))):
-        txt_file = splitext(audio_file)[0] + '.txt'
-        if exists(txt_file):
-            print(f'adding: {basename(audio_file)} / {basename(txt_file)}')
-            demo_files.append((audio_file, txt_file))
+    if source_dir:
+        demo_files = []
+        for audio_file in chain.from_iterable(glob(e) for e in (f'{source_dir}/*.{ext}' for ext in ('mp3', 'wav'))):
+            txt_file = splitext(audio_file)[0] + '.txt'
+            if exists(txt_file):
+                print(f'adding: {basename(audio_file)} / {basename(txt_file)}')
+                demo_files.append((audio_file, txt_file))
 
     keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, gpu = query_asr_params(args)
     return demo_files, target_dir, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, gpu

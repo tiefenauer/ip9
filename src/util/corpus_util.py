@@ -48,7 +48,7 @@ def get_corpus_path(corpus_path):
     if isfile(corpus_path):
         if not exists(corpus_path):
             raise ValueError(f'corpus from file path requested but file {corpus_path} does not exist!')
-        corpus_path = pardir(corpus_path)
+        corpus_path = join(corpus_path, pardir)
     return abspath(corpus_path)
 
 

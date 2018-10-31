@@ -8,7 +8,7 @@ import pandas as pd
 from pipeline import pipeline
 from util.corpus_util import get_corpus
 from util.log_util import create_args_str
-from util.pipeline_util import query_asr_params, calculate_stats, create_demo_files
+from util.pipeline_util import query_asr_params, calculate_stats, create_demo_files, visualize_performance
 
 parser = argparse.ArgumentParser(description="""
     Evaluate the performance of a pipeline by calculating the following values for each entry in a test set:
@@ -84,14 +84,16 @@ def main(args):
         create_demo_files(target_dir_keras, audio_file, transcript, ds_alignments_keras, df_stats_keras)
         print('-----------------------------------------------------------------')
 
-        for ix, row in df_stats_ds.iterrows():
-            stats.append([keras_path, len(transcript)] + row.tolist())
-
         for ix, row in df_stats_keras.iterrows():
-            stats.append([ds_path, len(transcript)] + row.tolist())
+            stats.append(['Keras', keras_path, len(transcript)] + row.tolist())
 
-    df = pd.DataFrame(stats, columns=['engine', 'transcript_length', 'LER', 'similarity'])
-    df.to_csv(join(target_dir, 'pipeline_performance.csv'))
+        for ix, row in df_stats_ds.iterrows():
+            stats.append(['DeepSpeech', ds_path, len(transcript)] + row.tolist())
+
+    df = pd.DataFrame(stats, columns=['engine_id', 'engine_path', 'transcript_length', 'LER', 'similarity'])
+    performance_csv = join(target_dir, 'pipeline_performance.csv')
+    df.to_csv(performance_csv)
+    visualize_performance(performance_csv, silent=True)
 
 
 def setup(args):

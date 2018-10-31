@@ -116,29 +116,30 @@ Creation date: {ctime(self.creation_date)}
         columns = ['train', 'dev', 'test', 'total']
         df_stats = pd.DataFrame(index=index, columns=columns)
 
-        def abs_perc_string(seconds, total_seconds):
-            percent = 100 * seconds / total_seconds if total_seconds > 0 else 0
-            return f'{timedelta(seconds=seconds)} ({percent:.2f}%)'
+        def abs_perc_string(value, total, unit=None):
+            percent = 100 * value / total if total > 0 else 0
+            value = timedelta(seconds=value) if unit == 's' else value
+            return f'{value} ({percent:.2f}%)'
 
         num_map = {True: 'numeric', False: 'non-numeric', None: 'all'}
         for lang, num, in product(self.languages + ['all'], num_map.keys()):
+            df_total = filter_df(self.df, lang=lang, subset=None, numeric=num)
+            s_tot_sum = df_total['duration'].sum()
+            s_tot_mean = df_total['duration'].mean() if df_total['duration'].any() else 0
+
+            df_stats.loc[(lang, num_map[num], 'samples'), 'total'] = abs_perc_string(len(df_total), len(df_total))
+            df_stats.loc[(lang, num_map[num], 'audio'), 'total'] = abs_perc_string(s_tot_sum, s_tot_sum, unit='s')
+            df_stats.loc[(lang, num_map[num], 'Ø audio'), 'total'] = timedelta(seconds=s_tot_mean)
 
             for subset in ['train', 'dev', 'test']:
-                df_total = filter_df(self.df, lang=lang, subset=None, numeric=num)
                 df_sub = filter_df(self.df, lang=lang, subset=subset, numeric=num)
+                s_num_sum = df_sub['duration'].sum()
+                s_num_mean = df_sub['duration'].mean() if df_sub['duration'].any() else 0
 
                 df_stats.loc[(lang, num_map[num], 'samples'), subset] = abs_perc_string(len(df_sub), len(df_total))
-                df_stats.loc[(lang, num_map[num], 'samples'), 'total'] = abs_perc_string(len(df_total), len(df_total))
-
-                s_num_sum = df_sub['duration'].sum()
-                s_tot_sum = df_total['duration'].sum()
-                df_stats.loc[(lang, num_map[num], 'audio'), subset] = abs_perc_string(s_num_sum, s_tot_sum)
-                df_stats.loc[(lang, num_map[num], 'audio'), 'total'] = abs_perc_string(s_tot_sum, s_tot_sum)
-
-                s_num_mean = df_sub['duration'].mean() if df_sub['duration'].any() else 0
-                s_tot_mean = df_total['duration'].mean() if df_total['duration'].any() else 0
+                df_stats.loc[(lang, num_map[num], 'audio'), subset] = abs_perc_string(s_num_sum, s_tot_sum, unit='s')
                 df_stats.loc[(lang, num_map[num], 'Ø audio'), subset] = timedelta(seconds=s_num_mean)
-                df_stats.loc[(lang, num_map[num], 'Ø audio'), 'total'] = timedelta(seconds=s_tot_mean)
+
 
         with pd.option_context('display.max_rows', None,
                                'display.max_columns', None,

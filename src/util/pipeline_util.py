@@ -150,10 +150,10 @@ def query_asr_params(args):
     keras_path = None
     if not not args.keras_path and not args.ds_path:
         args.keras_path = input('Enter path to directory containing Keras model (*.h5) or leave blank to use DS: ')
-        if args.keras_path:
-            keras_path = abspath(args.keras_path)
-            if not exists(keras_path):
-                raise ValueError(f'ERROR: Keras model not found at {keras_path}')
+    if args.keras_path:
+        keras_path = abspath(args.keras_path)
+        if not exists(keras_path):
+            raise ValueError(f'ERROR: Keras model not found at {keras_path}')
 
     if not keras_path and not args.ds_path:
         while not args.ds_path:

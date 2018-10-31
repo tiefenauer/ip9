@@ -52,14 +52,14 @@ args = parser.parse_args()
 def main(args):
     print(create_args_str(args))
     demo_files, target_dir, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, gpu = setup(args)
+    print(f'processing {len(demo_files)}. All results will be written to {target_dir}')
 
     stats = []
-    print(f'all results will be written to {target_dir}')
-    for audio_file, transcript_file in demo_files:
+    for i, (audio_file, transcript_file) in enumerate(demo_files):
+        print(f'Evaluating pipeline on {audio_file}')
         run_id = splitext(basename(audio_file))[0]
         target_dir_ds = join(target_dir, run_id + '_ds')
-        print(f'evaluating pipeline on {audio_file} using DS model at {ds_path}')
-        print(f'saving results in {target_dir_ds}')
+        print(f'Using DS model at {ds_path}, saving results in {target_dir_ds}')
         print('-----------------------------------------------------------------')
         df_alignments_ds, transcript, language = pipeline(audio_file,
                                                           transcript_file=transcript_file,
@@ -68,28 +68,29 @@ def main(args):
                                                           ds_trie_path=ds_trie_path,
                                                           lm_path=lm_path,
                                                           target_dir=target_dir_ds)
+        df_stats_ds = calculate_stats(df_alignments_ds)
         create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
 
         target_dir_keras = join(target_dir, run_id + '_keras')
-        print(f'evaluating pipeline on {audio_file} using Keras model at {keras_path}')
-        print(f'saving results in {target_dir_keras}')
+        print(f'Using Keras model at {keras_path}, saving results in {target_dir_keras}')
         print('-----------------------------------------------------------------')
         ds_alignments_keras, transcript, language = pipeline(audio_file,
                                                              transcript_file=transcript_file,
                                                              keras_path=keras_path,
                                                              lm_path=lm_path,
                                                              target_dir=target_dir_keras)
+        df_stats_keras = calculate_stats(ds_alignments_keras)
         create_demo_files(target_dir_keras, audio_file, transcript, ds_alignments_keras, df_stats_keras)
         print('-----------------------------------------------------------------')
-        df_stats_ds = calculate_stats(df_alignments_ds)
+
         for row in df_stats_ds.iterrows():
             stats.append([keras_path, len(transcript)] + row.tolist())
-        df_stats_keras = calculate_stats(ds_alignments_keras)
+
         for row in df_stats_keras.iterrows():
             stats.append([ds_path, len(transcript)] + row.tolist())
 
-        df = pd.DataFrame(stats, columns=['engine', 'transcript_length', 'LER', 'similarity'])
-        df.to_csv(join(target_dir, 'pipeline_performance.csv'))
+    df = pd.DataFrame(stats, columns=['engine', 'transcript_length', 'LER', 'similarity'])
+    df.to_csv(join(target_dir, 'pipeline_performance.csv'))
 
 
 def setup(args):

@@ -83,7 +83,7 @@ class ReportCallback(callbacks.Callback):
         mean_metrics = calculate_metrics_mean(df_inferences)
 
         print('--------------------------------------------------------')
-        print(f'Validation results after epoch {epoch+1}: WER & LER using best-path and beam search decoding')
+        print(f'Validation results after epoch {epoch+1}: {self.target_dir}')
         if self.lm and self.lm_vocab:
             print(f'using LM at: {self.lm_path}')
             print(f'using LM vocab at: {self.vocab_path}')

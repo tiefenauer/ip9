@@ -173,6 +173,9 @@ def needle_wunsch(str_1, str_2, beginnings, match_score=10, mismatch_score=-5, g
             target_str = str_2[j - 1] + target_str
             j -= 1
 
+    if beginnings and end:
+        alignments.insert(0, {'start': 0, 'end': end, 'text': str_1[0:end]})
+
     while j > 0:
         source_str = '-' + source_str
         target_str = str_2[j - 1] + target_str

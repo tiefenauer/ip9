@@ -16,7 +16,7 @@ parser.add_argument('--keras_path', type=str, required=False,
                     help=f'path to Keras model to use for inference')
 parser.add_argument('--ds_path', type=str, required=False,
                     help=f'path to DeepSpeech model. If set, this will be preferred over \'--asr_model\'.')
-parser.add_argument('--language', type=str, choices=['en', 'de'], required=False,
+parser.add_argument('--language', type=str, choices=['en', 'de', 'fr', 'it', 'es'], required=False,
                     help='language to train on. '
                          'English will use 26 characters from the alphabet, German 29 (+umlauts)')
 parser.add_argument('--lm_path', type=str,
@@ -87,7 +87,7 @@ def setup(args):
 
     if not args.language:
         args.language = input('Enter language of audio/transcript (en or de) or leave empty to detect automatically: ')
-        if args.language and args.language not in ['en', 'de']:
+        if args.language and args.language not in ['en', 'de', 'fr', 'it', 'es']:
             raise ValueError('ERROR: Language must be either en or de')
 
     return args.language, audio_path, transcript_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, target_dir, gpu

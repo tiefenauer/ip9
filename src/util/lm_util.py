@@ -115,7 +115,7 @@ def correction(sentence, language, lm=None, lm_vocab=None):
     :param sentence:
     :return:
     """
-    assert language in ['en', 'de'], 'language must be one of [\'en\', \'de\']'
+    assert language in ['en', 'de', 'fr', 'it', 'es'], 'language must be one of [\'en\', \'de\']'
     if not lm or not lm_vocab:
         return sentence
     alphabet = get_alphabet(language)

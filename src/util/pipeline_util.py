@@ -3,8 +3,7 @@ Utility functions for end-to-end tasks
 """
 import json
 import os
-from os.path import join, relpath, basename, exists, pardir, dirname, abspath
-from pathlib import Path
+from os.path import join, basename, exists, pardir, abspath
 from shutil import copyfile
 
 import numpy as np
@@ -12,24 +11,10 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from pattern3.metrics import levenshtein_similarity
 
-from constants import ROOT_DIR
+from constants import ASSETS_DIR
 from util.audio_util import frame_to_ms
 from util.lm_util import ler_norm
 from util.rnn_util import query_gpu
-
-ASSETS_DIR = join(ROOT_DIR, 'assets')
-ASSETS_FILES = [
-    'aligner.js',
-    'default.css',
-    'style.css',
-    'jquery-3.3.2.min.js',
-    'bootstrap.bundle.min.js',
-    'bootstrap.bundle.min.js.map',
-    # 'bootstrap-popover.css',
-    'bootstrap-tooltip.css',
-    # 'bootstrap.min.css',
-    # 'bootstrap.min.css.map'
-]
 
 
 def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, df_stats):
@@ -50,12 +35,12 @@ def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, df
 
     demo_id = basename(target_dir)
     update_index(target_dir, demo_id)
-    demo_path = create_demo_index(target_dir, demo_id, audio_dst_path, transcript_path, transcript, df_transcripts,
-                                  df_stats)
-    for file in ASSETS_FILES:
-        copyfile(join(ASSETS_DIR, file), join(target_dir, file))
+    create_demo_index(target_dir, demo_id, audio_src_path, transcript, df_transcripts, df_stats)
+
+    assets_dir = join(ASSETS_DIR, 'demo')
+    for file in [file for _, _, files in os.walk(assets_dir) for file in files]:
+        copyfile(join(assets_dir, file), join(target_dir, file))
     copyfile(join(ASSETS_DIR, 'start_server.sh'), join(join(target_dir, pardir), 'start_server.sh'))
-    return create_url(demo_path, target_dir)
 
 
 def create_alignment_json(df_transcripts):
@@ -68,7 +53,7 @@ def create_alignment_json(df_transcripts):
     return {'alignments': alignments}
 
 
-def create_demo_index(target_dir, demo_id, audio_path, transcript_path, transcript, df_transcripts, df_stats):
+def create_demo_index(target_dir, demo_id, audio_src_path, transcript, df_transcripts, df_stats):
     template_path = join(ASSETS_DIR, '_template.html')
     soup = BeautifulSoup(open(template_path), 'html.parser')
     soup.title.string = demo_id
@@ -84,20 +69,17 @@ def create_demo_index(target_dir, demo_id, audio_path, transcript_path, transcri
         return tr
 
     n_chars = len(transcript)
-    n_words = len(transcript.split())
-    n_alignments = len(df_transcripts)
-    n_aligned = len(' '.join(df_transcripts['alignment']))
+    n_aligned = len(' '.join([t for t in df_transcripts['alignment'] if t]))
     metrics_table = soup.find(id='metrics')
-    metrics_table.append(create_tr('directory', dirname(audio_path)))
-    metrics_table.append(create_tr('audio', basename(audio_path)))
-    metrics_table.append(create_tr('transcript', basename(transcript_path)))
-    metrics_table.append(create_tr('transcript length', f'{n_chars} characters, {n_words} words'))
-    metrics_table.append(create_tr('#aligned chars', f'{n_aligned} ({100*n_aligned/n_chars:.3f}%)'))
-    metrics_table.append(create_tr('#alignments', f'{n_alignments}'))
+    metrics_table.append(create_tr('directory', target_dir))
+    metrics_table.append(create_tr('audio file', audio_src_path))
+    metrics_table.append(create_tr('transcript length', f'{n_chars} characters, {len(transcript.split())} words'))
+    metrics_table.append(create_tr('#aligned chars', f'{n_aligned} ({100*n_aligned/n_chars:.2f}%)'))
+    metrics_table.append(create_tr('#alignments/segments', f'{len(df_transcripts)}'))
 
     for ix, (ler, similarity) in df_stats.iterrows():
         metrics_table.append(create_tr('Ø LER', ler))
-        metrics_table.append(create_tr('Ø similarity', similarity))
+        metrics_table.append(create_tr('Ø similarity inference/alignment', similarity))
 
     demo_index_path = join(target_dir, 'index.html')
     with open(demo_index_path, 'w', encoding='utf-8') as f:
@@ -123,10 +105,6 @@ def update_index(target_dir, demo_id):
 
         with open(index_path, 'w') as f:
             f.write(soup.prettify())
-
-
-def create_url(demo_path, target_dir):
-    return 'https://ip8.tiefenauer.info:8888/' + relpath(demo_path, Path(target_dir).parent).replace(os.sep, '/')
 
 
 def create_alignments_dataframe(voiced_segments, transcripts, sample_rate):

@@ -4,6 +4,7 @@ from os.path import abspath, dirname, join
 
 SRC_DIR = dirname(abspath(__file__))  # absolute path to project ./src/ directory
 ROOT_DIR = abspath(join(SRC_DIR, os.pardir))  # absolute path to project root directory
+ASSETS_DIR = join(ROOT_DIR, 'assets')
 
 LS_SOURCE = "/media/daniel/Data/corpus/librispeech-raw"
 LS_TARGET = "/media/daniel/IP9/corpora/librispeech"

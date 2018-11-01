@@ -7,8 +7,8 @@ SPACE_TOKEN = '<space>'
 
 def get_alphabet(language):
     if language == 'en':
-        return string.ascii_lowercase + 'äöü'
-    return string.ascii_lowercase + '\''
+        return string.ascii_lowercase + '\''
+    return string.ascii_lowercase + 'äöü'
 
 
 def get_tokens(language):

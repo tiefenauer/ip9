@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # do the full monty, i.e. create learning curves for all possible combinations
 
-echo "Enter corpus to train on ('ls'=LibriSpeech, 'rl'=ReadyLingua"
+echo "Enter corpus to train on ('ls'=LibriSpeech, 'rl'=ReadyLingua): "
 read corpus
 
-echo "Enter GPU # to use for training"
+echo "Enter GPU # to use for training: "
 read gpu
 
 echo "training on ${corpus} corpus using GPU ${gpu} for all training runs!"

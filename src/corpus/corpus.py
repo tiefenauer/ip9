@@ -25,13 +25,15 @@ class Corpus(ABC):
         self._name = name
         self.df_path = df_path
         self.df = df if df is not None else pd.read_csv(df_path)
-        self.creation_date = getmtime(df_path)
         self.entries = self.create_entries(self.df)
+        self.creation_date = getmtime(df_path)
         self.root_path = dirname(df_path)
 
     def create_entries(self, df):
+        entries = []
         for (entry_id, subset, lang, wav), df_segments in df.groupby(['entry_id', 'subset', 'language', 'audio_file']):
-            yield CorpusEntry(entry_id, self, subset, lang, wav, df_segments)
+            entries.append(CorpusEntry(entry_id, self, subset, lang, wav, df_segments))
+        return entries
 
     def segments(self, numeric=None):
         if numeric is True:
@@ -76,7 +78,7 @@ class Corpus(ABC):
 
     @property
     def languages(self):
-        return sorted(set(lang for lang in (corpus_entry.language for corpus_entry in self.entries)))
+        return sorted(set(entry.language for entry in self.entries))
 
     @property
     def keys(self):
@@ -105,7 +107,7 @@ class Corpus(ABC):
 Corpus:        {self.name}
 File:          {self.df_path}
 Creation date: {ctime(self.creation_date)}
-# entries:     {len(self.entries)}    
+# entries:     {len(self)}    
         """)
 
         def abs_perc_string(value, total, unit=None):
@@ -174,7 +176,7 @@ Creation date: {ctime(self.creation_date)}
             print(df_stats.T)
 
 
-class ReadyLinguaCorpus(Corpus, ABC):
+class ReadyLinguaCorpus(Corpus):
 
     def __init__(self, df_path, df=None):
         super().__init__('rl', 'ReadyLingua', df_path, df)

@@ -152,7 +152,7 @@ class CSVBatchGenerator(BatchGenerator):
         elif num_minutes:
             # truncate dataset to first {num_minutes} minutes of audio data
             if num_minutes * 60 > total_audio_length:
-                print(f"""WARNING: {num_minutes} minutes is longer than total length of the dataset ({timedelta(seconds=total_audio_length)})!
+                print(f"""WARNING: {num_minutes} minutes ({timedelta(seconds=num_minutes)}) is longer than total length of the dataset ({timedelta(seconds=total_audio_length)})!
                 Training will be done on the whole dataset.""")
             else:
                 df = truncate_dataset(df, batch_size, num_minutes)

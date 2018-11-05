@@ -18,25 +18,29 @@ def to_wav(mp3_path, wav_path):
     subprocess.call(['sox', mp3_path, '-r', '16000', '-b', '16', '-c', '1', wav_path])
 
 
-def crop_and_resample(audio_src, audio_dst, segments):
+def resample(audio_src, audio_dst, crop_start=0, crop_end=None):
     """
     Crop audio signal to match a list of segments. Leading audio frames will be cut off (cropped) until the start frame
     of the first segment. Trailing audio frames will be cut off from the end frame of the last segment.
     Segment start and end frames will be shifted to make up for the cropping
     :param audio_src: source audio file (any format)
     :param audio_dst: target audio file (WAV, PCM 16bit LE, mono)
-    :param segments:
+    :param crop_end: start frame to crop to
+    :param crop_start: end frame to crop from
     :return:
     """
     to_wav(audio_src, audio_dst)
-    crop_start = min(segment['start_frame'] for segment in segments)
-    crop_end = max(segment['end_frame'] for segment in segments)
     audio, rate = sf.read(audio_dst, start=crop_start, stop=crop_end)
     sf.write(audio_dst, audio, rate, 'PCM_16')
 
+
+def crop_segments(segments):
+    crop_start = min(segment['start_frame'] for segment in segments)
+    crop_end = max(segment['end_frame'] for segment in segments)
     for segment in segments:
         segment['start_frame'] -= crop_start
         segment['end_frame'] -= crop_start
+    return crop_start, crop_end
 
 
 def calculate_crop(segments):

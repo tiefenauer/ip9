@@ -12,8 +12,8 @@ import pandas as pd
 from lxml import etree
 from tqdm import tqdm
 
-from constants import RL_TARGET, RL_SOURCE
-from util.audio_util import resample_frame, crop_and_resample
+from constants import RL_ROOT, RL_RAW
+from util.audio_util import resample_frame, resample, crop_segments
 from util.corpus_util import find_file_by_suffix
 from util.log_util import create_args_str
 from util.string_util import create_filename, normalize, contains_numeric
@@ -28,10 +28,10 @@ LANGUAGES = {  # mapping from folder names to language code
 
 parser = argparse.ArgumentParser(description="""Create ReadyLingua corpus from raw files""")
 parser.add_argument('-f', '--file', help='Dummy argument for Jupyter Notebook compatibility')
-parser.add_argument('-s', '--source_root', default=RL_SOURCE,
-                    help=f'(optional) source root directory (default: {RL_SOURCE}')
-parser.add_argument('-t', '--target_root', default=RL_TARGET,
-                    help=f'(optional) target root directory (default: {RL_TARGET})')
+parser.add_argument('-s', '--source_root', default=RL_RAW,
+                    help=f'(optional) source root directory (default: {RL_RAW}')
+parser.add_argument('-t', '--target_root', default=RL_ROOT,
+                    help=f'(optional) target root directory (default: {RL_ROOT})')
 parser.add_argument('-m', '--max_entries', type=int, default=None,
                     help='(optional) maximum number of corpus entries to process. Default=None=\'all\'')
 parser.add_argument('-o', '--overwrite', default=False, action='store_true',
@@ -84,10 +84,11 @@ def create_segments(source_dir, target_dir, max_entries):
         entry_id, entry_name, lang, rate = collect_corpus_entry_parms(source_dir, index_file, audio_file)
 
         segment_infos = extract_segment_infos(index_file, transcript_file, rate, lang)
+        crop_start, crop_end = crop_segments(segment_infos)
 
         wav_file = join(target_dir, entry_id + ".wav")
         if not exists(wav_file) or args.overwrite:
-            crop_and_resample(audio_file, wav_file, segment_infos)
+            resample(audio_file, wav_file, crop_start, crop_end)
 
         # write full transcript
         with open(transcript_file) as f_src, open(join(target_dir, f'{entry_id}.txt'), 'w') as f_dst:
@@ -105,7 +106,8 @@ def create_segments(source_dir, target_dir, max_entries):
             numeric = contains_numeric(transcript)
             segments.append([entry_id, subset, lang, audio_file, start_frame, end_frame, duration, transcript, numeric])
 
-    columns = ['entry_id', 'subset', 'language', 'audio_file', 'start_frame', 'end_frame', 'duration', 'transcript', 'numeric']
+    columns = ['entry_id', 'subset', 'language', 'audio_file', 'start_frame', 'end_frame', 'duration', 'transcript',
+               'numeric']
     df = pd.DataFrame(segments, columns=columns)
 
     """
@@ -252,22 +254,6 @@ def collect_speeches(index_file):
                   'end_text': end_text}
         speeches.append(speech)
     return sorted(speeches, key=lambda s: s['start_frame'])
-
-
-def get_index_for_audio_length(segments, min_length):
-    """
-    get index to split speech segments at a minimum audio length.Index will not split segments of same corpus entry
-    :param segments: list of speech segments
-    :param min_length: minimum audio length to split
-    :return: first index where total length of speech segments is equal or greater to minimum legnth
-    """
-    audio_length = 0
-    prev_corpus_entry_id = None
-    for ix, segment in enumerate(segments):
-        audio_length += segment.audio_length
-        if audio_length > min_length and segment.corpus_entry.id is not prev_corpus_entry_id:
-            return ix
-        prev_corpus_entry_id = segment.corpus_entry.id
 
 
 if __name__ == '__main__':

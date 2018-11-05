@@ -11,18 +11,18 @@ from tabulate import tabulate
 from tqdm import tqdm
 from unidecode import unidecode
 
-from constants import LS_SOURCE, LS_TARGET
-from util.audio_util import seconds_to_frame, crop_and_resample
+from constants import LS_RAW, LS_ROOT
+from util.audio_util import seconds_to_frame, resample, crop_segments
 from util.corpus_util import find_file_by_suffix
 from util.log_util import create_args_str
 from util.string_util import normalize, contains_numeric
 
 parser = argparse.ArgumentParser(description="""Create LibriSpeech corpus from raw files""")
 parser.add_argument('-f', '--file', help='Dummy argument for Jupyter Notebook compatibility')
-parser.add_argument('-s', '--source', default=LS_SOURCE,
-                    help=f'(optional) source root directory (default: {LS_SOURCE}')
-parser.add_argument('-t', '--target', default=LS_TARGET,
-                    help=f'(optional) target root directory (default: {LS_TARGET})')
+parser.add_argument('-s', '--source', default=LS_RAW,
+                    help=f'(optional) source root directory (default: {LS_RAW}')
+parser.add_argument('-t', '--target', default=LS_ROOT,
+                    help=f'(optional) target root directory (default: {LS_ROOT})')
 parser.add_argument('-l', '--limit', type=int, default=None,
                     help='(optional) maximum number of corpus entries to process. Default=None=\'all\'')
 parser.add_argument('-o', '--overwrite', default=False, action='store_true',
@@ -66,7 +66,9 @@ def create_segments(source_dir, target_dir, limit):
 
     books = collect_book_texts(books_root)
 
-    directories = [root for root, subdirs, files in walk(audio_root) if not subdirs and root in chapters.keys()][:limit]
+    directories = [root for root, subdirs, files in walk(audio_root)
+                   if not subdirs
+                   and basename(root) in chapters.keys()][:limit]
     progress = tqdm(directories, total=min(len(directories), limit or math.inf), file=sys.stderr, unit='entries')
 
     segments = []
@@ -82,6 +84,10 @@ def create_segments(source_dir, target_dir, limit):
 
         book_id = chapters[chapter_id]['book_id']
         if not book_id:
+            print(f'WARNING: no book information available for chapter {chapter_id}. Skipping corpus entry...')
+            continue
+
+        if book_id not in books:
             print(f'WARNING: no book text available for chapter {chapter_id}. Skipping corpus entry...')
             continue
 
@@ -101,11 +107,12 @@ def create_segments(source_dir, target_dir, limit):
             continue
 
         segment_infos = extract_segment_infos(segments_file, transcript_file)
+        crop_start, crop_end = crop_segments(segment_infos)
 
-        # crop/resample audio
+        # resample audio if necessary
         wav_file = join(target_dir, basename(splitext(mp3_file)[0] + ".wav"))
         if not exists(wav_file) or args.overwrite:
-            crop_and_resample(mp3_file, wav_file, segment_infos)
+            resample(mp3_file, wav_file, crop_start, crop_end)
 
         # write full transcript
         with open(join(target_dir, f'{chapter_id}.txt'), 'w') as f:
@@ -129,6 +136,10 @@ def create_segments(source_dir, target_dir, limit):
                 text_end = len(book_text) - 1
                 for i in range(1, len(last_transcript) - 1):
                     if last_transcript[-i:] not in book_text:
+                        if last_transcript[-i + 1:] not in book_text:
+                            print(book_text)
+                            print(i, last_transcript[-i + 1:])
+                            print(i, last_transcript)
                         text_end = book_text.index(last_transcript[-i + 1:]) + i - 1
                         break
 
@@ -180,7 +191,9 @@ def collect_book_texts(books_root):
         encoding = 'ascii' if 'ascii' in book_file else 'utf-8'
         with open(book_file, 'r', encoding=encoding) as f:
             try:
-                book_texts[book_id] = f.read().strip()
+                book_text = f.read().strip()
+                if len(book_text) > 0:
+                    book_texts[book_id] = book_text
             except UnicodeDecodeError as e:
                 invalid_encodings.append((book_id, book_file, encoding, e.start, e.end))
 

@@ -55,7 +55,7 @@ def precompute_features(corpus, feature_type, target_file, limit=None):
             for i, (subset, speech_segment) in progress:
                 inp = speech_segment.audio_features(feature_type)
                 lbl = speech_segment.text
-                dur = speech_segment.audio_length
+                dur = speech_segment.duration
                 desc = f'{subset}, lang: {lang}, t_x: {len(inp)}, t_y: {len(lbl)}, duration: {timedelta(seconds=dur)}'
                 progress.set_description(desc)
 

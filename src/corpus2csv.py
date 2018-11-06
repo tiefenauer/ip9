@@ -1,6 +1,7 @@
 import argparse
 import random
 from datetime import timedelta
+from operator import getitem
 from os import listdir, makedirs, remove
 from os.path import join, exists, getsize
 
@@ -210,6 +211,8 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
 
         if max_dur and sum_duration > max_dur * 60:
             break
+
+    sum_duration = sum(getitem(t, 2) for t in files)
 
     if synthesize or min_dur and sum_duration < min_dur * 60 or max_dur and sum_duration < max_dur * 60:
         print(f'total length: {timedelta(seconds=sum_duration)}')

@@ -77,7 +77,9 @@ def setup(args):
 
 
 def extract_segments(target_dir, corpus_id, corpus, synthesize=False, max_audio_length=0, override=False):
-    train_set, dev_set, test_set = corpus.train_dev_test_split(numeric=args.include_numeric)
+    train_set = corpus.train_set(numeric=args.include_numeric)
+    dev_set = corpus.dev_set(numeric=args.include_numeric)
+    test_set = corpus.test_set(numeric=args.include_numeric)
 
     print(f'training length is: {timedelta(seconds=sum(seg.duration for seg in train_set))}')
     print(f'dev length is: {timedelta(seconds=sum(seg.duration for seg in dev_set))}')

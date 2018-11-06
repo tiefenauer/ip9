@@ -62,7 +62,7 @@ class Corpus(ABC):
         return len(self.df.index)
 
     def __call__(self, *args, **kwargs):
-        languages = kwargs['languages'] if 'languages' in kwargs else self.languages
+        languages = kwargs['languages'].split(',') if 'languages' in kwargs else self.languages
         print(f'filtering languages={languages}')
         df = self.df[self.df['language'].isin(languages)]
 

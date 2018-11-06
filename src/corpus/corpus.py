@@ -152,16 +152,16 @@ Creation date: {ctime(self.creation_date)}
             audio_dev_av = timedelta(seconds=df_dev['duration'].mean()) if df_dev['duration'].any() else '-'
             audio_test_av = timedelta(seconds=df_test['duration'].mean()) if df_test['duration'].any() else '-'
 
-            trans_all_av = df['transcript'].map(len).mean() if df['transcript'].any() else '-'
-            trans_train_av = df_train['transcript'].map(len).mean() if df['transcript'].any() else '-'
-            trans_dev_av = df_dev['transcript'].map(len).mean() if df['transcript'].any() else '-'
-            trans_test_av = df_test['transcript'].map(len).mean() if df['transcript'].any() else '-'
+            trans_all_av = f"{df['transcript'].map(len).mean():.2f}" if df['transcript'].any() else '-'
+            trans_train_av = f"{df_train['transcript'].map(len).mean():.2f}" if df['transcript'].any() else '-'
+            trans_dev_av = f"{df_dev['transcript'].map(len).mean():.2f}" if df['transcript'].any() else '-'
+            trans_test_av = f"{df_test['transcript'].map(len).mean():.2f}" if df['transcript'].any() else '-'
 
             return [
                 n_all, n_train, n_dev, n_test,
                 audio_all, audio_train, audio_dev, audio_test,
                 str(audio_all_av), str(audio_train_av), str(audio_dev_av), str(audio_test_av),
-                f'{trans_all_av:.2f}', f'{trans_train_av:.2f}', f'{trans_dev_av:.2f}', f'{trans_test_av:.2f}',
+                trans_all_av, trans_train_av, trans_dev_av, trans_test_av
             ]
 
         data = []

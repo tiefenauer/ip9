@@ -134,7 +134,7 @@ class VoiceSegmentsBatchGenerator(BatchGenerator):
 class CSVBatchGenerator(BatchGenerator):
 
     def __init__(self, csv_path, lang, sort=False, n_batches=None, batch_size=16, num_minutes=None, use_synth=False):
-        df, total_audio_length = read_data_from_csv(csv_path=csv_path, sort=sort)
+        df, total_duration = read_data_from_csv(csv_path=csv_path, sort=sort)
         if not use_synth:
             synth_suffixes = ['-high', '-low', '-fast', '-slow', '-shift', '-distorted']
             print(f'keeping only non-synthesized data (samples ending in {synth_suffixes}))')
@@ -151,15 +151,15 @@ class CSVBatchGenerator(BatchGenerator):
             df = df.head(n_batches * batch_size)
         elif num_minutes:
             # truncate dataset to first {num_minutes} minutes of audio data
-            if num_minutes * 60 > total_audio_length:
-                print(f"""WARNING: {num_minutes} minutes ({timedelta(seconds=num_minutes)}) is longer than total length of the dataset ({timedelta(seconds=total_audio_length)})!
+            if num_minutes * 60 > total_duration:
+                print(f"""WARNING: {num_minutes} minutes ({timedelta(seconds=num_minutes)}) is longer than total length of the dataset ({timedelta(seconds=total_duration)})!
                 Training will be done on the whole dataset.""")
             else:
                 df = truncate_dataset(df, batch_size, num_minutes)
 
         if 'wav_length' in df:
-            avg_audio_length = df['wav_length'].mean()
-            print(f'average audio length: {timedelta(seconds=avg_audio_length)}')
+            avg_duration = df['wav_length'].mean()
+            print(f'average audio length: {timedelta(seconds=avg_duration)}')
 
         self.wav_files = df['wav_filename'].tolist()
         self.transcripts = df['transcript'].tolist()
@@ -187,8 +187,8 @@ def read_data_from_csv(csv_path, sort=True, create_word_list=False):
     :param create_word_list: whether to create a list of unique words
     :return:
         df: pd.DataFrame containing the CSV data
-        total_audio_length: integer representing the total length of the audio by summing over the 'wav_length' column
-                            from the CSV. If such a column is not present, the value returned is math.inf
+        total_duration: integer representing the total length of the audio by summing over the 'wav_length' column
+                        from the CSV. If such a column is not present, the value returned is math.inf
     """
     if not isfile(csv_path):
         print(f'ERROR: CSV file {csv_path} does not exist!', file=sys.stderr)
@@ -198,12 +198,12 @@ def read_data_from_csv(csv_path, sort=True, create_word_list=False):
     df = pd.read_csv(csv_path, sep=',', encoding='utf-8')
     print(f'done! ({len(df.index)} samples', end='')
 
-    total_audio_length = math.inf
+    total_duration = math.inf
 
     if 'wav_length' in df:
-        total_audio_length = df['wav_length'].sum()
-        avg_audio_length = df['wav_length'].mean()
-        print(f', {timedelta(seconds=total_audio_length)}, Ø audio length: {avg_audio_length:.4f} seconds)')
+        total_duration = df['wav_length'].sum()
+        avg_duration = df['wav_length'].mean()
+        print(f', {timedelta(seconds=total_duration)}, Ø audio length: {avg_duration:.4f} seconds)')
     else:
         print(')')
 
@@ -215,7 +215,7 @@ def read_data_from_csv(csv_path, sort=True, create_word_list=False):
 
     avg_trans_length = np.mean([len(trans) for trans in df['transcript']])
     print(f'average transcript length: {avg_trans_length}')
-    return df.reset_index(drop=True), total_audio_length
+    return df.reset_index(drop=True), total_duration
 
 
 def extract_mfcc(wav_file_path):

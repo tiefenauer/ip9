@@ -1,6 +1,6 @@
 #!/bin/bash 
 # print stats of corpus file to stdout
-# the corpus file must be supplied as dirst and single argument
+# the corpus file must be supplied as first and single argument
 
 hms()
 {
@@ -54,11 +54,11 @@ function displaytime {
 corpus_file=$1
 echo "Stats for ${corpus_file}"
 
-n_samples=$(cat $corpus_file | wc -l | awk '{print $1-1}')
+n_samples=$(cat ${corpus_file} | wc -l | awk '{print $1-1}')
 echo "# samples: ${n_samples} "
 
-total_audio_length=$(tail -n +2 $corpus_file | awk -F',' '{sum+=$3; ++n} END { printf ("%9.4f\n", sum) } ' )
-echo "total audio length: ${total_audio_length} seconds"
+total_duration=$(tail -n +2 ${corpus_file} | awk -F',' '{sum+=$3; ++n} END { printf ("%9.4f\n", sum) } ' )
+echo "total audio length: ${total_duration} seconds"
 
-avg_audio_length=$(tail -n +2 $corpus_file | awk -F',' '{sum+=$3; ++n} END { print sum/n }')
-echo "avg. audio length: ${avg_audio_length}"
+avg_duration=$(tail -n +2 ${corpus_file} | awk -F',' '{sum+=$3; ++n} END { print sum/n }')
+echo "avg. audio length: ${avg_duration}"

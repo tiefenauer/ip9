@@ -32,7 +32,7 @@ parser.add_argument('-x', '--synthesize', action='store_true',
                     help='create synthesized data')
 parser.add_argument('-num', '--include_numeric', action='store_true', default=False,
                     help='(optional) whether to include transcripts with numeric chars (default: False)')
-parser.add_argument('-m', '--max_audio_length', nargs='?', type=int, default=0,
+parser.add_argument('-m', '--max_duration', nargs='?', type=int, default=0,
                     help='(optional) maximum number of speech segments minutes to process (default: all)')
 parser.add_argument('-p', '--precompute_features', action='store_true',
                     help='(optional) precompute MFCC features in HDF5 format. Default: False')
@@ -73,10 +73,10 @@ def setup(args):
     corpus = corpus(languages=args.language)
     corpus.summary()
 
-    return target_dir, args.id, corpus, override, args.synthesize, args.max_audio_length, args.precompute_features
+    return target_dir, args.id, corpus, override, args.synthesize, args.max_duration, args.precompute_features
 
 
-def extract_segments(target_dir, corpus_id, corpus, synthesize=False, max_audio_length=0, override=False):
+def extract_segments(target_dir, corpus_id, corpus, synthesize=False, max_duration=0, override=False):
     train_set = corpus.train_set(numeric=args.include_numeric)
     dev_set = corpus.dev_set(numeric=args.include_numeric)
     test_set = corpus.test_set(numeric=args.include_numeric)
@@ -86,19 +86,19 @@ def extract_segments(target_dir, corpus_id, corpus, synthesize=False, max_audio_
     print(f'test length is: {timedelta(seconds=sum(seg.duration for seg in test_set))}')
 
     print(f'processing training segments')
-    df_train = process_subset('train', train_set, synthesize, corpus_id, target_dir, max_audio_length, override)
+    df_train = process_subset('train', train_set, synthesize, corpus_id, target_dir, max_duration, override)
 
     print(f'processing validation segments (data is only synthesized for training set)')
-    df_valid = process_subset('dev', dev_set, False, corpus_id, target_dir, max_audio_length * 0.2, override)
+    df_valid = process_subset('dev', dev_set, False, corpus_id, target_dir, max_duration * 0.2, override)
 
     print(f'processing validation segments (data is only synthesized for training set)')
-    df_test = process_subset('test', test_set, False, corpus_id, target_dir, max_audio_length * 0.2, override)
+    df_test = process_subset('test', test_set, False, corpus_id, target_dir, max_duration * 0.2, override)
 
     return df_train, df_valid, df_test
 
 
-def process_subset(subset_id, subset, synthesize, corpus_id, target_dir, max_audio_length, override):
-    df = split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, max_audio_length, override)
+def process_subset(subset_id, subset, synthesize, corpus_id, target_dir, max_duration, override):
+    df = split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, max_duration, override)
 
     csv_path = join(target_dir, f'{corpus_id}-{subset_id}.csv')
     print(f'saving metadata in {csv_path}')
@@ -106,25 +106,25 @@ def process_subset(subset_id, subset, synthesize, corpus_id, target_dir, max_aud
     return df
 
 
-def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, max_audio_length, override):
+def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, max_duration, override):
     files = []
-    sum_audio_length = 0
+    sum_duration = 0
 
     total = len(subset)
 
-    if max_audio_length:
-        print(f'trying to cap numer of speech segments to a total length of {max_audio_length} minutes. '
+    if max_duration:
+        print(f'trying to cap numer of speech segments to a total length of {max_duration} minutes. '
               f'Speech segements will be sorted by length before capping.')
-        tot_audio_length = sum(s.audio_length for s in subset) / 60
-        if tot_audio_length < max_audio_length:
-            print(f'WARNING: maximum length of corpus was set to {max_audio_length} minutes, but total length of all '
-                  f'speech segments is only {tot_audio_length} minutes! '
+        tot_duration = sum(s.duration for s in subset) / 60
+        if tot_duration < max_duration:
+            print(f'WARNING: maximum length of corpus was set to {max_duration} minutes, but total length of all '
+                  f'speech segments is only {tot_duration} minutes! '
                   f'-> using all entries from corpus ({total} speech segments)')
         else:
-            for i, s in enumerate(sorted(subset, key=lambda s: s.audio_length)):
-                if sum(s.audio_length for s in subset[:i]) > max_audio_length * 60:
+            for i, s in enumerate(sorted(subset, key=lambda s: s.duration)):
+                if sum(s.duration for s in subset[:i]) > max_duration * 60:
                     break
-            print(f'total length of corpus will be capped at {max_audio_length} minutes ({i} speech segments)')
+            print(f'total length of corpus will be capped at {max_duration} minutes ({i} speech segments)')
             total = i
             subset = subset[:1]
 
@@ -145,8 +145,8 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
                 transcript = f'{segment.start_frame} {segment.end_frame} {segment.transcript}'
                 f.write(transcript)
 
-        files.append((wav_path, getsize(wav_path_absolute), segment.audio_length, segment.text))
-        sum_audio_length += segment.audio_length
+        files.append((wav_path, getsize(wav_path_absolute), segment.duration, segment.text))
+        sum_duration += segment.duration
 
         if synthesize:
             audio, rate = librosa.load(wav_path_absolute, sr=16000, mono=True)
@@ -192,11 +192,11 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
             files.append((wav_distort, getsize(wav_distort_path), wav_distort_len, segment.text))
 
         description = wav_path
-        if max_audio_length:
-            description += f' {timedelta(seconds=sum_audio_length)}'
+        if max_duration:
+            description += f' {timedelta(seconds=sum_duration)}'
         progress.set_description(description)
 
-        if max_audio_length and sum_audio_length > max_audio_length * 60:
+        if max_duration and sum_duration > max_duration * 60:
             break
 
     return pandas.DataFrame(data=files, columns=['wav_filename', 'wav_filesize', 'wav_length', 'transcript'])

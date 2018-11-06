@@ -212,10 +212,12 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
             break
 
     if synthesize or min_dur and sum_duration < min_dur * 60 or max_dur and sum_duration < max_dur * 60:
-        print(f'filling up with distorted data until 1000 minutes are reached')
+        print(f'total length: {timedelta(seconds=sum_duration)}')
+        print(f'filling up with distorted data until {timedelta(minutes=1000)} is reached')
+        i = 0
         while sum_duration < 1000 * 60:
-            for i, (segment_id, audio, rate, transcript) in tqdm(enumerate(segments), total=len(segments),
-                                                                 unit=' segments'):
+            i += 1
+            for segment_id, audio, rate, transcript in tqdm(segments, unit=' segments'):
                 shift = random.uniform(0.5, 1.5)
                 pitch = random.uniform(-5, 5)
                 tempo = random.uniform(0.6, 1.6)
@@ -228,6 +230,9 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
                                                        tempo=tempo, volume=volume, echo=echo, force=force)
                 files.append((wav_distort, getsize(wav_distort_path), wav_distort_len, transcript))
                 sum_duration += wav_distort_len
+
+                if sum_duration > 1000 * 60:
+                    break
 
             print(f'total length: {timedelta(seconds=sum_duration)}')
 

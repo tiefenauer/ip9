@@ -77,12 +77,12 @@ def create_segments(source_dir, target_dir, limit):
 
         chapter_id = basename(source_dir)
         speaker_id = basename(abspath(join(source_dir, pardir)))
+        book_id = chapters[chapter_id]['book_id']
 
         if chapter_id not in chapters:
             print(f'WARNING: chapter {chapter_id} unknown or not in train-clean-xxx. Skipping corpus entry...')
             continue
 
-        book_id = chapters[chapter_id]['book_id']
         if not book_id:
             print(f'WARNING: no book information available for chapter {chapter_id}. Skipping corpus entry...')
             continue
@@ -136,10 +136,6 @@ def create_segments(source_dir, target_dir, limit):
                 text_end = len(book_text) - 1
                 for i in range(1, len(last_transcript) - 1):
                     if last_transcript[-i:] not in book_text:
-                        if last_transcript[-i + 1:] not in book_text:
-                            print(book_text)
-                            print(i, last_transcript[-i + 1:])
-                            print(i, last_transcript)
                         text_end = book_text.index(last_transcript[-i + 1:]) + i - 1
                         break
 

@@ -105,7 +105,7 @@ class Corpus(ABC):
             return df_subset
         return df_subset[df_subset['numeric'] == numeric]
 
-    def summary(self, format=None):
+    def summary(self, html=False):
         print(f"""
 Corpus:        {self.name}
 Root:          {self.root_path}
@@ -118,61 +118,69 @@ Creation date: {ctime(self.creation_date)}
             percent = 100 * value / total if total > 0 else 0
             if unit == 's':
                 value = timedelta(seconds=value)
-                # delta = timedelta(seconds=value)
-                # value = delta - timedelta(microseconds=delta.microseconds)
             else:
                 value = f'{value:,}'
             return f'{value} ({percent:.2f}%)'
 
-        def create_row(df_total):
-            df_train = df_total[df_total['subset'] == 'train']
-            df_dev = df_total[df_total['subset'] == 'dev']
-            df_test = df_total[df_total['subset'] == 'test']
+        def create_row(df, n_total, s_total):
+            df_train = df[df['subset'] == 'train']
+            df_dev = df[df['subset'] == 'dev']
+            df_test = df[df['subset'] == 'test']
 
-            n_all = abs_perc_string(len(df_total), len(df_total))
-            n_train = abs_perc_string(len(df_train), len(df_total))
-            n_dev = abs_perc_string(len(df_dev), len(df_total))
-            n_test = abs_perc_string(len(df_test), len(df_total))
+            n_all = abs_perc_string(len(df), n_total) if len(df) else '-'
+            n_train = abs_perc_string(len(df_train), n_total) if len(df_train) else '-'
+            n_dev = abs_perc_string(len(df_dev), n_total) if len(df_dev) else '-'
+            n_test = abs_perc_string(len(df_test), n_total) if len(df_test) else '-'
 
-            s_all_sum = df_total['duration'].sum()
-            s_train_sum = df_train['duration'].sum()
-            s_dev_sum = df_dev['duration'].sum()
-            s_test_sum = df_test['duration'].sum()
+            s_all = df['duration'].sum()
+            s_train = df_train['duration'].sum()
+            s_dev = df_dev['duration'].sum()
+            s_test = df_test['duration'].sum()
 
-            audio_all = abs_perc_string(s_all_sum, s_all_sum, unit='s')
-            audio_train = abs_perc_string(s_train_sum, s_all_sum, unit='s')
-            audio_dev = abs_perc_string(s_dev_sum, s_all_sum, unit='s')
-            audio_test = abs_perc_string(s_test_sum, s_all_sum, unit='s')
+            audio_all = abs_perc_string(s_all, s_total, unit='s') if s_all else '-'
+            audio_train = abs_perc_string(s_train, s_total, unit='s') if s_train else '-'
+            audio_dev = abs_perc_string(s_dev, s_total, unit='s') if s_dev else '-'
+            audio_test = abs_perc_string(s_test, s_total, unit='s') if s_test else '-'
 
-            audio_all_av = timedelta(seconds=df_total['duration'].mean() if df_total['duration'].any() else 0)
-            audio_train_av = timedelta(seconds=df_train['duration'].mean() if df_train['duration'].any() else 0)
-            audio_dev_av = timedelta(seconds=df_dev['duration'].mean() if df_dev['duration'].any() else 0)
-            audio_test_av = timedelta(seconds=df_test['duration'].mean() if df_test['duration'].any() else 0)
+            audio_all_av = timedelta(seconds=df['duration'].mean()) if df['duration'].any() else '-'
+            audio_train_av = timedelta(seconds=df_train['duration'].mean()) if df_train['duration'].any() else '-'
+            audio_dev_av = timedelta(seconds=df_dev['duration'].mean()) if df_dev['duration'].any() else '-'
+            audio_test_av = timedelta(seconds=df_test['duration'].mean()) if df_test['duration'].any() else '-'
+
+            trans_all_av = df['transcript'].map(len).mean()
+            trans_train_av = df_train['transcript'].map(len).mean()
+            trans_dev_av = df_dev['transcript'].map(len).mean()
+            trans_test_av = df_test['transcript'].map(len).mean()
 
             return [
-                n_all, audio_all, str(audio_all_av),
-                n_train, audio_train, str(audio_train_av),
-                n_dev, audio_dev, str(audio_dev_av),
-                n_test, audio_test, str(audio_test_av)
+                n_all, n_train, n_dev, n_test,
+                audio_all, audio_train, audio_dev, audio_test,
+                str(audio_all_av), str(audio_train_av), str(audio_dev_av), str(audio_test_av),
+                f'{trans_all_av:.2f}', f'{trans_train_av:.2f}', f'{trans_dev_av:.2f}', f'{trans_test_av:.2f}',
             ]
 
         data = []
         languages = self.languages + [None] if len(self.languages) > 1 else self.languages
         for lang, numeric, in product(languages, [None, True, False]):
-            df_tot = self.df
+            df = self.df
             if lang:
-                df_tot = df_tot[df_tot['language'] == lang]
+                df = df[df['language'] == lang]
+
+            n_total = len(df)
+            s_total = df['duration'].sum()
+
             if numeric is not None:
-                df_tot = df_tot[df_tot['numeric'] == numeric]
-            data.append(create_row(df_tot))
+                df = df[df['numeric'] == numeric]
+            data.append(create_row(df, n_total=n_total, s_total=s_total))
 
         languages = self.languages + ['all'] if len(self.languages) > 1 else self.languages
         index = pd.MultiIndex.from_product([languages, ['all', 'numeric', 'non-numeric']])
-        columns = pd.MultiIndex.from_product([['total', 'train', 'dev', 'test'], ['samples', 'audio', 'Ø audio']])
+        columns = pd.MultiIndex.from_product([['samples', 'audio', 'Ø audio', 'Ø transcript'],
+                                              ['total', 'train', 'dev', 'test']])
         df_stats = pd.DataFrame(data=data, index=index, columns=columns)
         df_stats = df_stats.T
 
-        if format and format.lower() == 'html':
+        if html:
             return df_stats.to_html()
 
         with pd.option_context('display.max_rows', None,
@@ -211,12 +219,12 @@ class CommonVoiceCorpus(Corpus):
 
 def parse_cv_index(csv_file, subset):
     df = pd.read_csv(csv_file)
-    df = df.drop(['up_votes', 'down_votes', 'age', 'gender', 'accent'], axis=1)
-    df['entry_id'] = df['filename'].map(lambda f: splitext(basename(f))[0])
+    df['entry_id'] = df['wav_filename'].map(lambda f: splitext(basename(f))[0])
     df['subset'] = subset
     df['language'] = 'en'
     df['start_frame'] = 0
-    df['end_frame'] = df['duration'].map(lambda d: d * 16000)
-    df['numeric'] = df['text'].map(lambda t: contains_numeric(t))
-    df = df.rename(columns={'filename': 'audio_file', 'text': 'transcript'})
+    df['end_frame'] = df['wav_length'].map(lambda l: l // 2)  # 2 bytes per sample
+    df['numeric'] = df['transcript'].map(lambda t: contains_numeric(t))
+    df = df.rename(columns={'wav_filename': 'audio_file', 'wav_length': 'duration'})
+    df = df.drop(['wav_filesize'], axis=1)
     return df

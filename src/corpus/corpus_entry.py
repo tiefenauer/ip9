@@ -3,8 +3,8 @@ from itertools import islice
 from os.path import join
 from pathlib import Path
 
+import pandas as pd
 import soundfile as sf
-from tabulate import tabulate
 
 from corpus.audible import Audible
 from corpus.corpus_segment import Segment
@@ -35,9 +35,9 @@ class CorpusEntry(Audible):
             yield segment
 
     def __getitem__(self, item):
-        # access by index
         if isinstance(item, slice):
             return list(islice(self.segments, item.start, item.stop))
+        # access by index
         return next(islice(self.segments, item, item + 1))
 
     @property
@@ -93,26 +93,43 @@ class CorpusEntry(Audible):
         if '_rate' in state: del state['_rate']
         return state
 
-    def summary(self, format=None):
+    def summary(self, html=False):
         print(f"""
 Corpus Entry: {self.id}
 Subset      : {self.subset}
 Language    : {self.language}
-Duration    : {self.duration}
+Duration    : {timedelta(seconds=self.duration)} (only voiced parts)
 Audio file  : {self.audio_path}
 Transcript  : {self.transcript_path}
-# segments  : {len(self)}
         """)
-        total_length = sum(seg.duration for seg in self.segments)
-        l_sp_num = sum(seg.duration for seg in self.segments_numeric)
-        l_sp_nnum = sum(seg.duration for seg in self.segments_not_numeric)
-        table = {
-            '#speech segments': (len(self), timedelta(seconds=total_length)),
-            '#speech segments with numbers in transcript': (
-                len(list(self.segments_numeric)), timedelta(seconds=l_sp_num)),
-            '#speech segments without numbers in transcript': (
-                len(list(self.segments_not_numeric)), timedelta(seconds=l_sp_nnum))
-        }
-        headers = ['# ', 'hh:mm:ss']
-        print(tabulate([(k,) + v for k, v in table.items()], headers=headers))
-        print('')
+
+        n_all = f'{len(self.df.index)}:,'
+        s_all = timedelta(seconds=self.df['duration'].sum())
+
+        df_numeric = self.df[self.df['numeric'] == True]
+        n_num = f'{len(df_numeric.index):,}' if len(df_numeric.index) else '-'
+        s_num = timedelta(seconds=df_numeric['duration'].sum()) if len(df_numeric.index) else '-'
+
+        df_non_numeric = self.df[self.df['numeric'] == False]
+        n_non_num = f'{len(df_non_numeric.index):,}' if len(df_non_numeric.index) else '-'
+        s_non_num = timedelta(seconds=df_non_numeric['duration'].sum()) if len(df_non_numeric.index) else '-'
+
+        data = [
+            [n_all, s_all],
+            [n_num, s_num],
+            [n_non_num, s_non_num]
+        ]
+
+        index = ['total samples', 'numeric samples', 'non-numeric samples']
+        columns = ['#', 'duration (hh:mm:ss)']
+        df_stats = pd.DataFrame(data=data, index=index, columns=columns)
+
+        if html:
+            return df_stats.to_html()
+
+        with pd.option_context('display.max_rows', None,
+                               'display.max_columns', None,
+                               'display.width', 1000,
+                               'colheader_justify', 'center',
+                               'display.max_colwidth', -1):
+            print(df_stats)

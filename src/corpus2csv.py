@@ -145,7 +145,7 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
                 transcript = f'{segment.start_frame} {segment.end_frame} {segment.transcript}'
                 f.write(transcript)
 
-        files.append((wav_path, getsize(wav_path_absolute), segment.duration, segment.text))
+        files.append((wav_path, getsize(wav_path_absolute), segment.duration, segment.transcript))
         sum_duration += segment.duration
 
         if synthesize:
@@ -161,27 +161,27 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
             shift = random.uniform(0.5, 1.5)
             wav_shift_path = join(target_dir, wav_shift)
             wav_shift_len = synthesize_and_write(audio, rate, wav_shift_path, shift=shift, override=override)
-            files.append((wav_shift, getsize(wav_shift_path), wav_shift_len, segment.text))
+            files.append((wav_shift, getsize(wav_shift_path), wav_shift_len, segment.transcript))
 
             higher = random.uniform(1.5, 5)
             wav_high_path = join(target_dir, wav_high)
             wav_high_len = synthesize_and_write(audio, rate, wav_high_path, pitch=higher, override=override)
-            files.append((wav_high, getsize(wav_high_path), wav_high_len, segment.text))
+            files.append((wav_high, getsize(wav_high_path), wav_high_len, segment.transcript))
 
             lower = random.uniform(-5, -1.5)
             wav_low_path = join(target_dir, wav_low)
             wav_low_len = synthesize_and_write(audio, rate, wav_low_path, pitch=lower, override=override)
-            files.append((wav_low, getsize(wav_low_path), wav_low_len, segment.text))
+            files.append((wav_low, getsize(wav_low_path), wav_low_len, segment.transcript))
 
             faster = random.uniform(1.2, 1.6)
             wav_fast_path = join(target_dir, wav_fast)
             wav_fast_len = synthesize_and_write(audio, rate, wav_fast_path, tempo=faster, override=override)
-            files.append((wav_fast, getsize(wav_fast_path), wav_fast_len, segment.text))
+            files.append((wav_fast, getsize(wav_fast_path), wav_fast_len, segment.transcript))
 
             slower = random.uniform(0.6, 0.8)
             wav_slow_path = join(target_dir, wav_slow)
             wav_slow_len = synthesize_and_write(audio, rate, wav_slow_path, tempo=slower, override=override)
-            files.append((wav_slow, getsize(wav_slow_path), wav_slow_len, segment.text))
+            files.append((wav_slow, getsize(wav_slow_path), wav_slow_len, segment.transcript))
 
             shift = random.uniform(0.5, 1.5)
             pitch = random.uniform(-5, 5)
@@ -189,7 +189,7 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
             wav_distort_path = join(target_dir, wav_distort)
             wav_distort_len = synthesize_and_write(audio, rate, wav_distort_path, shift=shift, pitch=pitch, tempo=tempo,
                                                    override=override)
-            files.append((wav_distort, getsize(wav_distort_path), wav_distort_len, segment.text))
+            files.append((wav_distort, getsize(wav_distort_path), wav_distort_len, segment.transcript))
 
         description = wav_path
         if max_duration:

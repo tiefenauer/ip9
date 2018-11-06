@@ -88,16 +88,25 @@ class Corpus(ABC):
         return self.df['entry_id'].unique().tolist()
 
     def train_set(self, numeric=False):
-        df_train = self._filter_segments('train', numeric)
-        return self.create_entries(df_train)
+        return self._get_segments_for_subset('train', numeric)
 
     def dev_set(self, numeric=False):
-        df_dev = self._filter_segments('dev', numeric)
-        return self.create_entries(df_dev)
+        return self._get_segments_for_subset('dev', numeric)
 
     def test_set(self, numeric=False):
-        df_test = self._filter_segments('test', numeric)
-        return self.create_entries(df_test)
+        return self._get_segments_for_subset('test', numeric)
+
+    def _get_segments_for_subset(self, subset, numeric):
+        df_subset = self._filter_segments(subset, numeric)
+        if numeric is True:
+            segments = (segment for entry in self.create_entries(df_subset) for segment in entry.segments_numeric)
+        elif numeric is False:
+            segments = (segment for entry in self.create_entries(df_subset) for segment in entry.segments_not_numeric)
+        else:
+            segments = (segment for entry in self.create_entries(df_subset) for segment in entry.segments)
+
+        for segment in segments:
+            yield segment
 
     def _filter_segments(self, subset, numeric=None):
         df_subset = self.df[self.df['subset'] == subset]

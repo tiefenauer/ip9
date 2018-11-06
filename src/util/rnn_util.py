@@ -84,8 +84,7 @@ def load_keras_model(root_path, opt=None):
 def create_tf_session(gpu, allow_growth=False, log_device_placement=False):
     gpu = query_gpu(gpu)
     print('----------------------------------------------------------')
-    if 'CUDA_VISIBLE_DEVICES' in os.environ:
-        print(os.environ['CUDA_VISIBLE_DEVICES'])
+    print(os.environ['CUDA_VISIBLE_DEVICES'])
     print(K.get_session())
     print('----------------------------------------------------------')
     config = tf.ConfigProto(log_device_placement=log_device_placement)

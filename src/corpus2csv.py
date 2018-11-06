@@ -142,7 +142,7 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
 
         if not exists(txt_path_absolute) or not getsize(txt_path_absolute) or override:
             with open(txt_path_absolute, 'w') as f:
-                transcript = f'{segment.start_frame} {segment.end_frame} {segment.text}'
+                transcript = f'{segment.start_frame} {segment.end_frame} {segment.transcript}'
                 f.write(transcript)
 
         files.append((wav_path, getsize(wav_path_absolute), segment.audio_length, segment.text))

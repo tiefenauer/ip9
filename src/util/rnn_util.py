@@ -80,13 +80,11 @@ def load_keras_model(root_path, opt=None):
         return loaded_model
 
 
-def create_keras_session(gpu, allow_growth=False, log_device_placement=False):
-    gpu = query_gpu(gpu)
+def create_tf_session(gpu, allow_growth=False, log_device_placement=False):
     config = tf.ConfigProto(log_device_placement=log_device_placement)
     config.gpu_options.visible_device_list = gpu
     config.gpu_options.allow_growth = allow_growth
-    session = tf.Session(config=config)
-    K.set_session(session)
+    return tf.Session(config=config)
 
 
 def query_gpu(gpu):

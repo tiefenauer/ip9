@@ -18,7 +18,7 @@ from util.audio_util import to_wav, read_pcm16_wave, ms_to_frames
 from util.lm_util import load_lm_and_vocab
 from util.lsa_util import needle_wunsch
 from util.pipeline_util import create_alignments_dataframe
-from util.rnn_util import load_ds_model, load_keras_model, create_keras_session
+from util.rnn_util import load_ds_model, load_keras_model, create_tf_session
 from util.string_util import normalize
 from util.vad_util import webrtc_split
 
@@ -200,8 +200,7 @@ def asr_keras(voiced_segments, language, sample_rate, keras_path, lm_path, gpu):
     :param lm_path: absolute path to binary file containing KenLM n-gram Language Model
     :return: a list of transcripts for the voiced segments
     """
-    if gpu:
-        create_keras_session(gpu)
+    K.set_session(create_tf_session(gpu))
 
     keras_model = load_keras_model(keras_path)
     lm, lm_vocab = load_lm_and_vocab(lm_path)

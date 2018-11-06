@@ -130,7 +130,7 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
 
     progress = tqdm(subset, total=total, unit=' speech segments')
     for i, segment in enumerate(progress):
-        segment_id = f'{corpus_id}-{subset_id}-{i:0=3d}'
+        segment_id = f'{corpus_id}-{subset_id}-{i:0=4d}'
         wav_path = f'{segment_id}.wav'
         txt_path = f'{segment_id}.txt'
 
@@ -243,12 +243,6 @@ def create_subset(h5_file, name, df):
 
         durations.resize(durations.shape[0] + 1, axis=0)
         durations[durations.shape[0] - 1] = wav_file_size
-
-
-def get_segment_id(segment):
-    corpus_entry = segment.corpus_entry
-    ix = corpus_entry.segments.index(segment)
-    return f'{corpus_entry.id}-{ix:0=4d}'
 
 
 if __name__ == '__main__':

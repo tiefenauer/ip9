@@ -1,7 +1,6 @@
 import argparse
 import random
 from datetime import timedelta
-from itertools import chain
 from os import listdir, makedirs, remove
 from os.path import join, exists, getsize
 
@@ -129,7 +128,7 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
             subset = subset[:i]
 
     segments = []
-    originals, shifted, echoed, pitch_high, pitch_low, tempo_fast, tempo_slow, vol_louder, vol_quiet = [], [], [], [], [], [], [], [], []
+    files = []
     sum_duration = 0
     progress = tqdm(subset, total=total, unit=' speech segments')
     for i, segment in enumerate(progress):
@@ -149,7 +148,7 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
                 f.write(transcript)
 
         segments.append((segment_id, segment.audio, segment.rate, segment.transcript))
-        originals.append((wav_path, getsize(wav_path_absolute), segment.duration, segment.transcript))
+        files.append((wav_path, getsize(wav_path_absolute), segment.duration, segment.transcript))
         sum_duration += segment.duration
 
         if synthesize:
@@ -167,42 +166,42 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
             shift = random.uniform(0.5, 1.5)
             wav_shift_path = join(target_dir, wav_shift)
             wav_shift_len = synthesize_and_write(audio, rate, wav_shift_path, shift=shift, force=force)
-            shifted.append((wav_shift, getsize(wav_shift_path), wav_shift_len, segment.transcript))
+            files.append((wav_shift, getsize(wav_shift_path), wav_shift_len, segment.transcript))
 
             echo = random.randint(30, 100)
             wav_echo_path = join(target_dir, wav_echo)
             wav_echo_len = synthesize_and_write(audio, rate, wav_echo_path, echo=echo, force=force)
-            echoed.append((wav_echo, getsize(wav_echo_path), wav_echo_len, segment.transcript))
+            files.append((wav_echo, getsize(wav_echo_path), wav_echo_len, segment.transcript))
 
             higher = random.uniform(1.5, 5)
             wav_high_path = join(target_dir, wav_high)
             wav_high_len = synthesize_and_write(audio, rate, wav_high_path, pitch=higher, force=force)
-            pitch_high.append((wav_high, getsize(wav_high_path), wav_high_len, segment.transcript))
+            files.append((wav_high, getsize(wav_high_path), wav_high_len, segment.transcript))
 
             lower = random.uniform(-5, -1.5)
             wav_low_path = join(target_dir, wav_low)
             wav_low_len = synthesize_and_write(audio, rate, wav_low_path, pitch=lower, force=force)
-            pitch_low.append((wav_low, getsize(wav_low_path), wav_low_len, segment.transcript))
+            files.append((wav_low, getsize(wav_low_path), wav_low_len, segment.transcript))
 
             faster = random.uniform(1.2, 1.6)
             wav_fast_path = join(target_dir, wav_fast)
             wav_fast_len = synthesize_and_write(audio, rate, wav_fast_path, tempo=faster, force=force)
-            tempo_fast.append((wav_fast, getsize(wav_fast_path), wav_fast_len, segment.transcript))
+            files.append((wav_fast, getsize(wav_fast_path), wav_fast_len, segment.transcript))
 
             slower = random.uniform(0.6, 0.8)
             wav_slow_path = join(target_dir, wav_slow)
             wav_slow_len = synthesize_and_write(audio, rate, wav_slow_path, tempo=slower, force=force)
-            tempo_slow.append((wav_slow, getsize(wav_slow_path), wav_slow_len, segment.transcript))
+            files.append((wav_slow, getsize(wav_slow_path), wav_slow_len, segment.transcript))
 
             louder = random.randint(5, 15)
             wav_loud_path = join(target_dir, wav_loud)
             wav_loud_len = synthesize_and_write(audio, rate, wav_loud_path, volume=louder, force=force)
-            vol_louder.append((wav_loud, getsize(wav_loud_path), wav_loud_len, segment.transcript))
+            files.append((wav_loud, getsize(wav_loud_path), wav_loud_len, segment.transcript))
 
             quieter = random.randint(-15, 5)
             wav_quiet_path = join(target_dir, wav_quiet)
             wav_quiet_len = synthesize_and_write(audio, rate, wav_quiet_path, volume=quieter, force=force)
-            vol_louder.append((wav_quiet, getsize(wav_quiet_path), wav_quiet_len, segment.transcript))
+            files.append((wav_quiet, getsize(wav_quiet_path), wav_quiet_len, segment.transcript))
 
         description = wav_path
         if max_dur:
@@ -212,12 +211,11 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
         if max_dur and sum_duration > max_dur * 60:
             break
 
-    distorted = []
-    if synthesize and (
-            min_dur and sum_duration < min_dur * 60 or max_dur and sum_duration < max_dur * 60):
+    if synthesize or min_dur and sum_duration < min_dur * 60 or max_dur and sum_duration < max_dur * 60:
         print(f'filling up with distorted data until 1000 minutes are reached')
         while sum_duration < 1000 * 60:
-            for i, (segment_id, audio, rate, transcript) in tqdm(enumerate(segments), unit=' segments'):
+            for i, (segment_id, audio, rate, transcript) in tqdm(enumerate(segments), total=len(segments),
+                                                                 unit=' segments'):
                 shift = random.uniform(0.5, 1.5)
                 pitch = random.uniform(-5, 5)
                 tempo = random.uniform(0.6, 1.6)
@@ -228,18 +226,13 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
                 wav_distort_path = join(target_dir, wav_distort)
                 wav_distort_len = synthesize_and_write(audio, rate, wav_distort_path, shift=shift, pitch=pitch,
                                                        tempo=tempo, volume=volume, echo=echo, force=force)
-                distorted.append((wav_distort, getsize(wav_distort_path), wav_distort_len, transcript))
+                files.append((wav_distort, getsize(wav_distort_path), wav_distort_len, transcript))
                 sum_duration += wav_distort_len
 
             print(f'total length: {timedelta(seconds=sum_duration)}')
 
-    if synthesize:
-        all_segments = zip(originals, shifted, echoed, pitch_high, pitch_low, tempo_fast, tempo_slow, vol_louder,
-                           vol_quiet, distorted)
-        files = list(chain.from_iterable(all_segments))
-    else:
-        files = originals
-    return pd.DataFrame(data=files, columns=['wav_filename', 'wav_filesize', 'wav_length', 'transcript'])
+    return pd.DataFrame(data=files, columns=['wav_filename', 'wav_filesize', 'wav_length', 'transcript']).sort_values(
+        'wav_length')
 
 
 def synthesize_and_write(audio, rate, wav_path, shift=0, pitch=0, tempo=1, volume=0, echo=0, force=False):

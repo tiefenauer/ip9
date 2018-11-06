@@ -1,18 +1,20 @@
 import argparse
 import random
 from datetime import timedelta
+from itertools import chain
 from os import listdir, makedirs, remove
 from os.path import join, exists, getsize
 
 import h5py
 import librosa
 import numpy as np
-import pandas
+import pandas as pd
 import soundfile as sf
 from python_speech_features import mfcc
 from scipy.io import wavfile
 from tqdm import tqdm
 
+from corpus.corpus import DeepSpeechCorpus
 from util.audio_util import distort_audio
 from util.corpus_util import get_corpus
 from util.log_util import create_args_str
@@ -32,7 +34,9 @@ parser.add_argument('-x', '--synthesize', action='store_true',
                     help='create synthesized data')
 parser.add_argument('-num', '--include_numeric', action='store_true', default=False,
                     help='(optional) whether to include transcripts with numeric chars (default: False)')
-parser.add_argument('-m', '--max_duration', nargs='?', type=int, default=0,
+parser.add_argument('-min', '--min_duration', nargs='?', type=int, default=0,
+                    help='(optional) maximum number of speech segments minutes to process (default: all)')
+parser.add_argument('-max', '--max_duration', nargs='?', type=int, default=0,
                     help='(optional) maximum number of speech segments minutes to process (default: all)')
 parser.add_argument('-p', '--precompute_features', action='store_true',
                     help='(optional) precompute MFCC features in HDF5 format. Default: False')
@@ -42,15 +46,21 @@ args = parser.parse_args()
 def main(args):
     print(create_args_str(args))
 
-    target_dir, corpus_id, corpus, override, synthesize, max_segments, precompute_features = setup(args)
+    target_dir, corpus_id, force, synthesize, min_dur, max_dur, precompute_features = setup(args)
+
+    corpus = get_corpus(args.source_dir, args.language)
+    corpus.summary()
 
     print(f'processing {corpus.name} corpus and saving split segments in {target_dir}')
-    df_train, df_valid, df_test = extract_segments(target_dir, corpus_id, corpus, synthesize, max_segments, override)
+    csv_train, csv_dev, csv_test = extract_segments(target_dir, corpus_id, corpus, synthesize, min_dur, max_dur, force)
     print(f'done! All files are in {target_dir}')
+
+    corpus = DeepSpeechCorpus(csv_train, csv_dev, csv_test)
+    corpus.summary()
 
     if precompute_features:
         print(f'pre-computing features')
-        compute_features(df_train, df_valid, df_test, target_dir, override)
+        compute_features(csv_train, csv_dev, csv_test, target_dir, force)
 
 
 def setup(args):
@@ -59,24 +69,18 @@ def setup(args):
         print(f'target directory {target_dir} does not exist. Creating...')
         makedirs(target_dir)
 
-    override = False
-    if not args.force and listdir(target_dir):
+    force = args.force
+    if not force and listdir(target_dir):
         inp = input(f"""
         WARNING: target directory {target_dir} already exists. Override?
         (this will overwrite all existing files in {target_dir} with the same names!!!) (Y/n)
         """)
-        override = inp.lower() in ['', 'y']
+        force = inp.lower() in ['', 'y']
 
-    corpus = get_corpus(args.source_dir)
-    if args.language not in corpus.languages:
-        raise ValueError('ERROR: Language {args.languate} does not exist in corpus {corpus.root_path}')
-    corpus = corpus(languages=args.language)
-    corpus.summary()
-
-    return target_dir, args.id, corpus, override, args.synthesize, args.max_duration, args.precompute_features
+    return target_dir, args.id, force, args.synthesize, args.min_duration, args.max_duration, args.precompute_features
 
 
-def extract_segments(target_dir, corpus_id, corpus, synthesize=False, max_duration=0, override=False):
+def extract_segments(target_dir, corpus_id, corpus, synthesize=False, min_dur=0, max_dur=0, force=False):
     train_set = corpus.train_set(numeric=args.include_numeric)
     dev_set = corpus.dev_set(numeric=args.include_numeric)
     test_set = corpus.test_set(numeric=args.include_numeric)
@@ -86,48 +90,47 @@ def extract_segments(target_dir, corpus_id, corpus, synthesize=False, max_durati
     print(f'test length is: {timedelta(seconds=sum(seg.duration for seg in test_set))}')
 
     print(f'processing training segments')
-    df_train = process_subset('train', train_set, synthesize, corpus_id, target_dir, max_duration, override)
+    csv_train = process_subset('train', train_set, synthesize, corpus_id, target_dir, min_dur, max_dur, force)
 
     print(f'processing validation segments (data is only synthesized for training set)')
-    df_valid = process_subset('dev', dev_set, False, corpus_id, target_dir, max_duration * 0.2, override)
+    csv_dev = process_subset('dev', dev_set, False, corpus_id, target_dir, min_dur, max_dur, force)
 
     print(f'processing validation segments (data is only synthesized for training set)')
-    df_test = process_subset('test', test_set, False, corpus_id, target_dir, max_duration * 0.2, override)
+    csv_test = process_subset('test', test_set, False, corpus_id, target_dir, min_dur, max_dur, force)
 
-    return df_train, df_valid, df_test
+    return csv_train, csv_dev, csv_test
 
 
-def process_subset(subset_id, subset, synthesize, corpus_id, target_dir, max_duration, override):
-    df = split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, max_duration, override)
+def process_subset(subset_id, subset, synthesize, corpus_id, target_dir, min_dur, max_dur, force):
+    df = split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, min_dur, max_dur, force)
 
     csv_path = join(target_dir, f'{corpus_id}-{subset_id}.csv')
     print(f'saving metadata in {csv_path}')
     df.to_csv(csv_path, index=False)
-    return df
+    return csv_path
 
 
-def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, max_duration, override):
-    files = []
-    sum_duration = 0
-
+def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, min_dur, max_dur, force):
     total = len(subset)
-
-    if max_duration:
-        print(f'trying to cap numer of speech segments to a total length of {max_duration} minutes. '
+    if max_dur:
+        print(f'trying to cap numer of speech segments to a total length of {max_dur} minutes. '
               f'Speech segements will be sorted by length before capping.')
         tot_duration = sum(s.duration for s in subset) / 60
-        if tot_duration < max_duration:
-            print(f'WARNING: maximum length of corpus was set to {max_duration} minutes, but total length of all '
+        if tot_duration < max_dur:
+            print(f'WARNING: maximum length of corpus was set to {max_dur} minutes, but total length of all '
                   f'speech segments is only {tot_duration} minutes! '
                   f'-> using all entries from corpus ({total} speech segments)')
         else:
             for i, s in enumerate(sorted(subset, key=lambda s: s.duration)):
-                if sum(s.duration for s in subset[:i]) > max_duration * 60:
+                if sum(s.duration for s in subset[:i]) > max_dur * 60:
                     break
-            print(f'total length of corpus will be capped at {max_duration} minutes ({i} speech segments)')
+            print(f'total length of corpus will be capped at {max_dur} minutes ({i} speech segments)')
             total = i
-            subset = subset[:1]
+            subset = subset[:i]
 
+    segments = []
+    originals, shifted, echoed, pitch_high, pitch_low, tempo_fast, tempo_slow, vol_louder, vol_quiet = [], [], [], [], [], [], [], [], []
+    sum_duration = 0
     progress = tqdm(subset, total=total, unit=' speech segments')
     for i, segment in enumerate(progress):
         segment_id = f'{corpus_id}-{subset_id}-{i:0=4d}'
@@ -137,88 +140,135 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
         wav_path_absolute = join(target_dir, wav_path)
         txt_path_absolute = join(target_dir, txt_path)
 
-        if not exists(wav_path_absolute) or not getsize(wav_path_absolute) or override:
+        if not exists(wav_path_absolute) or not getsize(wav_path_absolute) or force:
             sf.write(wav_path_absolute, segment.audio, segment.rate, subtype='PCM_16')
 
-        if not exists(txt_path_absolute) or not getsize(txt_path_absolute) or override:
+        if not exists(txt_path_absolute) or not getsize(txt_path_absolute) or force:
             with open(txt_path_absolute, 'w') as f:
                 transcript = f'{segment.start_frame} {segment.end_frame} {segment.transcript}'
                 f.write(transcript)
 
-        files.append((wav_path, getsize(wav_path_absolute), segment.duration, segment.transcript))
+        segments.append((segment_id, segment.audio, segment.rate, segment.transcript))
+        originals.append((wav_path, getsize(wav_path_absolute), segment.duration, segment.transcript))
         sum_duration += segment.duration
 
         if synthesize:
             audio, rate = librosa.load(wav_path_absolute, sr=16000, mono=True)
 
             wav_shift = f'{segment_id}-shift.wav'
+            wav_echo = f'{segment_id}-echo.wav'
             wav_high = f'{segment_id}-high.wav'
             wav_low = f'{segment_id}-low.wav'
             wav_fast = f'{segment_id}-fast.wav'
             wav_slow = f'{segment_id}-slow.wav'
-            wav_distort = f'{segment_id}-distorted.wav'
+            wav_loud = f'{segment_id}-loud.wav'
+            wav_quiet = f'{segment_id}-quiet.wav'
 
             shift = random.uniform(0.5, 1.5)
             wav_shift_path = join(target_dir, wav_shift)
-            wav_shift_len = synthesize_and_write(audio, rate, wav_shift_path, shift=shift, override=override)
-            files.append((wav_shift, getsize(wav_shift_path), wav_shift_len, segment.transcript))
+            wav_shift_len = synthesize_and_write(audio, rate, wav_shift_path, shift=shift, force=force)
+            shifted.append((wav_shift, getsize(wav_shift_path), wav_shift_len, segment.transcript))
+
+            echo = random.randint(30, 100)
+            wav_echo_path = join(target_dir, wav_echo)
+            wav_echo_len = synthesize_and_write(audio, rate, wav_echo_path, echo=echo, force=force)
+            echoed.append((wav_echo, getsize(wav_echo_path), wav_echo_len, segment.transcript))
 
             higher = random.uniform(1.5, 5)
             wav_high_path = join(target_dir, wav_high)
-            wav_high_len = synthesize_and_write(audio, rate, wav_high_path, pitch=higher, override=override)
-            files.append((wav_high, getsize(wav_high_path), wav_high_len, segment.transcript))
+            wav_high_len = synthesize_and_write(audio, rate, wav_high_path, pitch=higher, force=force)
+            pitch_high.append((wav_high, getsize(wav_high_path), wav_high_len, segment.transcript))
 
             lower = random.uniform(-5, -1.5)
             wav_low_path = join(target_dir, wav_low)
-            wav_low_len = synthesize_and_write(audio, rate, wav_low_path, pitch=lower, override=override)
-            files.append((wav_low, getsize(wav_low_path), wav_low_len, segment.transcript))
+            wav_low_len = synthesize_and_write(audio, rate, wav_low_path, pitch=lower, force=force)
+            pitch_low.append((wav_low, getsize(wav_low_path), wav_low_len, segment.transcript))
 
             faster = random.uniform(1.2, 1.6)
             wav_fast_path = join(target_dir, wav_fast)
-            wav_fast_len = synthesize_and_write(audio, rate, wav_fast_path, tempo=faster, override=override)
-            files.append((wav_fast, getsize(wav_fast_path), wav_fast_len, segment.transcript))
+            wav_fast_len = synthesize_and_write(audio, rate, wav_fast_path, tempo=faster, force=force)
+            tempo_fast.append((wav_fast, getsize(wav_fast_path), wav_fast_len, segment.transcript))
 
             slower = random.uniform(0.6, 0.8)
             wav_slow_path = join(target_dir, wav_slow)
-            wav_slow_len = synthesize_and_write(audio, rate, wav_slow_path, tempo=slower, override=override)
-            files.append((wav_slow, getsize(wav_slow_path), wav_slow_len, segment.transcript))
+            wav_slow_len = synthesize_and_write(audio, rate, wav_slow_path, tempo=slower, force=force)
+            tempo_slow.append((wav_slow, getsize(wav_slow_path), wav_slow_len, segment.transcript))
 
-            shift = random.uniform(0.5, 1.5)
-            pitch = random.uniform(-5, 5)
-            tempo = random.uniform(0.6, 1.6)
-            wav_distort_path = join(target_dir, wav_distort)
-            wav_distort_len = synthesize_and_write(audio, rate, wav_distort_path, shift=shift, pitch=pitch, tempo=tempo,
-                                                   override=override)
-            files.append((wav_distort, getsize(wav_distort_path), wav_distort_len, segment.transcript))
+            louder = random.randint(5, 15)
+            wav_loud_path = join(target_dir, wav_loud)
+            wav_loud_len = synthesize_and_write(audio, rate, wav_loud_path, volume=louder, force=force)
+            vol_louder.append((wav_loud, getsize(wav_loud_path), wav_loud_len, segment.transcript))
+
+            quieter = random.randint(-15, 5)
+            wav_quiet_path = join(target_dir, wav_quiet)
+            wav_quiet_len = synthesize_and_write(audio, rate, wav_quiet_path, volume=quieter, force=force)
+            vol_louder.append((wav_quiet, getsize(wav_quiet_path), wav_quiet_len, segment.transcript))
 
         description = wav_path
-        if max_duration:
+        if max_dur:
             description += f' {timedelta(seconds=sum_duration)}'
         progress.set_description(description)
 
-        if max_duration and sum_duration > max_duration * 60:
+        if max_dur and sum_duration > max_dur * 60:
             break
 
-    return pandas.DataFrame(data=files, columns=['wav_filename', 'wav_filesize', 'wav_length', 'transcript'])
+    distorted = []
+    if synthesize and (
+            min_dur and sum_duration < min_dur * 60 or max_dur and sum_duration < max_dur * 60):
+        print(f'filling up with distorted data until 1000 minutes are reached')
+        while sum_duration < 1000 * 60:
+            for i, (segment_id, audio, rate, transcript) in tqdm(enumerate(segments), unit=' segments'):
+                shift = random.uniform(0.5, 1.5)
+                pitch = random.uniform(-5, 5)
+                tempo = random.uniform(0.6, 1.6)
+                volume = random.randint(-15, 15)
+                echo = random.randint(30, 100)
+
+                wav_distort = f'{segment_id}-distorted-{i}.wav'
+                wav_distort_path = join(target_dir, wav_distort)
+                wav_distort_len = synthesize_and_write(audio, rate, wav_distort_path, shift=shift, pitch=pitch,
+                                                       tempo=tempo, volume=volume, echo=echo, force=force)
+                distorted.append((wav_distort, getsize(wav_distort_path), wav_distort_len, transcript))
+                sum_duration += wav_distort_len
+
+            print(f'total length: {timedelta(seconds=sum_duration)}')
+
+    if synthesize:
+        files = list(
+            chain.from_iterable(
+                zip(originals, shifted + echoed + pitch_high + pitch_low + tempo_fast + tempo_slow + vol_louder,
+                    vol_quiet, distorted)))
+    else:
+        files = originals
+    return pd.DataFrame(data=files, columns=['wav_filename', 'wav_filesize', 'wav_length', 'transcript'])
 
 
-def synthesize_and_write(audio, rate, wav_path, shift=0, pitch=0, tempo=1, override=False):
-    audio_synth = distort_audio(audio, rate, shift_s=shift, pitch_factor=pitch, tempo_factor=tempo)
+def synthesize_and_write(audio, rate, wav_path, shift=0, pitch=0, tempo=1, volume=0, echo=0, force=False):
+    audio_synth = distort_audio(audio, rate,
+                                shift_s=shift,
+                                pitch_factor=pitch,
+                                tempo_factor=tempo,
+                                volume=volume,
+                                echo=echo)
 
-    if not exists(wav_path) or not getsize(wav_path) or override:
+    if not exists(wav_path) or not getsize(wav_path) or force:
         sf.write(wav_path, audio_synth, rate, subtype='PCM_16')
 
     return len(audio_synth) / rate
 
 
-def compute_features(df_train, df_valid, df_test, target_dir, override):
+def compute_features(csv_train, csv_valid, csv_test, target_dir, force):
+    df_train = pd.read_csv(csv_train)
+    df_dev = pd.read_csv(csv_valid)
+    df_test = pd.read_csv(csv_test)
+
     h5_file_path = join(target_dir, 'features_mfcc.h5')
-    if exists(h5_file_path) and override:
+    if exists(h5_file_path) and force:
         remove(h5_file_path)
     if not exists(h5_file_path):
         with h5py.File(h5_file_path) as h5_file:
             create_subset(h5_file, 'train', df_train)
-            create_subset(h5_file, 'test', df_valid)
+            create_subset(h5_file, 'test', df_dev)
             create_subset(h5_file, 'valid', df_test)
 
 

@@ -1,3 +1,4 @@
+pysndfx
 seaborn
 deepspeech=0.2.0
 gensim

@@ -4,12 +4,13 @@ Utility functions for audio manipulation
 import logging
 import subprocess
 import wave
+from os import remove
 
-import librosa
 import numpy as np
 import soundfile as sf
 from librosa.effects import time_stretch, pitch_shift
 from pydub import AudioSegment
+from pysndfx import AudioEffectsChain
 
 log = logging.getLogger(__name__)
 
@@ -80,10 +81,12 @@ def frame_to_ms(val_frame, sample_rate):
     return float(val_frame / sample_rate)
 
 
-def distort_audio(audio, rate, shift_s=0, pitch_factor=0, tempo_factor=1):
+def distort_audio(audio, rate, shift_s=0, pitch_factor=0, tempo_factor=1, volume=0, echo=0):
     audio_distorted = shift(audio, rate, shift_s)
     audio_distorted = change_pitch(audio_distorted, rate, pitch_factor)
     audio_distorted = change_tempo(audio_distorted, tempo_factor)
+    audio_distorted = change_volume(audio_distorted, rate, db=volume)
+    audio_distorted = add_echo(audio_distorted, echo)
     return audio_distorted
 
 
@@ -100,16 +103,21 @@ def change_tempo(audio, factor=1.0):
     return time_stretch(audio, factor)
 
 
-def add_echo(audio, rate, gain_in=0.8, gain_out=0.9, delay_decay="500 0.2"):
-    delay_decay = delay_decay.split()
-    assert len(delay_decay) % 2 == 0, f'delay_decay must contain pairwise values, but got {len(delay_decay)} values'
-    assert len(delay_decay) > 1, f'at least 2 values are required, but got {len(delay_decay)} values'
-    delay_decay = ' '.join(delay_decay)
-    effect = f'echo {gain_in:.3f} {gain_out:.3f} {delay_decay}'
-    tmp_file = 'tmp.wav'
-    librosa.output.write_wav(tmp_file, audio, rate)
-    result = subprocess.check_output(['sox', tmp_file, tmp_file, effect])
-    return result
+def change_volume(audio, rate, db=0):
+    if audio.dtype is not np.int16:
+        tmp = 'tmp.wav'
+        sf.write(tmp, audio, rate, subtype='PCM_16')
+        audio_segment = AudioSegment.from_wav(tmp)
+        remove(tmp)
+    else:
+        audio_segment = AudioSegment(audio, frame_rate=rate, channels=1, sample_width=2)
+    audio_segment += db
+    return np.frombuffer(audio_segment.get_array_of_samples(), dtype=np.int16)
+
+
+def add_echo(audio, echo=100):
+    fx = AudioEffectsChain().reverb(reverberance=echo)
+    return fx(audio)
 
 
 def mp3_to_wav(infile, outfile, outrate=16000, outchannels=1):

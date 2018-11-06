@@ -208,7 +208,7 @@ class LibriSpeechCorpus(Corpus):
         super().__init__('ls', 'LibriSpeech', df_path, df)
 
 
-class CommonVoiceCorpus(Corpus):
+class DeepSpeechCorpus(Corpus):
 
     def __init__(self, train_csv, dev_csv, test_csv):
         super().__init__('cv', 'CommonVoice')

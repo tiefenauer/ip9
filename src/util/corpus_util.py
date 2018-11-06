@@ -5,7 +5,7 @@ from os import listdir
 from os.path import join, isdir, abspath, exists, isfile, pardir
 
 from constants import LS_ROOT, RL_ROOT, CV_ROOT
-from corpus.corpus import ReadyLinguaCorpus, LibriSpeechCorpus, CommonVoiceCorpus
+from corpus.corpus import ReadyLinguaCorpus, LibriSpeechCorpus, DeepSpeechCorpus
 
 
 def get_corpus(corpus_id_or_file, language=None):
@@ -20,11 +20,11 @@ def get_corpus(corpus_id_or_file, language=None):
         train_csv = join(corpus_root, 'cv-valid-train-rel.csv')
         dev_csv = join(corpus_root, 'cv-valid-dev-rel.csv')
         test_csv = join(corpus_root, 'cv-valid-test-rel.csv')
-        corpus = CommonVoiceCorpus(train_csv, dev_csv, test_csv)
+        corpus = DeepSpeechCorpus(train_csv, dev_csv, test_csv)
     else:
         raise ValueError(f'ERROR: could not determine corpus id from {corpus_id_or_file}')
     if language:
-        return corpus(languages=[language])
+        return corpus(languages=language)
     return corpus
 
 

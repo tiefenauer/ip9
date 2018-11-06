@@ -99,14 +99,10 @@ class Corpus(ABC):
     def _get_segments_for_subset(self, subset, numeric):
         df_subset = self._filter_segments(subset, numeric)
         if numeric is True:
-            segments = (segment for entry in self.create_entries(df_subset) for segment in entry.segments_numeric)
+            return [segment for entry in self.create_entries(df_subset) for segment in entry.segments_numeric]
         elif numeric is False:
-            segments = (segment for entry in self.create_entries(df_subset) for segment in entry.segments_not_numeric)
-        else:
-            segments = (segment for entry in self.create_entries(df_subset) for segment in entry.segments)
-
-        for segment in segments:
-            yield segment
+            return [segment for entry in self.create_entries(df_subset) for segment in entry.segments_not_numeric]
+        return [segment for entry in self.create_entries(df_subset) for segment in entry.segments]
 
     def _filter_segments(self, subset, numeric=None):
         df_subset = self.df[self.df['subset'] == subset]

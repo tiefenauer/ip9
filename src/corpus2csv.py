@@ -248,7 +248,7 @@ def create_subset(h5_file, name, df):
 def get_segment_id(segment):
     corpus_entry = segment.corpus_entry
     ix = corpus_entry.segments.index(segment)
-    return f'{corpus_entry.id}-{ix:0=3d}'
+    return f'{corpus_entry.id}-{ix:0=4d}'
 
 
 if __name__ == '__main__':

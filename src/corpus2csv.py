@@ -234,10 +234,9 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
             print(f'total length: {timedelta(seconds=sum_duration)}')
 
     if synthesize:
-        files = list(
-            chain.from_iterable(
-                zip(originals, shifted + echoed + pitch_high + pitch_low + tempo_fast + tempo_slow + vol_louder,
-                    vol_quiet, distorted)))
+        all_segments = zip(originals, shifted, echoed, pitch_high, pitch_low, tempo_fast, tempo_slow, vol_louder,
+                           vol_quiet, distorted)
+        files = list(chain.from_iterable(all_segments))
     else:
         files = originals
     return pd.DataFrame(data=files, columns=['wav_filename', 'wav_filesize', 'wav_length', 'transcript'])

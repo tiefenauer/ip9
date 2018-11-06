@@ -136,7 +136,7 @@ class CSVBatchGenerator(BatchGenerator):
     def __init__(self, csv_path, lang, sort=False, n_batches=None, batch_size=16, num_minutes=None, use_synth=False):
         df, total_duration = read_data_from_csv(csv_path=csv_path, sort=sort)
         if not use_synth:
-            synth_suffixes = ['-high', '-low', '-fast', '-slow', '-shift', '-distorted']
+            synth_suffixes = ['-high', '-low', '-fast', '-slow', '-loud', '-quiet', '-shift', '-echo', '-distorted']
             print(f'keeping only non-synthesized data (samples ending in {synth_suffixes}))')
 
             def is_original(row):

@@ -28,9 +28,9 @@ class Corpus(ABC):
         self.root_path = None
         if df_path:
             self.df_path = df_path
-            self.df = pd.read_csv(df_path)
             self.creation_date = getmtime(df_path)
             self.root_path = dirname(df_path)
+            self.df = df if df else pd.read_csv(df_path)
         elif df:
             self.df = df
 

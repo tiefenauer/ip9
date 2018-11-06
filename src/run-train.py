@@ -21,7 +21,7 @@ from core.models import *
 from core.report_callback import ReportCallback
 from util.ctc_util import get_tokens
 from util.log_util import create_args_str
-from util.rnn_util import load_keras_model, create_tf_session
+from util.rnn_util import load_keras_model, create_keras_session
 
 #######################################################
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Prevent pool_allocator message
@@ -144,7 +144,7 @@ def create_model(target_dir, opt, dropouts, language):
 
 
 def train_model(model, language, target_dir, num_minutes=None):
-    K.set_session(create_tf_session(args.gpu))
+    create_keras_session(args.gpu)
     print("Creating data batch generators")
     data_train = CSVBatchGenerator(args.train_files, lang=language, sort=True, n_batches=args.train_batches,
                                    batch_size=args.batch_size, num_minutes=num_minutes, use_synth=args.use_synth)

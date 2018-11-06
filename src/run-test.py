@@ -9,7 +9,7 @@ from core.batch_generator import CSVBatchGenerator
 from core.report_callback import *
 from util.lm_util import load_lm_and_vocab
 from util.log_util import create_args_str
-from util.rnn_util import load_keras_model, create_tf_session
+from util.rnn_util import load_keras_model, create_keras_session
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--model_dir', type=str, required=False,
@@ -66,7 +66,7 @@ def setup(args):
     if not isdir(target_dir):
         makedirs(target_dir)
 
-    K.set_session(create_tf_session(args.gpu))
+    create_keras_session(args.gpu)
     return target_dir
 
 

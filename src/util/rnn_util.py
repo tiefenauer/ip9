@@ -1,6 +1,7 @@
 """
 Contains various helper functions to create/train a BRNN
 """
+import os
 from genericpath import exists
 from os import makedirs
 from os.path import join
@@ -82,6 +83,10 @@ def load_keras_model(root_path, opt=None):
 
 def create_tf_session(gpu, allow_growth=False, log_device_placement=False):
     gpu = query_gpu(gpu)
+    print('----------------------------------------------------------')
+    print(os.environ['CUDA_VISIBLE_DEVICES'])
+    print(K.get_session())
+    print('----------------------------------------------------------')
     config = tf.ConfigProto(log_device_placement=log_device_placement)
     config.gpu_options.visible_device_list = gpu
     config.gpu_options.allow_growth = allow_growth

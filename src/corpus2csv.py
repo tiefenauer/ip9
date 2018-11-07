@@ -55,7 +55,7 @@ def main(args):
     csv_train, csv_dev, csv_test = extract_segments(target_dir, corpus_id, corpus, synthesize, min_dur, max_dur, force)
     print(f'done! All files are in {target_dir}')
 
-    corpus = DeepSpeechCorpus(csv_train, csv_dev, csv_test)
+    corpus = DeepSpeechCorpus(args.language, csv_train, csv_dev, csv_test)
     corpus.summary()
 
     if precompute_features:

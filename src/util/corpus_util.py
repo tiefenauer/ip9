@@ -20,7 +20,7 @@ def get_corpus(corpus_id_or_file, language=None):
         train_csv = join(corpus_root, 'cv-valid-train-rel.csv')
         dev_csv = join(corpus_root, 'cv-valid-dev-rel.csv')
         test_csv = join(corpus_root, 'cv-valid-test-rel.csv')
-        corpus = DeepSpeechCorpus(train_csv, dev_csv, test_csv)
+        corpus = DeepSpeechCorpus(language, train_csv, dev_csv, test_csv)
     else:
         raise ValueError(f'ERROR: could not determine corpus id from {corpus_id_or_file}')
     if language:

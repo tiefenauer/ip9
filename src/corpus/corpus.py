@@ -210,23 +210,23 @@ class LibriSpeechCorpus(Corpus):
 
 class DeepSpeechCorpus(Corpus):
 
-    def __init__(self, train_csv, dev_csv, test_csv):
+    def __init__(self, language, train_csv, dev_csv, test_csv):
         super().__init__('cv', 'CommonVoice')
         self.creation_date = datetime.now().timestamp()
         self.root_path = dirname(train_csv)
         self.df_path = ', '.join([train_csv, dev_csv, test_csv])
         self.df = pd.concat([
-            parse_cv_index(train_csv, 'train'),
-            parse_cv_index(dev_csv, 'dev'),
-            parse_cv_index(test_csv, 'test')
+            parse_cv_index(train_csv, 'train', language),
+            parse_cv_index(dev_csv, 'dev', language),
+            parse_cv_index(test_csv, 'test', language)
         ])
 
 
-def parse_cv_index(csv_file, subset):
+def parse_cv_index(csv_file, subset, language):
     df = pd.read_csv(csv_file)
     df['entry_id'] = df['wav_filename'].map(lambda f: splitext(basename(f))[0])
     df['subset'] = subset
-    df['language'] = 'en'
+    df['language'] = language
     df['start_frame'] = 0
     df['end_frame'] = df['wav_length'].map(lambda l: l // 2)  # 2 bytes per sample
     df['numeric'] = df['transcript'].map(lambda t: contains_numeric(t))

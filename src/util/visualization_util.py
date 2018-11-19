@@ -147,6 +147,10 @@ def visualize_pipeline_performance(csv_keras, csv_ds, silent=False):
     :param csv_keras: path to CSV file containing the data
     :param silent: whether to show plots at the end
     """
+    suptitle = 'Pipeline evaluation: Simplified Keras model vs. pre-trained DeepSpeech model'
+    p_r_f_boxplot_png = join(dirname(csv_keras), f'p_r_f_boxplot.png')
+    ler_similarity_png = join(dirname(csv_keras), f'similarity_scatterplot.png')
+
     df_keras = pd.read_csv(csv_keras)
     keras_path = df_keras['model path'].unique()[0]
     df_ds = pd.read_csv(csv_ds)
@@ -162,7 +166,6 @@ def visualize_pipeline_performance(csv_keras, csv_ds, silent=False):
     df.boxplot('recall', by='model path', ax=ax_r)
     df.boxplot('f-score', by='model path', ax=ax_f)
 
-    fig.suptitle('Pipeline evaluation: Simplified Keras model vs. pre-trained DeepSpeech model')
     ax_p.set_title('Precision')
     ax_r.set_title('Recall')
     ax_f.set_title('F-Score')
@@ -170,10 +173,12 @@ def visualize_pipeline_performance(csv_keras, csv_ds, silent=False):
     ax_r.set_xlabel('Model')
     ax_f.set_xlabel('Model')
 
+    fig.suptitle(suptitle)
     fig.tight_layout(rect=[0, 0.03, 1, 0.85])
     fig.text(.5, .9, f'DS model: {ds_path}', fontsize=10, ha='center')
     fig.text(.5, .85, f'Keras model: {keras_path}', fontsize=10, ha='center')
-    fig.savefig(join(dirname(csv_keras), f'precision_recall_fscore.png'))
+    fig.savefig(p_r_f_boxplot_png)
+    print(f'saved Precision/Recall/F-Score (Boxplot) to {p_r_f_boxplot_png}')
 
     fig, (ax_ler, ax_sim) = plt.subplots(1, 2, figsize=(14, 5))
     df_keras.plot.scatter(x='transcript length', y='LER', c='b', label='Keras', ax=ax_ler)
@@ -186,7 +191,12 @@ def visualize_pipeline_performance(csv_keras, csv_ds, silent=False):
     ax_sim.set_xlabel('transcript length (characters)')
     ax_sim.set_ylabel('Levensthein similarity')
 
-    fig.savefig(join(dirname(csv_keras), f'ler_similarity.png'))
+    fig.suptitle(suptitle)
+    fig.tight_layout(rect=[0, 0.03, 1, 0.85])
+    fig.text(.5, .9, f'DS model: {ds_path}', fontsize=10, ha='center')
+    fig.text(.5, .85, f'Keras model: {keras_path}', fontsize=10, ha='center')
+    fig.savefig(ler_similarity_png)
+    print(f'saved LER similarity (Scatterplot) to {ler_similarity_png}')
 
     if not silent:
         plt.show()

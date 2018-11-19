@@ -9,12 +9,12 @@ where:
     -l  ISO 639-1 code of the language to train on (default: de)
     -d  data structure to use (use 'trie' or 'probing'). See https://kheafield.com/code/kenlm/structures/ for details. (default: trie)
     -t  target directory to write to
-    -w  number of words in vocabulary to keep (default: 500,000)
+    -w  number of words in vocabulary to keep (default: 250,000)
     -r  remove intermediate artifacts after training. Only set this flag if you really don't want to train another model because creating intermediate artifacts can take a long time. (default: false)
 
-EXAMPLE USAGE: create a 4-gram model for German using the 400k most frequent words from the Wikipedia articles, using probing as data structure and removing everything but the trained model afterwards:
+EXAMPLE USAGE: create a 5-gram model for German using the 250k most frequent words from the Wikipedia articles, using probing as data structure and removing everything but the trained model afterwards:
 
-./create_lm.sh -l de -o 5 -w 40000 -r
+./create_lm.sh -l de -o 5 -w 250000 -r
 
 Make sure the target directory specified by -t has enough free space (around 20-30G). KenLM binaries (lmplz and build_binary) need to be on the path. See https://kheafield.com/code/kenlm/ on how to build those.
 
@@ -34,7 +34,7 @@ The following result files are created and will not be removed:
 order=4
 language='de'
 data_structure=trie
-top_words=500000
+top_words=250000
 target_dir='./lm'
 remove_artifacts=false
 

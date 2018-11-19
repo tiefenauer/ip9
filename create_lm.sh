@@ -145,7 +145,7 @@ if [[ ! -f "${corpus_file}" ]] ; then
     echo "Non-ASCII characters will be replaced with their closest ASCII equivalent (if possible), but umlauts will be preserved!"
     echo "This will take some time (~4h). Go to sleep or something..."
     export PYTHONPATH=$(pwd)
-    result=$(find $cleaned_dir -name '*bz2' -exec bzcat {} \+ \
+    result=$(find ${cleaned_dir} -name '*bz2' -exec bzcat {} \+ \
             | pv \
             | tee >(    sed 's/<[^>]*>//g' \
                       | sed 's|["'\''„“‚‘]||g' \
@@ -170,7 +170,7 @@ if [[ ${recreate_vocab} = 1 ]] ; then
     echo "counting word occurrences..."
     cat ${corpus_file} |
         pv -s $(stat --printf="%s" ${corpus_file}) | # show progress bar
-        tr '[:space:]' '[\n*]' | # replace space with newline (one word per line)
+        tr '[:space:]' '\n' | # replace space with newline (one word per line)
         grep -v "^\s*$" | # remove empty lines
         grep -v '#' | # remove words with numbers
         awk 'length($0)>1' | # remove words with length 1
@@ -196,7 +196,7 @@ fi
 
 echo "compressing $corpus_file. File size before:"
 du -h ${corpus_file}
-bzip2 ${corpus_file}
+bzip2 -k ${corpus_file}
 echo "done! Compressed file size:"
 du -h ${corpus_file}.bz2
 
@@ -215,8 +215,8 @@ if [[ ! -f ${lm_binary} ]]; then
     echo "This should usually not take too much time even for high-order models"
     build_binary -a 255 \
                  -q  8 \
-                 ${data_structure}
-                 ${lm_arpa}
+                 ${data_structure} \
+                 ${lm_arpa} \
                  ${lm_binary}
 fi
 

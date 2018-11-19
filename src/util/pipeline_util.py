@@ -68,18 +68,19 @@ def create_demo_index(target_dir, demo_id, audio_src_path, transcript, df_transc
             tr.append(td)
         return tr
 
-    n_chars = len(transcript)
-    n_aligned = len(' '.join([t for t in df_transcripts['alignment'] if t]))
     metrics_table = soup.find(id='metrics')
     metrics_table.append(create_tr('directory', target_dir))
     metrics_table.append(create_tr('audio file', audio_src_path))
-    metrics_table.append(create_tr('transcript length', f'{n_chars} characters, {len(transcript.split())} words'))
-    metrics_table.append(create_tr('#aligned chars', f'{n_aligned} ({100*n_aligned/n_chars:.2f}%)'))
+    metrics_table.append(create_tr('transcript length', f'{len(transcript)} characters, {len(transcript.split())} words'))
     metrics_table.append(create_tr('#alignments/segments', f'{len(df_transcripts)}'))
 
-    for ix, (ler, similarity) in df_stats.iterrows():
-        metrics_table.append(create_tr('Ø LER', ler))
-        metrics_table.append(create_tr('Ø similarity inference/alignment', similarity))
+    for ix, (model_path, transcript_len, p, r, f, ler_avg) in df_stats.iterrows():
+        metrics_table.append(create_tr('ASR model path', model_path))
+        metrics_table.append(create_tr('Transcript length', transcript_len))
+        metrics_table.append(create_tr('Precision (Ø similarity inference/alignment)', p))
+        metrics_table.append(create_tr('Recall (coverage)', r))
+        metrics_table.append(create_tr('F-Score', f))
+        metrics_table.append(create_tr('Ø LER', ler_avg))
 
     demo_index_path = join(target_dir, 'index.html')
     with open(demo_index_path, 'w', encoding='utf-8') as f:
@@ -167,11 +168,19 @@ def query_asr_params(args):
     return keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, gpu
 
 
-def calculate_stats(df_alignments):
+def calculate_stats(df_alignments, model_path, transcript):
     ground_truths = df_alignments['transcript'].values
     alignments = df_alignments['alignment'].values
 
-    ler_avg = np.mean([ler_norm(gt, al) for gt, al in zip(ground_truths, alignments)])
-    similarity_avg = np.mean([levenshtein_similarity(gt, al) for gt, al in zip(ground_truths, alignments)])
+    # Precision = similarity between
+    p = np.mean([levenshtein_similarity(gt, al) for gt, al in zip(ground_truths, alignments)])
+    # Recall = fraction of aligned text
+    r = len(' '.join(ground_truths)) / len(transcript)
+    # F-Score
+    f = 2 * p * r / (p + r)
 
-    return pd.DataFrame([[ler_avg, similarity_avg]], columns=['LER', 'similarity'])
+    ler_avg = np.mean([ler_norm(gt, al) for gt, al in zip(ground_truths, alignments)])
+
+    data = [[model_path, len(transcript), p, r, f, ler_avg]]
+    columns = ['model path', 'transcript length', 'precision', 'recall', 'f-score', 'LER']
+    return pd.DataFrame(data, columns=columns)

@@ -42,7 +42,7 @@ def main(args):
                                                keras_path, ds_path, ds_alpha_path, ds_trie_path,
                                                lm_path, target_dir)
 
-    df_stats = calculate_stats(df_alignments)
+    df_stats = calculate_stats(df_alignments, transcript)
     create_demo_files(target_dir, audio_path, transcript, df_alignments, df_stats)
 
     print()

@@ -55,7 +55,7 @@ def main(args):
     print(create_args_str(args))
     demo_files, target_dir, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, gpu = setup(args)
     num_files = len(demo_files)
-    print(f'processing {num_files}. All results will be written to {target_dir}')
+    print(f'Processing {num_files} audio/transcript samples. All results will be written to {target_dir}')
 
     stats_keras, stats_ds = [], []
     for i, (audio_file, transcript_file) in enumerate(demo_files):
@@ -71,7 +71,7 @@ def main(args):
                                                           ds_trie_path=ds_trie_path,
                                                           lm_path=lm_path,
                                                           target_dir=target_dir_ds)
-        df_stats_ds = calculate_stats(df_alignments_ds)
+        df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
         create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
 
         target_dir_keras = join(target_dir, run_id + '_keras')
@@ -82,7 +82,7 @@ def main(args):
                                                              keras_path=keras_path,
                                                              lm_path=lm_path,
                                                              target_dir=target_dir_keras)
-        df_stats_keras = calculate_stats(df_alignments_keras)
+        df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)
         create_demo_files(target_dir_keras, audio_file, transcript, df_alignments_keras, df_stats_keras)
         print('-----------------------------------------------------------------')
 
@@ -93,12 +93,12 @@ def main(args):
             .mean()
 
         for ix, row in df_stats_keras.iterrows():
-            stats_keras.append([keras_path, len(transcript), av_similarity] + row.tolist())
+            stats_keras.append(row.tolist() + [av_similarity])
 
         for ix, row in df_stats_ds.iterrows():
-            stats_ds.append([ds_path, len(transcript), av_similarity] + row.tolist())
+            stats_ds.append(row.tolist() + [av_similarity])
 
-    columns = ['engine_path', 'transcript_length', 'alignment_similarity', 'LER', 'similarity']
+    columns = ['model path', 'transcript length', 'precision', 'recall', 'f-score', 'LER', 'similarity']
     df_keras = pd.DataFrame(stats_keras, columns=columns)
     csv_keras = join(target_dir, 'performance_keras.csv')
     df_keras.to_csv(csv_keras)
@@ -119,7 +119,7 @@ def setup(args):
 
     if args.corpus:
         corpus = get_corpus(args.corpus, args.language)
-        demo_files = [(entry.audio_path, entry.transcript_path) for entry in corpus.test_set()]
+        demo_files = [(entry.audio_path, entry.transcript_path) for entry in set(s.entry for s in corpus.test_set())]
         target_dir = abspath(args.target_dir)
     else:
         source_dir = abspath(args.source_dir)

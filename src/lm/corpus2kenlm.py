@@ -3,7 +3,7 @@ import multiprocessing as mp
 
 from tqdm import tqdm
 
-from lm.lm_corpus_util import process_line
+from util.lm_corpus_util import process_line
 from util.ctc_util import get_alphabet
 from util.string_util import remove_multi_spaces, unidecode_with_alphabet, remove_punctuation, replace_numeric
 

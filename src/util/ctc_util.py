@@ -12,10 +12,10 @@ def get_alphabet(language):
 
 
 def get_tokens(language):
-    # English has 31 target labels  (+ blank token):
-    #   <space>=0, a=1, b=2, ..., z=26, ä=27, ö=28, ü=29, '=30, _ (padding token)=31
-    # German has 28 target labels (+ blank token):
-    #   <space>=0, a=1, b=2, ..., z=26, '=27, _ (padding token)=28
+    # German has 30 target labels (+ 1 blank token):
+    #   <space>=0, a=1, b=2, ..., z=26, ä=27, ö=28, ü=29, '=30
+    # English has 28 target labels (+ 1 blank token1:
+    #   <space>=0, a=1, b=2, ..., z=26, '=27
     return ' ' + get_alphabet(language)
 
 

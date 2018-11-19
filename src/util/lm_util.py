@@ -68,8 +68,9 @@ def load_lm_and_vocab(lm_path, vocab_path=None):
 def load_lm(lm_path):
     global LANGUAGE_MODELS
     if lm_path in LANGUAGE_MODELS:
-        print(f'using cached LM:')
-        return LANGUAGE_MODELS[lm_path]
+        lm = LANGUAGE_MODELS[lm_path]
+        print(f'using cached LM ({lm.order}-gram):')
+        return lm
 
     lm_abs_path = abspath(lm_path)
     if not exists(lm_abs_path):
@@ -85,8 +86,9 @@ def load_lm(lm_path):
 def load_vocab(vocab_path):
     global LM_VOCABS
     if vocab_path in LM_VOCABS:
-        print(f'using cached LM vocab')
-        return LM_VOCABS[vocab_path]
+        lm_vocab = LM_VOCABS[vocab_path]
+        print(f'using cached LM vocab ({len(lm_vocab)} words)')
+        return lm_vocab
 
     lm_vocab_abs_path = abspath(vocab_path)
     if not exists(lm_vocab_abs_path):

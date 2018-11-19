@@ -4,7 +4,7 @@ from os.path import abspath, exists
 from util.log_util import create_args_str
 from util.visualization_util import visualize_pipeline_performance
 
-parser = argparse.ArgumentParser(description="""Visualize the performance of a pipelins""")
+parser = argparse.ArgumentParser(description="""Visualize the performance of a pipeline""")
 parser.add_argument('csv', type=str, nargs='?',
                     help=f'path to CSV file holding the results of a pipeline evaluation')
 parser.add_argument('-s', '--silent', action='store_true', help='(optional) whether to suppress showing plots')

@@ -14,7 +14,7 @@ where:
 
 EXAMPLE USAGE: create a 4-gram model for German using the 400k most frequent words from the Wikipedia articles, using probing as data structure and removing everything but the trained model afterwards:
 
-./create_lm.sh -l de -o 4 -t 400000 -r
+./create_lm.sh -l de -o 5 -w 40000 -r
 
 Make sure the target directory specified by -t has enough free space (around 20-30G). KenLM binaries (lmplz and build_binary) need to be on the path. See https://kheafield.com/code/kenlm/ on how to build those.
 
@@ -103,15 +103,15 @@ lm_arpa="${tmp_dir}/${lm_basename}.arpa" # ARPA file
 lm_binary="${target_dir}/${lm_basename}.klm" # KenLM binary file (this is the result of the script)
 
 # create target directories if the don't exist yet
-mkdir -p $target_dir
-mkdir -p $tmp_dir
+mkdir -p ${target_dir}
+mkdir -p ${tmp_dir}
 # #################################
 
 echo "creating $order-gram model from Wikipedia dump"
 echo "time indications are based upon personal experience when training on my personal laptop (i7, 4 cores, 8GB RAM, SSD)"
 
 # recreate vocabulary
-[ -f $lm_vocab ]
+[[ -f ${lm_vocab} ]]
 recreate_vocab=$?
 
 # #################################
@@ -120,7 +120,7 @@ recreate_vocab=$?
 # #################################
 download_url="http://download.wikimedia.org/${language}wiki/latest/${language}wiki-latest-pages-articles.xml.bz2"
 target_file=${tmp_dir}/$(basename ${download_url})  # get corpus file name from url and corpus name
-if [ ! -f ${target_file} ]; then
+if [[ ! -f ${target_file} ]]; then
     echo "downloading corpus ${corpus_name} from ${download_url} and saving in ${target_file}"
     echo "This can take up to an hour (Wiki servers are slow). Have lunch or something..."
     wget -O ${target_file} ${download_url}
@@ -130,9 +130,9 @@ fi
 # STEP 2: Create corpus from dump if necessary
 # Use WikExtractor (see https://github.com/attardi/wikiextractor for details)
 # #################################
-if [ ! -f "${corpus_file}" ] ; then
+if [[ ! -f "${corpus_file}" ]] ; then
     cd ./src/
-    if [ ! -d $cleaned_dir ] ; then
+    if [[ ! -d ${cleaned_dir} ]] ; then
         echo "Extracting/cleaning text from Wikipedia data base dump at ${target_file} using WikiExtractor."
         echo "Cleaned articles are saved to ${cleaned_dir}"
         echo "This will take 2-3 hours. Have a walk or something..."
@@ -163,7 +163,7 @@ if [ ! -f "${corpus_file}" ] ; then
     recreate_vocab = 1
 fi
 
-if [ ${recreate_vocab} = 1 ] ; then
+if [[ ${recreate_vocab} = 1 ]] ; then
     echo "(re-)creating vocabulary of $corpus_file and saving it in $lm_vocab. "
     echo "This usually takes around half an hour. Get a coffee or something..."
 
@@ -200,16 +200,24 @@ bzip2 ${corpus_file}
 echo "done! Compressed file size:"
 du -h ${corpus_file}.bz2
 
-if [ ! -f ${lm_arpa} ]; then
+if [[ ! -f ${lm_arpa} ]]; then
     echo "Training $order-gram KenLM model with data from $corpus_file.bz2 and saving ARPA file to $lm_arpa"
     echo "This can take several hours, depending on the order of the model"
-    lmplz -o ${order} -T ${tmp_dir} -S 40%  --limit_vocab_file ${lm_vocab} --arpa ${lm_arpa} <${corpus_file}.bz2
+    lmplz --order ${order} \
+          --temp_prefix ${tmp_dir} \
+          --memory 40% \
+          --arpa ${lm_arpa} \
+          --prune 0 0 0 1 <${corpus_file}.bz2
 fi
 
-if [ ! -f $lm_binary ]; then
+if [[ ! -f ${lm_binary} ]]; then
     echo "Building binary file from $lm_arpa and saving to $lm_binary"
     echo "This should usually not take too much time even for high-order models"
-    build_binary ${data_structure} ${lm_arpa} ${lm_binary}
+    build_binary -a 255 \
+                 -q  8 \
+                 ${data_structure}
+                 ${lm_arpa}
+                 ${lm_binary}
 fi
 
 if ${remove_artifacts}; then

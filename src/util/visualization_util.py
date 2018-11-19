@@ -27,21 +27,31 @@ def visualize_learning_curve(source_dir, silent=False):
     :param source_dir: path to the directory containing the data of the training runs
     :param silent: whether to show the plots
     """
+    loss_png = join(source_dir, 'loss.png')
+    wer_png = join(source_dir, 'wer.png')
+    ler_png = join(source_dir, 'ler.png')
+
     df_losses = collect_loss(source_dir)
-    df_metrics = collect_metrics(source_dir)
     fig_loss, _ = plot_loss(df_losses)
+    fig_loss.savefig(loss_png)
+    print(f'loss plot saved to {loss_png}')
+
+    df_metrics = collect_metrics(source_dir)
     fig_wer, *_ = plot_metric(df_metrics, 'wer')
+    fig_wer.savefig(wer_png)
+    print(f'WER plot saved to {wer_png}')
+
     fig_ler, *_ = plot_metric(df_metrics, 'ler')
-    fig_loss.savefig(join(source_dir, 'loss.png'))
-    fig_wer.savefig(join(source_dir, 'wer.png'))
-    fig_ler.savefig(join(source_dir, 'ler.png'))
+    fig_ler.savefig(ler_png)
+    print(f'LER plot saved to {ler_png}')
+
     if not silent:
         plt.show()
 
 
 def collect_loss(source_dir):
     data = {}
-    for tensorboard_file in sorted(glob(join(source_dir, '**/tensorboard/event*'))):
+    for tensorboard_file in sorted(glob(join(source_dir, '**/tensorboard/event*')), reverse=True):
         print(f'parsing {tensorboard_file}')
         loss, val_loss = [], []
         minutes = Path(relpath(tensorboard_file, source_dir)).parts[0]
@@ -62,18 +72,18 @@ def collect_metrics(source_dir):
     columns = pd.MultiIndex.from_product([
         metrics,
         decoding_strategies,
-        lm_uses,
-        ['1_min', '10_min', '100_min', '1000_min']
+        ['1_min', '10_min', '100_min', '1000_min'],
+        lm_uses
     ])
     df_metric = pd.DataFrame(columns=columns)
 
-    for subdir_name in [name for name in listdir(source_dir) if isdir(join(source_dir, name))]:
+    for subdir_name in sorted([name for name in listdir(source_dir) if isdir(join(source_dir, name))], reverse=True):
         minutes = re.findall('(\d*)', subdir_name)[0]
-        ler_wer_csv = join(source_dir, subdir_name, f'model_{minutes}_min.csv')
+        metrics_csv = join(source_dir, subdir_name, f'model_{minutes}_min.csv')
 
-        df = pd.read_csv(ler_wer_csv, header=[0, 1, 2], index_col=0)
+        df = pd.read_csv(metrics_csv, header=[0, 1, 2], index_col=0)
         for m, d, l in itertools.product(metrics, decoding_strategies, lm_uses):
-            df_metric[m, d, l, f'{minutes}_min'] = df[m, d, l]
+            df_metric[m, d, f'{minutes}_min', l] = df[m, d, l]
     df_metric.index += 1
     return df_metric
 
@@ -81,9 +91,9 @@ def collect_metrics(source_dir):
 def plot_loss(df_losses):
     fig, ax = plt.subplots(figsize=(14, 7))
 
-    legend = [f'{mins} ({train_valid})' for train_valid in ['training', 'validation'] for mins in
-              ['1 min', '10 mins', '100 mins', '1000 mins']]
-    styles = [color + line for (line, color) in itertools.product(['-', '--'], list('rgbm'))]
+    legend = [f'{mins} ({train_valid})' for mins in
+              ['1 min', '10 mins', '100 mins', '1000 mins'] for train_valid in ['training', 'validation']]
+    styles = [color + line for (color, line) in itertools.product(list('ygbr'), ['-', '--'])]
 
     plot_df(df_losses, ax=ax, styles=styles, legend=legend, ylabel='loss', title='CTC-Loss')
 
@@ -98,8 +108,8 @@ def plot_metric(df_metrics, metric):
 
     fig, (ax_greedy, ax_beam) = plt.subplots(1, 2, figsize=(10, 6), sharey=True)
 
-    legend = [f'{mins}{lm_use}' for lm_use in ['', '+LM'] for mins in ['1 min', '10 mins', '100 mins', '1000 mins']]
-    styles = [color + line for (line, color) in itertools.product(['-', '--'], list('rgbm'))]
+    legend = [f'{mins}{lm_use}' for mins in ['1 min', '10 mins', '100 mins', '1000 mins'] for lm_use in ['', '+LM']]
+    styles = [color + line for (color, line) in itertools.product(list('ygbr'), ['-', '--'])]
 
     plot_df(df_greedy, ax=ax_greedy, styles=styles, legend=legend, ylabel=metric, title='best-path decoding')
     plot_df(df_beam, ax=ax_beam, styles=styles, legend=legend, ylabel=metric, title='beam search decoding')
@@ -137,42 +147,46 @@ def visualize_pipeline_performance(csv_keras, csv_ds, silent=False):
     :param csv_keras: path to CSV file containing the data
     :param silent: whether to show plots at the end
     """
-    target_dir = dirname(csv_keras)
-    fig, (ax_ler, ax_similarity, ax_correlation) = plt.subplots(1, 3, figsize=(14, 5))
-
     df_keras = pd.read_csv(csv_keras)
-    keras_path = df_keras['engine_path'].unique()[0]
+    keras_path = df_keras['model path'].unique()[0]
     df_ds = pd.read_csv(csv_ds)
-    ds_path = df_ds['engine_path'].unique()[0]
+    ds_path = df_ds['model path'].unique()[0]
 
-    plot_corellation(df_keras, 'transcript_length', 'LER', 'b', 'Keras', ax_ler)
-    plot_corellation(df_keras, 'transcript_length', 'similarity', 'b', 'Keras', ax_similarity)
+    df_keras['model path'] = 'Keras'
+    df_ds['model path'] = 'DeepSpeech'
+    df = pd.concat([df_keras, df_ds])
 
-    plot_corellation(df_ds, 'transcript_length', 'LER', 'g', 'DeepSpeech', ax_ler)
-    plot_corellation(df_ds, 'transcript_length', 'similarity', 'g', 'DeepSpeech', ax_similarity)
+    fig, (ax_p, ax_r, ax_f) = plt.subplots(1, 3, figsize=(14, 5))
 
-    plot_corellation(df_keras, 'transcript_length', 'alignment_similarity', 'k', None, ax_correlation)
+    df.boxplot('precision', by='model path', ax=ax_p)
+    df.boxplot('recall', by='model path', ax=ax_r)
+    df.boxplot('f-score', by='model path', ax=ax_f)
 
     fig.suptitle('Pipeline evaluation: Simplified Keras model vs. pre-trained DeepSpeech model')
-    ax_ler.set_title('LER (lower is better)')
-    ax_similarity.set_title('Similarity inferred/aligned text (higher is better)')
-    ax_correlation.set_title('Similarity of alignments (higher is better)')
-
-    ax_ler.set_xlabel('transcript length (characters)')
-    ax_similarity.set_xlabel('transcript length (characters)')
-    ax_similarity.set_ylabel('Levenshtein Similarity')
-    ax_correlation.set_xlabel('transcript length (characters)')
-    ax_correlation.set_ylabel('Levenshtein Similarity')
+    ax_p.set_title('Precision')
+    ax_r.set_title('Recall')
+    ax_f.set_title('F-Score')
+    ax_p.set_xlabel('Model')
+    ax_r.set_xlabel('Model')
+    ax_f.set_xlabel('Model')
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.85])
     fig.text(.5, .9, f'DS model: {ds_path}', fontsize=10, ha='center')
     fig.text(.5, .85, f'Keras model: {keras_path}', fontsize=10, ha='center')
-    fig.savefig(join(target_dir, f'performance.png'))
+    fig.savefig(join(dirname(csv_keras), f'precision_recall_fscore.png'))
+
+    fig, (ax_ler, ax_sim) = plt.subplots(1, 2, figsize=(14, 5))
+    df_keras.plot.scatter(x='transcript length', y='LER', c='b', label='Keras', ax=ax_ler)
+    df_ds.plot.scatter(x='transcript length', y='LER', c='g', label='DeepSpeech', ax=ax_ler)
+
+    df_keras.plot.scatter(x='transcript length', y='similarity', c='k', label='Keras', ax=ax_sim)
+
+    ax_ler.set_xlabel('transcript length (characters)')
+    ax_ler.set_ylabel('LER')
+    ax_sim.set_xlabel('transcript length (characters)')
+    ax_sim.set_ylabel('Levensthein similarity')
+
+    fig.savefig(join(dirname(csv_keras), f'ler_similarity.png'))
+
     if not silent:
         plt.show()
-
-
-def plot_corellation(df, x, y, color, label, ax):
-    df.plot.scatter(x=x, y=y, c=color, label=label, ax=ax)
-    # df.plot.scatter(x='transcript_length', y='similarity', c=color, label=label, ax=ax)
-    # df.plot.scatter(x='transcript_length', y='alignment_similarity', c=color, label='Keras', ax=ax)

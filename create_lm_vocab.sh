@@ -47,7 +47,7 @@ if [[ ! -f "${vocab_counts}" ]] ; then
         tr -s '[:space:]' '\n' | # replace any number of spaces with one newline (one word per line)
         grep -v '^\s*$' | # remove empty lines
         grep -Ev '[0-9]' | # remove words containing numbers
-        awk 'length($0)>1' | # remove words with length 1
+#        awk 'length($0)>1' | # remove words with length 1
         sort | uniq -c | sort -bnr > ${vocab_counts} # sort alphanumeric, count unique words, then sort numeric
     echo '...done!'
 fi

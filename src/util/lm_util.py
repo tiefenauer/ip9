@@ -7,6 +7,7 @@ from os.path import abspath, exists, dirname, join, splitext
 import numpy as np
 from pattern3.metrics import levenshtein
 
+from core.lm_vocabulary import Vocabulary
 from util.ctc_util import get_alphabet
 
 # the LER is just the Levenshtein/edit distance
@@ -94,11 +95,10 @@ def load_vocab(vocab_path):
     if not exists(lm_vocab_abs_path):
         raise ValueError(f'ERROR: LM vocabulary not found at {lm_vocab_abs_path}')
 
-    with open(lm_vocab_abs_path) as vocab_f:
-        print(f'loading LM vocab from {lm_vocab_abs_path}...', end='')
-        lm_vocab = set(vocab_f.read().split())
-        print(f'done! Loaded {len(lm_vocab)} words.')
-        LM_VOCABS[vocab_path] = lm_vocab
+    print(f'loading LM vocab from {lm_vocab_abs_path}...', end='')
+    lm_vocab = Vocabulary(lm_vocab_abs_path)
+    print(f'done! Loaded {len(lm_vocab)} words.')
+    LM_VOCABS[vocab_path] = lm_vocab
     return lm_vocab
 
 

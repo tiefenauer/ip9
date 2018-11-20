@@ -130,13 +130,21 @@ class ReportCallback(callbacks.Callback):
         """
         metrics = [
             self.df_history['WER', 'greedy', 'lm_n'].dropna().values,  # WER (best-path)
-            self.df_history['WER', 'greedy', 'lm_y'].dropna().values,  # WER (best-path + LM)
+            self.df_history['WER', 'greedy', 'lm_40k'].dropna().values,  # WER (best-path + 40k vocabulary)
+            self.df_history['WER', 'greedy', 'lm_80k'].dropna().values,  # WER (best-path + 80k vocabulary)
+            self.df_history['WER', 'greedy', 'lm_160k'].dropna().values,  # WER (best-path + 160k vocabulary)
             self.df_history['WER', 'beam', 'lm_n'].dropna().values,  # WER (beam search)
-            self.df_history['WER', 'beam', 'lm_y'].dropna().values,  # WER (beam search + LM)
+            self.df_history['WER', 'beam', 'lm_40k'].dropna().values,  # WER (beam search + 40k vocabulary)
+            self.df_history['WER', 'beam', 'lm_80k'].dropna().values,  # WER (beam search + 80k vocabulary)
+            self.df_history['WER', 'beam', 'lm_160k'].dropna().values,  # WER (beam search + 160k vocabulary)
             self.df_history['LER', 'greedy', 'lm_n'].dropna().values,  # LER (best-path)
-            self.df_history['LER', 'greedy', 'lm_y'].dropna().values,  # LER (best-path + LM)
+            self.df_history['LER', 'greedy', 'lm_40k'].dropna().values,  # LER (best-path + 40k vocabulary)
+            self.df_history['LER', 'greedy', 'lm_80k'].dropna().values,  # LER (best-path + 80k vocabulary)
+            self.df_history['LER', 'greedy', 'lm_160k'].dropna().values,  # LER (best-path + 160k vocabulary)
             self.df_history['LER', 'beam', 'lm_n'].dropna().values,  # LER (beam search)
-            self.df_history['LER', 'beam', 'lm_y'].dropna().values,  # LER (beam search + LM)
+            self.df_history['LER', 'beam', 'lm_40k'].dropna().values,  # LER (beam search + 40k vocabulary)
+            self.df_history['LER', 'beam', 'lm_80k'].dropna().values,  # LER (beam search + 80k vocabulary)
+            self.df_history['LER', 'beam', 'lm_160k'].dropna().values,  # LER (beam search + 160k vocabulary)
         ]
         return any(is_last_value_smallest(metric) for metric in metrics)
 

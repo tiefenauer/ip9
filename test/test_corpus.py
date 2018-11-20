@@ -24,7 +24,7 @@ class TestCorpus(TestCase):
         print(entry.summary())
 
     def test_cv_corpus(self):
-        corpus = get_corpus('cv')
+        corpus = get_corpus('cv', 'en')
         corpus.summary()
         assert_that(corpus.corpus_id, is_('cv'))
         assert_that(len(corpus), is_(greater_than(0)))

@@ -4,7 +4,7 @@ from hamcrest import assert_that, is_, not_
 
 from util import lm_util
 from util.ctc_util import get_alphabet
-from util.lm_util import ler, ler_norm, wer, wer_norm, load_lm_and_vocab
+from util.lm_util import ler, ler_norm, wer, wer_norm, load_lm_and_vocab, load_lm, load_vocab
 
 
 class TestLMUtil(TestCase):
@@ -43,16 +43,17 @@ class TestLMUtil(TestCase):
         assert_that(len(list(result)), is_(3 + 2 + 81 + 108))
 
     def test_load_lm(self):
-        lm, vocab = load_lm_and_vocab('/media/daniel/IP9/lm/timit_en/libri-timit-lm.klm')
+        lm = load_lm('/media/daniel/IP9/lm/ds_en/lm.binary')
+        vocab = load_vocab('/media/daniel/IP9/lm/ds_en/lm_80k.vocab')
         assert_that(lm, is_(not_(None)))
         assert_that(vocab, is_(not_(None)))
 
     def test_correction(self):
-        lm, lm_vocab = load_lm_and_vocab('/media/daniel/IP9/lm/timit_en/libri-timit-lm.klm')
-        # 2 insertions (buut has >1 candidate!), 1 deltion, 1 substitution
-        text = 'buut langage modelang is aweesome'
-        text_corrected = lm_util.correction(text, 'en', lm=lm, lm_vocab=lm_vocab)
-        assert_that(text_corrected, is_('but language modeling is awesome'))
+        lm = load_lm('/media/daniel/IP9/lm/ds_en/lm.binary')
+        vocab = load_vocab('/media/daniel/IP9/lm/ds_en/lm_80k.vocab')
+        text = 'i seee i sey saind the blnd manp to his deaf dauhgter'
+        text_corrected = lm_util.correction(text, 'en', lm=lm, lm_vocab=vocab)
+        assert_that(text_corrected, is_('i see i see said the blind man to his deaf daughter'))
 
     def test_ler(self):
         ground_truth = 'i put the vice president in charge of mission control'

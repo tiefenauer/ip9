@@ -1,20 +1,19 @@
 #!/usr/bin/env bash
 # set -xe
-usage="$(basename "$0") [-h|--help] [-o|--order <int>] [-l|--language {'en'|'de'|'fr'|'it'|...}] [-d|--data_structure {'probing'|'trie'}] [-w|--max_words <int>] [-t|--target_dir <string> ] [-r|--remove_artifacts remove_artifacts]
+usage="$(basename "$0") [-h|--help] [-o|--order <int>] [-l|--language {'en'|'de'|'fr'|'it'|...}] [-d|--data_structure {'probing'|'trie'}] [-t|--target_dir <string> ] [-r|--remove_artifacts remove_artifacts]
 
 Create n-gram Language Model on ~2.2M Wikipedia articles using KenLM.
-where:
-    -h  show this help text
-    -o  set the order of the model, i.e. the n in n-gram (default: 4)
-    -l  ISO 639-1 code of the language to train on (default: de)
-    -d  data structure to use (use 'trie' or 'probing'). See https://kheafield.com/code/kenlm/structures/ for details. (default: trie)
-    -t  target directory to write to
-    -w  number of words in vocabulary to keep (default: 250,000)
-    -r  remove intermediate artifacts after training. Only set this flag if you really don't want to train another model because creating intermediate artifacts can take a long time. (default: false)
+Parameters:
+    -h|--help              show this help text
+    -o|--order             set the order of the model, i.e. the n in n-gram (default: 4)
+    -l|--language          ISO 639-1 code of the language to train on (default: de)
+    -d|--data_structure    data structure to use (use 'trie' or 'probing'). See https://kheafield.com/code/kenlm/structures/ for details. (default: trie)
+    -t|--target_dir        target directory to write to
+    -r|--remove_artifacts  remove intermediate artifacts after training. Only set this flag if you really don't want to train another model because creating intermediate artifacts can take a long time. (default: false)
 
-EXAMPLE USAGE: create a 5-gram model for German using the 250k most frequent words from the Wikipedia articles, using probing as data structure and removing everything but the trained model afterwards:
+EXAMPLE USAGE: create a 5-gram model for German using the 40k most frequent words from the Wikipedia articles, using probing as data structure and removing everything but the trained model afterwards:
 
-./create_lm.sh -l de -o 5 -w 250000 -r
+./create_lm.sh -l de -o 5 -r
 
 Make sure the target directory specified by -t has enough free space (around 20-30G). KenLM binaries (lmplz and build_binary) need to be on the path. See https://kheafield.com/code/kenlm/ on how to build those.
 
@@ -34,7 +33,6 @@ The following result files are created and will not be removed:
 order=4
 language='de'
 data_structure=trie
-top_words=250000
 target_dir='./lm'
 remove_artifacts=false
 
@@ -60,11 +58,6 @@ case $key in
     ;;
     -d|--data_structure)
     data_structure="$2"
-    shift
-    shift
-    ;;
-    -w|--max_words)
-    top_words="$2"
     shift
     shift
     ;;
@@ -97,7 +90,6 @@ tmp_dir="${target_dir}/tmp"  # directory for intermediate artifacts
 cleaned_dir="${tmp_dir}/${corpus_name}_clean" # directory for WikiExtractor
 corpus_file="${tmp_dir}/${corpus_name}.txt" # uncompressed corpus
 lm_counts="${tmp_dir}/${corpus_name}.counts" # corpus vocabulary with counts (all words)
-lm_vocab="${tmp_dir}/${corpus_name}.vocab" # corpus vocabulary used for training (most frequent words)
 lm_arpa="${tmp_dir}/${lm_basename}.arpa" # ARPA file
 
 lm_binary="${target_dir}/${lm_basename}.klm" # KenLM binary file (this is the result of the script)
@@ -109,10 +101,6 @@ mkdir -p ${tmp_dir}
 
 echo "creating $order-gram model from Wikipedia dump"
 echo "time indications are based upon personal experience when training on my personal laptop (i7, 4 cores, 8GB RAM, SSD)"
-
-# recreate vocabulary
-[[ -f ${lm_vocab} ]]
-recreate_vocab=$?
 
 # #################################
 # STEP 1: Download the Wikipedia dump in the given language if necessary
@@ -130,6 +118,7 @@ fi
 # STEP 2: Create corpus from dump if necessary
 # Use WikExtractor (see https://github.com/attardi/wikiextractor for details)
 # #################################
+recreate_vocab=0
 if [[ ! -f "${corpus_file}" ]] ; then
     cd ./src/
     if [[ ! -d ${cleaned_dir} ]] ; then
@@ -164,34 +153,9 @@ if [[ ! -f "${corpus_file}" ]] ; then
 fi
 
 if [[ ${recreate_vocab} = 1 ]] ; then
-    echo "(re-)creating vocabulary of $corpus_file and saving it in $lm_vocab. "
+    echo "(re-)creating vocabulary of $corpus_file. "
     echo "This usually takes around half an hour. Get a coffee or something..."
-
-    echo "counting word occurrences..."
-    cat ${corpus_file} |
-        pv -s $(stat --printf="%s" ${corpus_file}) | # show progress bar
-        tr '[:space:]' '\n' | # replace space with newline (one word per line)
-        grep -v "^\s*$" | # remove empty lines
-        grep -v '#' | # remove words with numbers
-        awk 'length($0)>1' | # remove words with length 1
-        sort | uniq -c | sort -bnr > ${lm_counts} # sort alphanumeric, count unique words, then sort result
-
-    echo "...done! writing $top_words top words to vocabulary"
-    cat ${lm_counts} |
-        tr -d '[:digit:] ' | # remove counts from lines
-        head -${top_words} | # keep $top_words words
-        tr '\n' ' ' > ${lm_vocab} # replace newline with spaces (expected input format for KenLM)
-
-    total_sum=$(cat ${lm_counts} |
-            tr -d ' [:alpha:]äöü<>\177' | # remove non-numeric characters (everything but the counts)
-            paste -sd+ | # concatenate with '+'
-            bc) # sum up
-    top_sum=$(cat ${lm_counts} |
-            head -${top_words} | # limit to first $top_words entries here
-            tr -d ' [:alpha:]äöü<>\177' | # same as above
-            paste -sd+ | bc) # same as above
-    fraction=$(echo "scale=2 ; 100 * $top_sum / $total_sum" | bc)
-    echo "Top $top_words words make up $fraction% of words"
+    ./create_lm_vocab.sh ${corpus_file} --target_dir ${target_dir}
 fi
 
 echo "compressing $corpus_file. File size before:"

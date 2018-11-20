@@ -43,7 +43,7 @@ class TestLMUtil(TestCase):
         assert_that(len(list(result)), is_(3 + 2 + 81 + 108))
 
     def test_load_lm(self):
-        lm, vocab = load_lm_and_vocab('/media/daniel/IP9//lm/timit_en/libri-timit-lm.klm')
+        lm, vocab = load_lm_and_vocab('/media/daniel/IP9/lm/timit_en/libri-timit-lm.klm')
         assert_that(lm, is_(not_(None)))
         assert_that(vocab, is_(not_(None)))
 

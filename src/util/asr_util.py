@@ -12,32 +12,28 @@ metrics = ['WER', 'LER', 'WER_raw', 'LER_raw']
 
 
 def infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, language, lm, vocab):
-    batch_generator.cur_index = 0  # reset index
-    batch_size = batch_generator.batch_size
-
     inferences = []
-    for ix in tqdm(range(len(batch_generator)), desc='transcribing/decoding batch', unit=' batches', position=1):
-        batch_inputs, _ = next(batch_generator)
-        batch_inferences = infer_batch(ix, batch_size, batch_inputs, decoder_greedy, decoder_beam, language, lm, vocab)
+    for ix in tqdm(range(len(batch_generator)), desc='transcribing batch', unit=' batches', position=1):
+        batch_inputs, _ = batch_generator[ix]
+        x = batch_inputs['the_input']
+        x_len = batch_inputs['input_length']
+        if 'source_str' in batch_inputs:
+            y = batch_inputs['source_str']
+        else:
+            y = [str(i) for i in range(ix * batch_generator.batch_size, ix * batch_generator.batch_size + len(x))]
+
+        batch_inferences = infer_batch(x, x_len, y, decoder_greedy, decoder_beam,language, lm, vocab)
         inferences.append(batch_inferences)
+        ix += 1
 
     df_inferences = pd.concat(inferences, sort=False)
     df_inferences.index.name = 'ground truth'
     return df_inferences
 
 
-def infer_batch(batch_ix, batch_size, batch_inputs, decoder_greedy, decoder_beam, language, lm=None, lm_vocab=None):
-    batch_input = batch_inputs['the_input']
-    batch_input_lengths = batch_inputs['input_length']
-
-    if 'source_str' in batch_inputs:
-        ground_truths = batch_inputs['source_str']
-    else:
-        indexes = range(batch_ix * batch_size, batch_ix * batch_size + len(batch_input))
-        ground_truths = [str(i) for i in indexes]
-
-    preds_greedy = decoder_greedy.decode(batch_input, batch_input_lengths)
-    preds_beam = decoder_beam.decode(batch_input, batch_input_lengths)
+def infer_batch(x, x_len, y, decoder_greedy, decoder_beam, language, lm=None, lm_vocab=None):
+    preds_greedy = decoder_greedy.decode(x, x_len)
+    preds_beam = decoder_beam.decode(x, x_len)
 
     preds_greedy_lm = [correction(pred_greedy, language, lm, lm_vocab) for pred_greedy in
                        tqdm(preds_greedy, unit=' voice segments', desc='making corrections (greedy)', position=0)]
@@ -47,8 +43,8 @@ def infer_batch(batch_ix, batch_size, batch_inputs, decoder_greedy, decoder_beam
     columns = pd.MultiIndex.from_product([decoding_strategies, lm_uses, ['prediction'] + metrics],
                                          names=['decoding strategy', 'LM correction', 'predictions'])
 
-    df = pd.DataFrame(index=ground_truths, columns=columns)
-    for ground_truth, pred_greedy, pred_greedy_lm, pred_beam, pred_beam_lm in zip(ground_truths,
+    df = pd.DataFrame(index=y, columns=columns)
+    for ground_truth, pred_greedy, pred_greedy_lm, pred_beam, pred_beam_lm in zip(y,
                                                                                   preds_greedy, preds_greedy_lm,
                                                                                   preds_beam, preds_beam_lm):
         df.loc[ground_truth, ('greedy', 'lm_n', 'prediction')] = pred_greedy

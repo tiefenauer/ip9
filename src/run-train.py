@@ -6,6 +6,7 @@ Forked and adjusted from: https://github.com/robmsmt/KerasDeepSpeech
 """
 
 import argparse
+import multiprocessing
 import os
 import sys
 from datetime import datetime
@@ -161,10 +162,11 @@ def train_model(model, language, target_dir, num_minutes=None):
 
     model.fit_generator(generator=data_train,
                         validation_data=data_valid,
-                        steps_per_epoch=len(data_train),
-                        validation_steps=len(data_valid),
                         epochs=args.epochs,
-                        callbacks=[tb_cb, report_cb])
+                        callbacks=[tb_cb, report_cb],
+                        use_multiprocessing=True,
+                        workers=multiprocessing.cpu_count() - 1
+                        )
 
     K.clear_session()
 

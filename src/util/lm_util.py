@@ -2,7 +2,7 @@
 import itertools
 import kenlm
 from heapq import heapify
-from os.path import abspath, exists, dirname, join, splitext
+from os.path import abspath, exists
 
 import numpy as np
 from pattern3.metrics import levenshtein
@@ -52,19 +52,6 @@ def lers_norm(ground_truths, predictions):
     return np.array([ler_norm(ground_truth, pred) for (ground_truth, pred) in zip(ground_truths, predictions)])
 
 
-def load_lm_and_vocab(lm_path, vocab_path=None):
-    lm = load_lm(lm_path)
-    lm_abs_path = abspath(lm_path)
-    if vocab_path:
-        lm_vocab_abs_path = abspath(vocab_path)
-    else:
-        lm_vocab_abs_path = abspath(join(dirname(lm_abs_path), splitext(lm_abs_path)[0] + '.vocab'))
-        if not exists(lm_vocab_abs_path):
-            raise ValueError(f'ERROR: LM vocabulary not set and no vocabulary found at {lm_vocab_abs_path}')
-    lm_vocab = load_vocab(lm_vocab_abs_path)
-    return lm, lm_vocab
-
-
 def load_lm(lm_path):
     global LANGUAGE_MODELS
     if lm_path in LANGUAGE_MODELS:
@@ -111,21 +98,24 @@ def score(word_list, lm):
     return lm.score(' '.join(word_list), bos=False, eos=False)
 
 
-def correction(sentence, language, lm=None, lm_vocab=None):
+def correction(sentence, language, lm=None, vocab=None):
     """
     Get most probable spelling correction for a given sentence.
     :param sentence:
+    :param language: the language of the sentence
+    :param lm: n-gram LM to use to score sentence
+    :param vocab: vocabulary of LM to use for spell checking
     :return:
     """
     assert language in ['en', 'de', 'fr', 'it', 'es'], 'language must be one of [\'en\', \'de\']'
-    if not lm or not lm_vocab:
+    if not lm or not vocab:
         return sentence
     alphabet = get_alphabet(language)
     beam_width = 1024
     layer = [(0, [])]  # list of (score, 2-gram)-pairs
     for word in sentence.split():
         layer = [(-score(node + [word_c], lm), node + [word_c])
-                 for word_c in candidate_words(word, lm_vocab, alphabet)
+                 for word_c in candidate_words(word, vocab, alphabet)
                  for sc, node in layer]
         heapify(layer)
         layer = layer[:beam_width]

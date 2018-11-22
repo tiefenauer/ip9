@@ -47,14 +47,13 @@ def load_keras_model(root_path, opt=None):
     :param opt: optimizer to use (optional if model is loaded from HDF5 file
     :return: the compiled model
     """
-    print(f'loading Keras model from {root_path}')
     get_custom_objects().update({"clipped_relu": clipped_relu})
     get_custom_objects().update({"ctc": ctc})
 
     # prefer single file over architecture + weight
     model_h5 = join(root_path, 'model.h5')
     if exists(model_h5):
-        print(f'loading model from {model_h5}')
+        print(f'loading Keras model from {model_h5}')
         K.set_learning_phase(1)
         return load_model(model_h5)
 

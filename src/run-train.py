@@ -11,7 +11,7 @@ import os
 import sys
 from datetime import datetime
 from os import makedirs
-from os.path import join, abspath, isdir, exists
+from os.path import join, isdir, exists
 from shutil import rmtree
 
 from keras.callbacks import TensorBoard
@@ -33,9 +33,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--target_dir', type=str, required=True, help='root directory for all output')
 parser.add_argument('--run_id', type=str, default='',
                     help='id of run, used to set checkpoint save name. Default uses timestamp')
-parser.add_argument('--train_files', type=str, default='',
+parser.add_argument('--train_files', type=str, required=True,
                     help='list of all train files, seperated by a comma if multiple')
-parser.add_argument('--valid_files', type=str, default='',
+parser.add_argument('--valid_files', type=str, required=True,
                     help='list of all validation files, seperate by a comma if multiple')
 parser.add_argument('--decoder', type=str, default='beamsearch,bestpath',
                     help='decoder to use (\'beamsearch\' or \'bestpath\') for validation. Default: None (both)')
@@ -88,7 +88,7 @@ def main(date_time):
 
     print(f'creating {args.optimizer.upper()} optimizer for model')
     if args.optimizer == 'adam':
-        opt = Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, decay=0.01)
+        opt = Adam(lr=0.001, beta_1=0.9, beta_2=0.999, decay=0.01, epsilon=1e-8)
     else:
         opt = SGD(lr=args.learning_rate, decay=1e-6, momentum=0.9, nesterov=True, clipnorm=5)
     model = create_model(target_dir, opt, args.dropouts, args.language)
@@ -103,16 +103,6 @@ def setup(date_time):
     target_dir = join(args.target_dir, args.run_id)
     if not isdir(target_dir):
         makedirs(target_dir)
-
-    # log_file_path = join(output_dir, 'train.log')
-    # redirect_to_file(log_file_path)
-
-    # detect user here too
-    if args.train_files == "" and args.valid_files == "":
-        # if paths to file not specified, assume testing
-        test_path = join('data', 'ldc93s1')
-        args.train_files = abspath(join(test_path, "ldc93s1.csv"))
-        args.valid_files = abspath(join(test_path, "ldc93s1.csv"))
 
     args.decoder = args.decoder.split(',')
 

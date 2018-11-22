@@ -17,12 +17,12 @@ from util.ctc_util import encode, get_tokens
 
 
 class BatchGenerator(object):
-    def __init__(self, batch_items, batch_size, language):
+    def __init__(self, batch_items, batch_size, lang):
         self.batch_items = batch_items
         self.batch_size = batch_size
         self.n = len(batch_items)
         self.cur_index = 0
-        self.tokens = get_tokens(language)
+        self.tokens = get_tokens(lang)
 
     def __getitem__(self, batch_ix):
         if isinstance(batch_ix, slice):
@@ -107,8 +107,8 @@ class BatchGenerator(object):
 
 class VoiceSegmentsBatchGenerator(BatchGenerator):
 
-    def __init__(self, voiced_segments, sample_rate, batch_size, language):
-        super().__init__(voiced_segments, batch_size, language)
+    def __init__(self, voiced_segments, sample_rate, batch_size, lang):
+        super().__init__(voiced_segments, batch_size, lang)
         self.sample_rate = sample_rate
 
     def __next__(self):
@@ -166,7 +166,7 @@ class CSVBatchGenerator(BatchGenerator):
         self.wav_sizes = df['wav_filesize'].tolist()
         self.wav_lengths = df['wav_length'].tolist() if 'wav_length' in df else []
 
-        super().__init__(batch_items=df, batch_size=batch_size, language=lang)
+        super().__init__(batch_items=df, batch_size=batch_size, lang=lang)
         del df
 
     def shuffle_entries(self):

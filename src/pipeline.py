@@ -110,8 +110,8 @@ def pipeline(audio_file, transcript_file=None, language=None, keras_path=None, d
         df_alignments['text_end'] = [a['end'] for a in alignments]
 
         if target_dir:
-            print(f'saving alignments to {join(target_dir, alignments_csv)}')
-            df_alignments.to_csv(join(target_dir, alignments_csv))
+            print(f'saving alignments to {alignments_csv}')
+            df_alignments.to_csv(alignments_csv)
     print(f"""
     --------------------------------------------------
     STAGE #4 COMPLETED

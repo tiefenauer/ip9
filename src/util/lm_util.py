@@ -111,21 +111,21 @@ def score(word_list, lm):
     return lm.score(' '.join(word_list), bos=False, eos=False)
 
 
-def correction(sentence, language, lm=None, lm_vocab=None):
+def correction(sentence, language, lm=None, vocab=None):
     """
     Get most probable spelling correction for a given sentence.
     :param sentence:
     :return:
     """
     assert language in ['en', 'de', 'fr', 'it', 'es'], 'language must be one of [\'en\', \'de\']'
-    if not lm or not lm_vocab:
+    if not lm or not vocab:
         return sentence
     alphabet = get_alphabet(language)
     beam_width = 1024
     layer = [(0, [])]  # list of (score, 2-gram)-pairs
     for word in sentence.split():
         layer = [(-score(node + [word_c], lm), node + [word_c])
-                 for word_c in candidate_words(word, lm_vocab, alphabet)
+                 for word_c in candidate_words(word, vocab, alphabet)
                  for sc, node in layer]
         heapify(layer)
         layer = layer[:beam_width]

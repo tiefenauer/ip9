@@ -159,13 +159,25 @@ def query_asr_params(args):
         if not exists(ds_trie_path):
             raise ValueError(f'ERROR: Trie not found at {ds_trie_path}')
 
-    while not args.lm_path:
-        args.lm_path = input('Enter path to binary file of KenLM n-gram model. Leave blank for no LM: ')
-        if args.lm_path and not exists(abspath(args.lm_path)):
-            raise ValueError(f'ERROR: LM not found at {abspath(args.lm_path)}')
+    return keras_path, ds_path, ds_alpha_path, ds_trie_path
 
-    lm_path = abspath(args.lm_path)
-    return keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, gpu
+
+def query_lm_params(args):
+    lm_path, vocab_path = '', ''
+    if not args.lm_path:
+        args.lm_path = input('Enter path to LM to use for spell checking (enter nothing for no spell checking): ')
+        if args.lm_path:
+            if not exists(abspath(args.lm_path)):
+                raise ValueError(f'ERROR: LM not found at {abspath(args.lm_path)}!')
+            lm_path = abspath(args.lm_path)
+            if not args.vocab_path:
+                args.vocab_path = input('Enter path to vocabulary file to use for spell checker: ')
+                if args.vocab_path:
+                    if not exists(abspath(args.vocab_path)):
+                        raise ValueError(f'ERROR: Vocabulary not found at {abspath(args.vocab_path)}!')
+                    vocab_path = abspath(args.vocab_path)
+
+    return lm_path, vocab_path
 
 
 def calculate_stats(df_alignments, model_path, transcript):

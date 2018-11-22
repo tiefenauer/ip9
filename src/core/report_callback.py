@@ -10,7 +10,7 @@ from keras import callbacks
 
 from core.decoder import BeamSearchDecoder, BestPathDecoder
 from util.asr_util import calculate_metrics_mean, infer_batches_keras, lm_uses, decoding_strategies, metrics
-from util.lm_util import load_lm_and_vocab
+from util.lm_util import load_lm, load_vocab
 from util.log_util import print_dataframe
 from util.rnn_util import save_model
 
@@ -46,7 +46,8 @@ class ReportCallback(callbacks.Callback):
         self.decoders = {}
         if lm_path:
             self.lm_path, self.vocab_path = lm_path, vocab_path
-            self.lm, self.lm_vocab = load_lm_and_vocab(lm_path, vocab_path)
+            self.lm = load_lm(lm_path)
+            self.lm_vocab = load_vocab(vocab_path)
 
         if not isdir(self.target_dir):
             makedirs(self.target_dir)

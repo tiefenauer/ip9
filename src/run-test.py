@@ -7,7 +7,6 @@ from keras.optimizers import SGD
 
 from core.batch_generator import CSVBatchGenerator
 from core.report_callback import *
-from util.lm_util import load_lm_and_vocab
 from util.log_util import create_args_str
 from util.rnn_util import load_keras_model, create_tf_session
 
@@ -51,7 +50,8 @@ def main():
 
     lm, vocab = None, None
     if args.lm:
-        lm, vocab = load_lm_and_vocab(args.lm, args.lm_vocab)
+        lm = load_lm(args.lm)
+        vocab = load_vocab(args.lm_vocab)
 
     test_model(model, args.test_files, args.test_batches, args.batch_size, args.language, lm, vocab, target_dir)
 

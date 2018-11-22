@@ -3,8 +3,10 @@ from os import makedirs
 from os.path import abspath, exists, splitext, join, dirname, basename
 
 from pipeline import pipeline
+from util.lm_util import load_lm, load_vocab
 from util.log_util import create_args_str, print_dataframe
-from util.pipeline_util import create_demo_files, query_asr_params, calculate_stats
+from util.pipeline_util import create_demo_files, query_asr_params, calculate_stats, query_lm_params
+from util.rnn_util import query_gpu, load_keras_model, load_ds_model
 
 parser = argparse.ArgumentParser(description="""Create HTML page with demonstration of pipeline performance""")
 parser.add_argument('--audio', type=str, required=False,
@@ -33,14 +35,18 @@ args = parser.parse_args()
 
 def main(args):
     print(create_args_str(args))
-    lang, audio_path, trans_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, target_dir, gpu = setup(
+    lang, audio_path, trans_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, vocab_path, target_dir, gpu = setup(
         args)
 
     print(f'all artefacts will be saved to {target_dir}')
 
+    keras_model = load_keras_model(keras_path)
+    ds_model = load_ds_model(ds_path, alphabet_path=ds_alpha_path, lm_path=lm_path, trie_path=ds_trie_path)
+    lm = load_lm(lm_path)
+    vocab = load_vocab(vocab_path)
     df_alignments, transcript, lang = pipeline(audio_path, trans_path, lang,
-                                               keras_path, ds_path, ds_alpha_path, ds_trie_path,
-                                               lm_path, target_dir)
+                                               keras_model=keras_model, ds_model=ds_model,
+                                               lm=lm, vocab=vocab, target_dir=target_dir)
 
     df_stats = calculate_stats(df_alignments, transcript)
     create_demo_files(target_dir, audio_path, transcript, df_alignments, df_stats)
@@ -71,7 +77,9 @@ def setup(args):
             transcript_path = abspath(args.transcript)
             args.transcript = input(f'No transcript found at {transcript_path}. Enter path to transcript file: ')
 
-    keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, gpu = query_asr_params(args)
+    keras_path, ds_path, ds_alpha_path, ds_trie_path = query_asr_params(args)
+    lm_path, vocab_path = query_lm_params(args)
+    gpu = query_gpu(args.gpu)
 
     if not args.target_dir:
         args.target_dir = input(
@@ -90,7 +98,7 @@ def setup(args):
         if args.language and args.language not in ['en', 'de', 'fr', 'it', 'es']:
             raise ValueError('ERROR: Language must be either en or de')
 
-    return args.language, audio_path, transcript_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, target_dir, gpu
+    return args.language, audio_path, transcript_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, vocab_path, target_dir, gpu
 
 
 if __name__ == '__main__':

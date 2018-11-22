@@ -14,7 +14,6 @@ from pattern3.metrics import levenshtein_similarity
 from constants import ASSETS_DIR
 from util.audio_util import frame_to_ms
 from util.lm_util import ler_norm
-from util.rnn_util import query_gpu
 
 
 def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, df_stats):
@@ -34,7 +33,7 @@ def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, df
     print(f'saved alignment information to {alignment_json_path}')
 
     demo_id = basename(target_dir)
-    update_index(target_dir, demo_id)
+    add_demo_to_index(target_dir, demo_id)
     create_demo_index(target_dir, demo_id, audio_src_path, transcript, df_transcripts, df_stats)
 
     assets_dir = join(ASSETS_DIR, 'demo')
@@ -71,7 +70,8 @@ def create_demo_index(target_dir, demo_id, audio_src_path, transcript, df_transc
     metrics_table = soup.find(id='metrics')
     metrics_table.append(create_tr('directory', target_dir))
     metrics_table.append(create_tr('audio file', audio_src_path))
-    metrics_table.append(create_tr('transcript length', f'{len(transcript)} characters, {len(transcript.split())} words'))
+    metrics_table.append(
+        create_tr('transcript length', f'{len(transcript)} characters, {len(transcript.split())} words'))
     metrics_table.append(create_tr('#alignments/segments', f'{len(df_transcripts)}'))
 
     for ix, (model_path, transcript_len, p, r, f, ler_avg) in df_stats.iterrows():
@@ -89,7 +89,7 @@ def create_demo_index(target_dir, demo_id, audio_src_path, transcript, df_transc
     return demo_index_path
 
 
-def update_index(target_dir, demo_id):
+def add_demo_to_index(target_dir, demo_id):
     index_path = join(join(target_dir, pardir), 'index.html')
     if not exists(index_path):
         copyfile(join(ASSETS_DIR, '_index_template.html'), index_path)
@@ -108,6 +108,37 @@ def update_index(target_dir, demo_id):
             f.write(soup.prettify())
 
 
+def update_index(target_dir, lang, num_aligned, df_keras=None, keras_path=None, df_ds=None, ds_path=None, lm_path=None, vocab_path=None):
+    index_path = join(target_dir, 'index.html')
+    soup = BeautifulSoup(open(index_path), 'html.parser')
+    soup.find(id='title').string = f'Forced Alignment Demo ({lang})'
+
+    soup.find(id='num_aligned').string = str(num_aligned)
+    soup.find(id='keras_path').string = keras_path if keras_path else ''
+    soup.find(id='ds_path').string = ds_path if ds_path else ''
+    soup.find(id='lm_path').string = lm_path if lm_path else ''
+    soup.find(id='vocab_path').string = vocab_path if vocab_path else ''
+
+    if df_keras is not None:
+        av_p = df_keras['precision'].mean()
+        av_r = df_keras['recall'].mean()
+        av_f = df_keras['f-score'].mean()
+        soup.find(id='precision_keras').string = f'{av_p:.4f}'
+        soup.find(id='recall_keras').string = f'{av_r:.4f}'
+        soup.find(id='f-score_keras').string = f'{av_f:.4f}'
+
+    if df_ds is not None:
+        av_p = df_ds['precision'].mean()
+        av_r = df_ds['recall'].mean()
+        av_f = df_ds['f-score'].mean()
+        soup.find(id='precision_ds').string = f'{av_p:.4f}'
+        soup.find(id='recall_ds').string = f'{av_r:.4f}'
+        soup.find(id='f-score_ds').string = f'{av_f:.4f}'
+
+    with open(index_path, 'w') as f:
+        f.write(soup.prettify())
+
+
 def create_alignments_dataframe(voiced_segments, transcripts, sample_rate):
     alignments = []
     for i, (voice_segment, transcript) in enumerate(zip(voiced_segments, transcripts)):
@@ -124,8 +155,6 @@ def query_asr_params(args):
     """
     Helper function to query ASR model from user if not set in args
     """
-    gpu = query_gpu(args.gpu)
-
     keras_path = None
     if not args.keras_path and not args.ds_path:
         args.keras_path = input('Enter path to directory containing Keras model (*.h5) or leave blank to use DS: ')
@@ -187,7 +216,8 @@ def calculate_stats(df_alignments, model_path, transcript):
     # Precision = similarity between
     p = np.mean([levenshtein_similarity(gt, al) for gt, al in zip(ground_truths, alignments)])
     # Recall = fraction of aligned text
-    r = len(' '.join(ground_truths)) / len(transcript)
+    merged_alignments = ' '.join(a for a in alignments if a)
+    r = len(merged_alignments) / len(transcript)
     # F-Score
     f = 2 * p * r / (p + r)
 

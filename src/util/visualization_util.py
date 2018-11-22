@@ -145,26 +145,32 @@ def visualize_pipeline_performance(csv_keras, csv_ds, silent=False):
     The plots will be saved as PNG in the same directory as the CSV
 
     :param csv_keras: path to CSV file containing the data
+    :param csv_ds:
     :param silent: whether to show plots at the end
     """
     suptitle = 'Pipeline evaluation: Simplified Keras model vs. pre-trained DeepSpeech model'
     p_r_f_boxplot_png = join(dirname(csv_keras), f'p_r_f_boxplot.png')
     ler_similarity_png = join(dirname(csv_keras), f'similarity_scatterplot.png')
 
-    df_keras = pd.read_csv(csv_keras)
-    keras_path = df_keras['model path'].unique()[0]
-    df_ds = pd.read_csv(csv_ds)
-    ds_path = df_ds['model path'].unique()[0]
+    df = pd.read_csv(csv_keras)
+    keras_path = df['model path'].unique()[0]
+    df['model path'] = 'Keras'
 
-    df_keras['model path'] = 'Keras'
-    df_ds['model path'] = 'DeepSpeech'
-    df = pd.concat([df_keras, df_ds])
+    if csv_ds:
+        df_ds = pd.read_csv(csv_ds)
+        ds_path = df_ds['model path'].unique()[0]
+        df_ds['model path'] = 'DeepSpeech'
+        df = df.append(df_ds)
+    else:
+        df_ds = None
+        ds_path = ''
 
-    fig, (ax_p, ax_r, ax_f) = plt.subplots(1, 3, figsize=(14, 5))
+    fig, (ax_p, ax_r, ax_f) = plt.subplots(1, 3, figsize=(10, 5))
 
-    df.boxplot('precision', by='model path', ax=ax_p)
-    df.boxplot('recall', by='model path', ax=ax_r)
-    df.boxplot('f-score', by='model path', ax=ax_f)
+    meanprops = dict(marker='.', markeredgecolor='black', markerfacecolor='firebrick')
+    df.boxplot('precision', by='model path', ax=ax_p, showmeans=True, meanprops=meanprops)
+    df.boxplot('recall', by='model path', ax=ax_r, showmeans=True, meanprops=meanprops)
+    df.boxplot('f-score', by='model path', ax=ax_f, showmeans=True, meanprops=meanprops)
 
     ax_p.set_title('Precision')
     ax_r.set_title('Recall')
@@ -175,16 +181,19 @@ def visualize_pipeline_performance(csv_keras, csv_ds, silent=False):
 
     fig.suptitle(suptitle)
     fig.tight_layout(rect=[0, 0.03, 1, 0.85])
-    fig.text(.5, .9, f'DS model: {ds_path}', fontsize=10, ha='center')
+    if ds_path:
+        fig.text(.5, .9, f'DS model: {ds_path}', fontsize=10, ha='center')
     fig.text(.5, .85, f'Keras model: {keras_path}', fontsize=10, ha='center')
     fig.savefig(p_r_f_boxplot_png)
     print(f'saved Precision/Recall/F-Score (Boxplot) to {p_r_f_boxplot_png}')
 
-    fig, (ax_ler, ax_sim) = plt.subplots(1, 2, figsize=(14, 5))
-    df_keras.plot.scatter(x='transcript length', y='LER', c='b', label='Keras', ax=ax_ler)
-    df_ds.plot.scatter(x='transcript length', y='LER', c='g', label='DeepSpeech', ax=ax_ler)
+    fig, (ax_ler, ax_sim) = plt.subplots(1, 2, figsize=(10, 5))
+    df.plot.scatter(x='transcript length', y='LER', c='b', label='Keras', ax=ax_ler)
+    if df_ds is not None:
+        df_ds.plot.scatter(x='transcript length', y='LER', c='g', label='DeepSpeech', ax=ax_ler)
 
-    df_keras.plot.scatter(x='transcript length', y='similarity', c='k', label='Keras', ax=ax_sim)
+    if 'similarity' in df.keys():
+        df.plot.scatter(x='transcript length', y='similarity', c='k', label='Keras', ax=ax_sim)
 
     ax_ler.set_xlabel('transcript length (characters)')
     ax_ler.set_ylabel('LER')
@@ -200,3 +209,5 @@ def visualize_pipeline_performance(csv_keras, csv_ds, silent=False):
 
     if not silent:
         plt.show()
+
+    return p_r_f_boxplot_png, ler_similarity_png

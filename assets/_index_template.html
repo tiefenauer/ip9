@@ -1,12 +1,81 @@
 <html>
- <head>
-  <title>
-   Forced Alignment Demo
-  </title>
- </head>
- <body>
-  <ul id="demo_list">
-   <!-- new items will be added here... -->
-  </ul>
- </body>
+<head>
+    <title>
+        Forced Alignment Demo
+    </title>
+    <style>
+        img {
+            width: 50%;
+        }
+    </style>
+</head>
+<body>
+<h1 id="title"><!-- will be replaced by a title--></h1>
+
+<table>
+    <tr>
+        <td># aligned audio/text files:</td>
+        <td id="num_aligned"></td>
+    </tr>
+    <tr>
+        <td>Keras Model:</td>
+        <td id="keras_path"></td>
+    </tr>
+    <tr>
+        <td>DeepSpeech Model:</td>
+        <td id="ds_path"></td>
+    </tr>
+    <tr>
+        <td>Language Model:</td>
+        <td id="lm_path"></td>
+    </tr>
+    <tr>
+        <td>Vocabulary:</td>
+        <td id="vocab_path"></td>
+    </tr>
+</table>
+
+<h2>Performance with DeepSpeech model (reference model)</h2>
+<table>
+    <tr>
+        <td>Average Precision</td>
+        <td id="precision_ds"></td>
+    </tr>
+    <tr>
+        <td>Average Recall</td>
+        <td id="recall_ds"></td>
+    </tr>
+    <tr>
+        <td>Average F-Score</td>
+        <td id="f-score_ds"></td>
+    </tr>
+</table>
+
+<h2>Performance with Keras model (simplified model)</h2>
+<table>
+    <tr>
+        <td>Average Precision</td>
+        <td id="precision_keras"></td>
+    </tr>
+    <tr>
+        <td>Average Recall</td>
+        <td id="recall_keras"></td>
+    </tr>
+    <tr>
+        <td>Average F-Score</td>
+        <td id="f-score_keras"></td>
+    </tr>
+</table>
+
+<h2>Average Precision/Recall/F-Score</h2>
+<img src="p_r_f_boxplot.png"/>
+
+<h2>Average LER between Inference and alignment, Average Similarity between Reference model and Simplified model</h2>
+<img src="similarity_scatterplot.png"/>
+
+
+<ul id="demo_list">
+    <!-- new items will be added here... -->
+</ul>
+</body>
 </html>

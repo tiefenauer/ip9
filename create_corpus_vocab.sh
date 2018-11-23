@@ -58,11 +58,16 @@ total_sum=$(echo $(cat ${vocab_counts} |
           bc) # sum everything up
 echo "total number of words in vocabulary: $total_sum"
 
+# write all words sorted by frequency to vocab file
+cat ${vocab_counts} |
+    tr -d '[:digit:] ' | # remove counts from lines
+    tr '\n' ' ' > ${target_dir}/${corpus_filename}.vocab # replace newline with spaces (expected input format for KenLM)
+
 for top_words in 40 80 160
 do
     vocab_file=${target_dir}/${corpus_filename}_${top_words}k.vocab
     n=$((${top_words}*1000))
-    echo "writing $n top words to vocabulary"
+    echo "writing $n top words to $vocab_file"
     head -${n} ${vocab_counts} |
         tr -d '[:digit:] ' | # remove counts from lines
         tr '\n' ' ' > ${vocab_file} # replace newline with spaces (expected input format for KenLM)

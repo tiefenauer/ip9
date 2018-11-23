@@ -88,17 +88,23 @@ def collect_metrics(source_dir):
     return df_metric
 
 
-def plot_loss(df_losses):
-    fig, ax = plt.subplots(figsize=(14, 7))
+def plot_loss(df):
+    fig, axes = plt.subplots(2, 2, figsize=(10, 5), sharex=True, sharey=True)
+    ax_1, ax_10, ax_100, ax_1000 = axes[0][0], axes[0][1], axes[1][0], axes[1][1]
 
-    legend = [f'{mins} ({train_valid})' for mins in
-              ['1 min', '10 mins', '100 mins', '1000 mins'] for train_valid in ['training', 'validation']]
-    styles = [color + line for (color, line) in itertools.product(list('ygbr'), ['-', '--'])]
+    leg = ['training', 'validation']
+    data_1 = df[[('CTC_train', '1_min'), ('CTC_val', '1_min')]]
+    data_10 = df[[('CTC_train', '10_min'), ('CTC_val', '10_min')]]
+    data_100 = df[[('CTC_train', '100_min'), ('CTC_val', '100_min')]]
+    data_1000 = df[[('CTC_train', '1000_min'), ('CTC_val', '1000_min')]]
+    plot_df(data_1, ax=ax_1, styles=['y-', 'y--'], legend=leg, ylabel='loss', title='1 minute')
+    plot_df(data_10, ax=ax_10, styles=['g-', 'g--'], legend=leg, ylabel='loss', title='10 minutes')
+    plot_df(data_100, ax=ax_100, styles=['b-', 'b--'], legend=leg, ylabel='loss', title='100 minutes')
+    plot_df(data_1000, ax=ax_1000, styles=['r-', 'r--'], legend=leg, ylabel='loss', title='1000 minutes')
 
-    plot_df(df_losses, ax=ax, styles=styles, legend=legend, ylabel='loss', title='CTC-Loss')
-
-    fig.tight_layout()
-    return fig, ax
+    fig.suptitle('CTC loss')
+    # fig.tight_layout(rect=[0, 0.03, 1, 0.85])
+    return fig, axes
 
 
 def plot_metric(df_metrics, metric):
@@ -106,7 +112,7 @@ def plot_metric(df_metrics, metric):
     df_greedy = df_metrics[metric, 'greedy']
     df_beam = df_metrics[metric, 'beam']
 
-    fig, (ax_greedy, ax_beam) = plt.subplots(1, 2, figsize=(10, 6), sharey=True)
+    fig, (ax_greedy, ax_beam) = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
 
     legend = [f'{mins}{lm_use}' for mins in ['1 min', '10 mins', '100 mins', '1000 mins'] for lm_use in ['', '+LM']]
     styles = [color + line for (color, line) in itertools.product(list('ygbr'), ['-', '--'])]

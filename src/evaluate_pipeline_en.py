@@ -13,7 +13,7 @@ from util.corpus_util import get_corpus
 from util.lm_util import load_lm, load_vocab
 from util.log_util import create_args_str
 from util.pipeline_util import query_asr_params, calculate_stats, create_demo_files, query_lm_params, update_index
-from util.rnn_util import query_gpu, load_keras_model, load_ds_model, create_tf_session
+from util.rnn_util import query_gpu
 from util.visualization_util import visualize_pipeline_performance
 
 parser = argparse.ArgumentParser(description="""
@@ -79,7 +79,8 @@ def main(args):
                                                           ds_alpha_path=ds_alpha_path,
                                                           ds_trie_path=ds_trie_path,
                                                           lm_path=lm_path,
-                                                          target_dir=target_dir_ds)
+                                                          target_dir=target_dir_ds,
+                                                          gpu=gpu)
         df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
         create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
 
@@ -90,7 +91,8 @@ def main(args):
                                                              transcript_file=transcript_file,
                                                              keras_path=keras_path,
                                                              lm=lm, vocab=vocab,
-                                                             target_dir=target_dir_keras)
+                                                             target_dir=target_dir_keras,
+                                                             gpu=gpu)
         df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)
         create_demo_files(target_dir_keras, audio_file, transcript, df_alignments_keras, df_stats_keras)
         print('-----------------------------------------------------------------')

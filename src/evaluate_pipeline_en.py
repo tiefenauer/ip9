@@ -62,9 +62,6 @@ def main(args):
     num_files = len(demo_files)
     print(f'Processing {num_files} audio/transcript samples. All results will be written to {target_dir}')
 
-    K.set_session(create_tf_session(gpu))
-    keras_model = load_keras_model(keras_path)
-    ds_model = load_ds_model(ds_path, alphabet_path=ds_alpha_path, lm_path=lm_path, trie_path=ds_trie_path)
     lm = load_lm(lm_path) if lm_path else None
     vocab = load_vocab(vocab_path) if vocab_path else None
 
@@ -77,8 +74,10 @@ def main(args):
         print('-----------------------------------------------------------------')
         df_alignments_ds, transcript, language = pipeline(audio_file,
                                                           transcript_file=transcript_file,
-                                                          ds_model=ds_model,
-                                                          lm=lm, vocab=vocab,
+                                                          ds_path=ds_path,
+                                                          ds_alpha_path=ds_alpha_path,
+                                                          ds_trie_path=ds_trie_path,
+                                                          lm_path=lm_path,
                                                           target_dir=target_dir_ds)
         df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
         create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
@@ -88,7 +87,7 @@ def main(args):
         print('-----------------------------------------------------------------')
         df_alignments_keras, transcript, language = pipeline(audio_file,
                                                              transcript_file=transcript_file,
-                                                             keras_model=keras_model,
+                                                             keras_path=keras_path,
                                                              lm=lm, vocab=vocab,
                                                              target_dir=target_dir_keras)
         df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)

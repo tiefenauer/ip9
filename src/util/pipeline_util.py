@@ -204,8 +204,8 @@ def query_lm_params(args):
                     if not exists(abspath(args.vocab_path)):
                         raise ValueError(f'ERROR: Vocabulary not found at {abspath(args.vocab_path)}!')
 
-    lm_path = abspath(args.lm_path)
-    vocab_path = abspath(args.vocab_path)
+    lm_path = abspath(args.lm_path) if args.lm_path else ''
+    vocab_path = abspath(args.vocab_path) if args.vocab_path else ''
     return lm_path, vocab_path
 
 

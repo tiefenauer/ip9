@@ -49,6 +49,8 @@ parser.add_argument('--ds_trie_path', type=str, required=False,
                     f'Required if --ds_path is set')
 parser.add_argument('--lm_path', type=str, required=False,
                     help=f'(optional) Path to binary file containing KenLM n-gram Language Model')
+parser.add_argument('--vocab_path', type=str, required=False,
+                    help=f'(optional) Path to vocabulary for LM')
 parser.add_argument('--gpu', type=str, required=False, default=None,
                     help='(optional) GPU(s) to use for training. If not set, you will be asked at runtime.')
 args = parser.parse_args()

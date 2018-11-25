@@ -108,7 +108,8 @@ def add_demo_to_index(target_dir, demo_id):
             f.write(soup.prettify())
 
 
-def update_index(target_dir, lang, num_aligned, df_keras=None, keras_path=None, df_ds=None, ds_path=None, lm_path=None, vocab_path=None):
+def update_index(target_dir, lang, num_aligned, df_keras=None, keras_path=None, df_ds=None, ds_path=None, lm_path=None,
+                 vocab_path=None):
     index_path = join(target_dir, 'index.html')
     soup = BeautifulSoup(open(index_path), 'html.parser')
     soup.find(id='title').string = f'Forced Alignment Demo ({lang})'
@@ -192,20 +193,19 @@ def query_asr_params(args):
 
 
 def query_lm_params(args):
-    lm_path, vocab_path = '', ''
     if not args.lm_path:
         args.lm_path = input('Enter path to LM to use for spell checking (enter nothing for no spell checking): ')
         if args.lm_path:
             if not exists(abspath(args.lm_path)):
                 raise ValueError(f'ERROR: LM not found at {abspath(args.lm_path)}!')
-            lm_path = abspath(args.lm_path)
             if not args.vocab_path:
                 args.vocab_path = input('Enter path to vocabulary file to use for spell checker: ')
                 if args.vocab_path:
                     if not exists(abspath(args.vocab_path)):
                         raise ValueError(f'ERROR: Vocabulary not found at {abspath(args.vocab_path)}!')
-                    vocab_path = abspath(args.vocab_path)
 
+    lm_path = abspath(args.lm_path)
+    vocab_path = abspath(args.vocab_path)
     return lm_path, vocab_path
 
 

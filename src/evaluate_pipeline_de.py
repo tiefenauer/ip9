@@ -113,7 +113,7 @@ def setup(args):
     keras_path = abspath(args.keras_path)
 
     lm_path, vocab_path = query_lm_params(args)
-    gpu = query_gpu(args.gpu)
+    gpu = args.gpu if args.gpu else query_gpu()
 
     return target_dir, keras_path, lm_path, vocab_path, gpu
 

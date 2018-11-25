@@ -1,6 +1,7 @@
 import argparse
 from glob import glob
 from itertools import chain
+from os import makedirs
 from os.path import abspath, splitext, exists, basename, join
 
 import pandas as pd
@@ -70,6 +71,8 @@ def main(args):
         print(f'{i}/{num_files}: Evaluating pipeline on {audio_file}')
         run_id = splitext(basename(audio_file))[0]
         target_dir_ds = join(target_dir, run_id + '_ds')
+        if not exists(target_dir_ds):
+            makedirs(target_dir_ds)
         print(f'Using DS model at {ds_path}, saving results in {target_dir_ds}')
         print('-----------------------------------------------------------------')
         df_alignments_ds, transcript, language = pipeline(audio_file,
@@ -83,6 +86,8 @@ def main(args):
         create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
 
         target_dir_keras = join(target_dir, run_id + '_keras')
+        if not exists(target_dir_keras):
+            makedirs(target_dir_keras)
         print(f'Using Keras model at {keras_path}, saving results in {target_dir_keras}')
         print('-----------------------------------------------------------------')
         df_alignments_keras, transcript, language = pipeline(audio_file,

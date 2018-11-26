@@ -83,7 +83,7 @@ def load_vocab(vocab_path):
 
     with open(lm_vocab_abs_path) as vocab_f:
         print(f'loading LM vocab from {lm_vocab_abs_path}...', end='')
-        lm_vocab = set(vocab_f.read().split())
+        lm_vocab = vocab_f.read().split()
         print(f'done! Loaded {len(lm_vocab)} words.')
         LM_VOCABS[vocab_path] = lm_vocab
     return lm_vocab

@@ -1,13 +1,13 @@
 \section{Introduction}\label{intro}
-This report documents the progress of the project \textit{Speech-To-Text Engine for Forced Alignment}, my master thesis at \ac{FHNW} (referred to as \textit{IP9}). Some preliminary work has been done in a previous project (referred to as \textit{IP8}). The overall goal, project situation and some background information are described in detail in the project report for IP8 and shall not be repeated here. A quick recap of the relevant terms and aspects is given as far as they are relevant for the understanding of this document.
+This report documents the progress of the project \textit{Speech-To-Text Engine for Forced Alignment}, my master thesis at \ac{FHNW} (referred to as \textit{IP9}). Some preliminary work has been done in a previous project (referred to as \textit{IP8}). The overall goal, project situation and some background information are described in detail in the project report for IP8 and shall not be repeated here. Only a quick recap of the relevant terms and aspects is given as far as they are relevant for the understanding of this document.
 
 \subsection{Scope and overall goal}
-\textit{ReadyLingua} is a Switzerland based company that develops tools and produces content for language learning. Some of this content consists of audio/video data with an accompanying transcript. The overall goal is to enrich the textual data with temporal information, so that for each part of the transcript the corresponding point in the audio/video data can be found. This process is called \textit{ac{fa}}. An \textit{InnoSuisse} project was started in 2018 to research how this could be achieved. The \textit{InnoSuisse} project foresees three different approaches, one of which is pursued in this project.
+\textit{ReadyLingua} is a Switzerland based company that develops tools and produces content for language learning. Some of this content consists of audio/video data with an accompanying transcript. The overall goal is to enrich the textual data with temporal information, so that for each part of the transcript the corresponding point in the audio/video data can be found. This process is called \textit{\ac{FA}}. An \textit{InnoSuisse} project was started in 2018 to research how this could be achieved. The \textit{InnoSuisse} project foresees three different approaches, one of which is pursued in this project.
 
 \subsection{Chosen approach and previous work}
 The approach chosen for this project is based on speech pauses, which can be detected using \textit{\ac{VAD}}. The utterances in between are transcribed using \textit{\ac{ASR}}, for which a \textit{\ac{RNN}} is used. The resulting partial transcripts contain the desired temporal information and can be matched up with the full transcript by means of \ac{LSA}.
 
-All theses parts were treated as individual stages of a pipeline:
+All theses parts were treated as stages of a pipeline:
 
 \begin{itemize}
 	\item \textbf{\ac{VAD}}: the audio was split into non-silent parts

@@ -32,7 +32,7 @@ parser.add_argument('--source_dir', type=str, required=False,
                     f'Either this or the --corpus argument must be set.')
 parser.add_argument('--corpus', type=str, required=False,
                     help=f'Corpus path or ID to use for evaluation. If set, this will override the --source_dir '
-                    f'argument. The elements from the training set of the respective corpus will be used for '
+                    f'argument. The elements from the test set of the respective corpus will be used for '
                     f'evaluation. Either this or the --source_dir argument must be set.')
 parser.add_argument('--language', type=str, required=False,
                     help='(optional) language to use.  Only considered in conjunction with --corpus')

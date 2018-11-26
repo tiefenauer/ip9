@@ -155,7 +155,7 @@ def train_model(model, language, target_dir, num_minutes=None):
                         epochs=args.epochs,
                         callbacks=[tb_cb, report_cb],
                         use_multiprocessing=True,
-                        workers=multiprocessing.cpu_count() - 1
+                        workers=1
                         )
 
     K.clear_session()

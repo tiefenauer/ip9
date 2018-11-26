@@ -88,10 +88,10 @@ def create_tf_session(gpu, allow_growth=False, log_device_placement=False):
 
 
 def query_gpu():
+    gpu = None
     if get_available_gpus():
-        gpu = input('Enter GPU to use (leave blank for all GPUs): ')
-        if not gpu:
-            gpu = ','.join(all_gpus)
+        while not gpu:
+            gpu = input('Enter GPU to use (leave blank for all GPUs): ')
         print(f'GPU set to {gpu}')
     return gpu
 

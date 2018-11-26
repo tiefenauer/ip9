@@ -1,8 +1,8 @@
 import argparse
 from os.path import exists, abspath, join
 
-from matplotlib import pyplot as plt
 import seaborn as sns
+from matplotlib import pyplot as plt
 
 from util.visualization_util import collect_metrics, plot_df
 
@@ -33,11 +33,13 @@ def main(args):
 
     fig, (ax_reg, ax_synth, ax_reg_synth) = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
     styles = ['g-', 'b-']
-    plot_df(df_reg, ax_reg, styles, ['unregularized', 'regularized'], 'LER', 'Regularized vs. unregularized model')
-    plot_df(df_synth, ax_synth, styles, ['w/o synthetisation', 'w/ synthetization'], 'LER', 'Synthesized vs. unsynthesized data')
-    plot_df(df_reg_synth, ax_reg_synth, styles, ['unregularized, w/o synthetisation', 'regularized, w/ synthetization'], 'LER', 'unregularized model/unsynthesized data vs. regularized model/synthesized data')
+    plot_df(df_reg, ax_reg, styles, ['unregularized model', 'regularized model'], 'LER', 'Regularisation')
+    plot_df(df_synth, ax_synth, styles, ['no synthesized data', 'with synthesized data'], 'LER', 'Synthetization')
+    plot_df(df_reg_synth, ax_reg_synth, styles, ['unregularized model, no synthesized data', 'regularized model, synthesized data'],
+            'LER', 'Synthetisation & Regularisation')
 
     regularization_synthetisation_png = join(target_dir, 'regularization_synthetisation.png')
+    fig.tight_layout()
     fig.savefig(regularization_synthetisation_png)
     print(f'loss plot saved to {regularization_synthetisation_png}')
 

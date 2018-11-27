@@ -1,5 +1,6 @@
 import argparse
 import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 from os import makedirs
 from os.path import abspath, exists, join, splitext, basename
 
@@ -44,9 +45,6 @@ def main(args):
     print(create_args_str(args))
     target_dir, keras_path, lm_path, vocab_path, gpu = setup(args)
     print(f'all results will be written to {target_dir}')
-
-    if gpu:
-        os.environ['CUDA_VISIBLE_DEVICES'] = gpu
 
     lm = load_lm(lm_path) if lm_path else None
     vocab = load_vocab(vocab_path) if vocab_path else None

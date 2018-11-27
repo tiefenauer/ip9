@@ -10,7 +10,7 @@ The reason for the first premise is that more complex neural networks usually re
 
 \subsection{Related research}
 
-The idea of \cite{budget} 
+The idea of training a \ac{STT} model on limited data has also been researched by \cite{budget}, although with a different approach. Instead of training a \ac{RNN} from scratch, they used a \ac{CNN} that was trained to recognize English, froze lower layers and then re-trained only upper layers on a (smaller) German corpus. This process is also known as Transfer Learning.
 
 Hier etwas über Transfer Learning (z.B. wie in https://arxiv.org/pdf/1706.00290.pdf) und warum es nicht eingesetzt wurde (CNN anstatt RNN, Zeitaufwand). Layer Freezen bringt ausserdem offenbar auch nix. \parencite{budget}
 

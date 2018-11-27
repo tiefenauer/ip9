@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+gpu=$1
+if [[ ${gpu} = '' ]]; then
+    echo "Enter GPU # to use for inference"
+    read gpu
+fi
+echo "using GPU #${gpu} for all inferences!"
+
 me=`basename "$0"`
 target_dir="/media/D1/daniel.tiefenauer/performance_rl_de"
 
@@ -11,4 +18,5 @@ python3 evaluate_pipeline_de.py \
     --corpus rl \
     --language de \
     --keras_path /home/daniel/Documents/_runs/lc_rl_de_wiki_synth/1000_min \
+    --gpu ${gpu} \
     --target_dir /media/daniel/IP9/demos/performance_rl_de | tee ${target_dir}/${me}.log

@@ -13,13 +13,15 @@ from util.lm_util import load_lm, load_vocab
 from util.log_util import create_args_str
 from util.pipeline_util import create_alignments_dataframe, query_lm_params, calculate_stats, create_demo_files, \
     update_index
-from util.rnn_util import load_keras_model, query_gpu, create_tf_session
+from util.rnn_util import query_gpu
 from util.visualization_util import visualize_pipeline_performance
 
 parser = argparse.ArgumentParser(description="""
     Evaluate the pipeline using German samples from the ReadyLingua corpus. Because there is no reference model for
     German, the VAD stage is skipped and the inference is only made 
     """)
+parser.add_argument('--corpus', type=str, required=True,
+                    help='corpus ID or path to corpus root directory')
 parser.add_argument('--target_dir', type=str, required=False,
                     help=f'Path to target directory where results will be written. '
                     f'If not set, the source directory will be used.')
@@ -45,7 +47,7 @@ def main(args):
     lm = load_lm(lm_path) if lm_path else None
     vocab = load_vocab(vocab_path) if vocab_path else None
 
-    corpus = get_corpus('rl', 'de')
+    corpus = get_corpus(args.corpus, 'de')
     corpus.summary()
     test_entries = list(set((segment.entry for segment in corpus.test_set())))
     stats = []

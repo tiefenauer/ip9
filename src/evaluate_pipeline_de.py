@@ -42,8 +42,6 @@ def main(args):
     target_dir, keras_path, lm_path, vocab_path, gpu = setup(args)
     print(f'all results will be written to {target_dir}')
 
-    K.set_session(create_tf_session(gpu))
-    keras_model = load_keras_model(keras_path)
     lm = load_lm(lm_path) if lm_path else None
     vocab = load_vocab(vocab_path) if vocab_path else None
 
@@ -64,8 +62,8 @@ def main(args):
         else:
             print(f'using simplified Keras model')
             voiced_segments = [Voice(s.audio, s.rate, s.start_frame, s.end_frame) for s in entry]
-            transcripts = asr_keras(voiced_segments, 'de', entry.rate, keras_model, lm, vocab)
-            df_alignments = create_alignments_dataframe(voiced_segments, transcripts, sample_rate)
+            transcripts = asr_keras(voiced_segments, 'de', entry.rate, keras_path, lm, vocab, gpu)
+            df_alignments = create_alignments_dataframe(voiced_segments, transcripts, entry.rate)
             if target_dir:
                 print(f'saving alignments to {alignments_csv}')
                 df_alignments.to_csv(join(target_dir, alignments_csv))

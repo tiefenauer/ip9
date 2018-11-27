@@ -1,4 +1,5 @@
 import argparse
+import os
 from glob import glob
 from itertools import chain
 from os import makedirs

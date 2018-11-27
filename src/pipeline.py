@@ -244,7 +244,7 @@ def asr_ds(voiced_segments, sample_rate, ds_path, ds_alphabet_path, lm_path, ds_
         progress.set_description(transcript)
         transcripts.append(transcript)
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = ''
+    del os.environ['CUDA_VISIBLE_DEVICES']
     return transcripts
 
 

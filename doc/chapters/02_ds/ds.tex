@@ -1,7 +1,16 @@
 \section{Training an \ac{RNN} for \ac{ASR}}\label{ds}
-As stated above, the focus for this project is not on training a state of the art \ac{STT} engine. Because the \ac{SW} algorithm used for local alignment is tolerant to a certain amount of errors in the transcripts, the \ac{RNN} need only be \textit{good enough} for the task at hand (\ac{FA}). If such a network can be trained under the given circumstances it could be used for any language in the \ac{ASR} stage of the pipeline. 
+As stated before, the title of this thesis may be a bit misleading because the focus for this project is not on training a state of the art \ac{STT} engine. The sequence alignment stage in the pipeline is tolerant to a certain amount of errors in the transcripts. This means training the \ac{RNN} will happen under the following premis.
+
+\begin{itemize}
+	\item The \ac{RNN} should be as simple as possible and as complex as necessary.
+	\item The \ac{RNN} only needs to be \textit{good enough} for the task at hand which is \ac{FA} and not speech recognition.	
+\end{itemize}
+
+The reason for the first premise is that more complex neural networks usually require more training data. The reason for the second premise is that a network architecture requiring only little training data opens up to \textit{good enough} a \ac{RNN}s for minority languages like Swiss German, where training data might be scarce.
 
 \subsection{Related research}
+
+The idea of \cite{budget} 
 
 Hier etwas über Transfer Learning (z.B. wie in https://arxiv.org/pdf/1706.00290.pdf) und warum es nicht eingesetzt wurde (CNN anstatt RNN, Zeitaufwand). Layer Freezen bringt ausserdem offenbar auch nix. \parencite{budget}
 

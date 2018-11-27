@@ -1,4 +1,3 @@
-import os
 from functools import reduce
 from genericpath import exists
 from os import remove, makedirs
@@ -17,7 +16,7 @@ from util.asr_util import infer_batches_keras, extract_best_transcript
 from util.audio_util import to_wav, read_pcm16_wave, ms_to_frames
 from util.lsa_util import needle_wunsch
 from util.pipeline_util import create_alignments_dataframe
-from util.rnn_util import create_tf_session, load_keras_model, load_ds_model
+from util.rnn_util import load_keras_model, load_ds_model
 from util.string_util import normalize
 from util.vad_util import webrtc_split
 

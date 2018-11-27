@@ -31,7 +31,7 @@ def save_model(model, target_dir):
 
 
 def load_ds_model(model_path, alphabet_path, lm_path=None, trie_path=None, n_features=26, n_context=9, beam_width=500,
-                  lm_weight=1.75, valid_word_count_weight=1.00):
+                  lm_weight=1.50, valid_word_count_weight=2.10):
     print(f'loading DeepSpeech model from {model_path}, using alphabet at {alphabet_path}, '
           f'LM at {lm_path} and trie at {trie_path}')
     ds = Model(model_path, n_features, n_context, alphabet_path, beam_width)

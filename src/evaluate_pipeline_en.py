@@ -63,6 +63,9 @@ def main(args):
     num_files = len(demo_files)
     print(f'Processing {num_files} audio/transcript samples. All results will be written to {target_dir}')
 
+    if gpu:
+        os.environ['CUDA_VISIBLE_DEVICES'] = gpu
+
     lm = load_lm(lm_path) if lm_path else None
     vocab = load_vocab(vocab_path) if vocab_path else None
 
@@ -79,8 +82,7 @@ def main(args):
                                                           ds_alpha_path=ds_alpha_path,
                                                           ds_trie_path=ds_trie_path,
                                                           lm_path=lm_path,
-                                                          target_dir=target_dir_ds,
-                                                          gpu=gpu)
+                                                          target_dir=target_dir_ds)
         df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
         create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
 
@@ -91,8 +93,7 @@ def main(args):
                                                              transcript_file=transcript_file,
                                                              keras_path=keras_path,
                                                              lm=lm, vocab=vocab,
-                                                             target_dir=target_dir_keras,
-                                                             gpu=gpu)
+                                                             target_dir=target_dir_keras)
         df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)
         create_demo_files(target_dir_keras, audio_file, transcript, df_alignments_keras, df_stats_keras)
         print('-----------------------------------------------------------------')

@@ -23,7 +23,7 @@ from util.vad_util import webrtc_split
 
 
 def pipeline(audio_file, transcript_file=None, language=None, keras_path=None, ds_path=None, ds_alpha_path=None,
-             ds_trie_path=None, lm_path=None, lm=None, vocab=None, target_dir=None, gpu=None):
+             ds_trie_path=None, lm_path=None, lm=None, vocab=None, target_dir=None):
     """
     Forced Alignment using pipeline.
 
@@ -81,10 +81,10 @@ def pipeline(audio_file, transcript_file=None, language=None, keras_path=None, d
     else:
         if ds_path:
             print(f'using DeepSpeech model')
-            transcripts = asr_ds(voiced_segments, sample_rate, ds_path, ds_alpha_path, lm_path, ds_trie_path, gpu)
+            transcripts = asr_ds(voiced_segments, sample_rate, ds_path, ds_alpha_path, lm_path, ds_trie_path)
         else:
             print(f'using simplified Keras model')
-            transcripts = asr_keras(voiced_segments, language, sample_rate, keras_path, lm, vocab, gpu)
+            transcripts = asr_keras(voiced_segments, language, sample_rate, keras_path, lm, vocab)
 
         df_alignments = create_alignments_dataframe(voiced_segments, transcripts, sample_rate)
         if target_dir:
@@ -190,7 +190,7 @@ def vad(audio_bytes, sample_rate):
     return voiced_segments
 
 
-def asr_keras(voiced_segments, lang, sample_rate, keras_path, lm, vocab, gpu):
+def asr_keras(voiced_segments, lang, sample_rate, keras_path, lm, vocab):
     """
     Pipeline Stage 3: Automatic Speech Recognition (ASR) with Keras
     This stage takes a list of voiced segments and transcribes it using a simplified, self-trained Keras model
@@ -204,7 +204,6 @@ def asr_keras(voiced_segments, lang, sample_rate, keras_path, lm, vocab, gpu):
     :param gpu:
     :return: a list of transcripts for the voiced segments
     """
-    K.set_session(create_tf_session(gpu))
     keras_model = load_keras_model(keras_path)
 
     batch_generator = VoiceSegmentsBatchGenerator(voiced_segments, sample_rate=sample_rate, batch_size=16, lang=lang)
@@ -217,7 +216,7 @@ def asr_keras(voiced_segments, lang, sample_rate, keras_path, lm, vocab, gpu):
     return transcripts
 
 
-def asr_ds(voiced_segments, sample_rate, ds_path, ds_alphabet_path, lm_path, ds_trie_path, gpu=None):
+def asr_ds(voiced_segments, sample_rate, ds_path, ds_alphabet_path, lm_path, ds_trie_path):
     """
     Pipeline Stage 3: Automatic Speech Recognition (ASR) with DeepSpeech
     This stage takes a list of voiced segments and transcribes it using using a pre-trained DeepSpeech (DS) model
@@ -229,12 +228,8 @@ def asr_ds(voiced_segments, sample_rate, ds_path, ds_alphabet_path, lm_path, ds_
     :param ds_trie_path: absolute path to file containing trie
     :param sample_rate: sample rate of the recordings
     :param ds_model: DeepSpeech model to use for inference
-    :param gpu: GPU to use
     :return: a list of transcripts for the voiced segments
     """
-    if gpu:
-        os.environ['CUDA_VISIBLE_DEVICES'] = gpu
-
     ds = load_ds_model(ds_path, alphabet_path=ds_alphabet_path, lm_path=lm_path, trie_path=ds_trie_path)
     print('transcribing segments using DeepSpeech model')
     progress = tqdm(voiced_segments, unit=' segments')
@@ -244,7 +239,6 @@ def asr_ds(voiced_segments, sample_rate, ds_path, ds_alphabet_path, lm_path, ds_
         progress.set_description(transcript)
         transcripts.append(transcript)
 
-    del os.environ['CUDA_VISIBLE_DEVICES']
     return transcripts
 
 

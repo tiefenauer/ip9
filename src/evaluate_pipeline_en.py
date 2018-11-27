@@ -1,5 +1,6 @@
 import argparse
 import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 from glob import glob
 from itertools import chain
 from os import makedirs
@@ -79,6 +80,7 @@ def main(args):
         print('-----------------------------------------------------------------')
         df_alignments_ds, transcript, language = pipeline(audio_file,
                                                           transcript_file=transcript_file,
+                                                          language='en',
                                                           ds_path=ds_path,
                                                           ds_alpha_path=ds_alpha_path,
                                                           ds_trie_path=ds_trie_path,
@@ -92,6 +94,7 @@ def main(args):
         print('-----------------------------------------------------------------')
         df_alignments_keras, transcript, language = pipeline(audio_file,
                                                              transcript_file=transcript_file,
+                                                             language='en',
                                                              keras_path=keras_path,
                                                              lm=lm, vocab=vocab,
                                                              target_dir=target_dir_keras)

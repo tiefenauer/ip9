@@ -75,33 +75,33 @@ def main(args):
     for i, (audio_file, transcript_file) in enumerate(demo_files):
         print(f'{i}/{num_files}: Evaluating pipeline on {audio_file}')
         run_id = splitext(basename(audio_file))[0]
-        target_dir_ds = join(target_dir, run_id + '_ds')
-        print(f'Using DS model at {ds_path}, saving results in {target_dir_ds}')
-        print('-----------------------------------------------------------------')
-        df_alignments_ds, transcript, language = pipeline(audio_file,
-                                                          transcript_file=transcript_file,
-                                                          language='en',
-                                                          ds_path=ds_path,
-                                                          ds_alpha_path=ds_alpha_path,
-                                                          ds_trie_path=ds_trie_path,
-                                                          lm_path=lm_path,
-                                                          target_dir=target_dir_ds)
-        df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
-        create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
+        # target_dir_ds = join(target_dir, run_id + '_ds')
+        # print(f'Using DS model at {ds_path}, saving results in {target_dir_ds}')
+        # print('-----------------------------------------------------------------')
+        # df_alignments_ds, transcript, language = pipeline(audio_file,
+        #                                                   transcript_file=transcript_file,
+        #                                                   language='en',
+        #                                                   ds_path=ds_path,
+        #                                                   ds_alpha_path=ds_alpha_path,
+        #                                                   ds_trie_path=ds_trie_path,
+        #                                                   lm_path=lm_path,
+        #                                                   target_dir=target_dir_ds)
+        # df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
+        # create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
 
-    #     target_dir_keras = join(target_dir, run_id + '_keras')
-    #     print(f'Using Keras model at {keras_path}, saving results in {target_dir_keras}')
-    #     print('-----------------------------------------------------------------')
-    #     df_alignments_keras, transcript, language = pipeline(audio_file,
-    #                                                          transcript_file=transcript_file,
-    #                                                          language='en',
-    #                                                          keras_path=keras_path,
-    #                                                          lm=lm, vocab=vocab,
-    #                                                          target_dir=target_dir_keras)
-    #     df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)
-    #     create_demo_files(target_dir_keras, audio_file, transcript, df_alignments_keras, df_stats_keras)
-    #     print('-----------------------------------------------------------------')
-    #
+        target_dir_keras = join(target_dir, run_id + '_keras')
+        print(f'Using Keras model at {keras_path}, saving results in {target_dir_keras}')
+        print('-----------------------------------------------------------------')
+        df_alignments_keras, transcript, language = pipeline(audio_file,
+                                                             transcript_file=transcript_file,
+                                                             language='en',
+                                                             keras_path=keras_path,
+                                                             lm=lm, vocab=vocab,
+                                                             target_dir=target_dir_keras)
+        df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)
+        create_demo_files(target_dir_keras, audio_file, transcript, df_alignments_keras, df_stats_keras)
+        print('-----------------------------------------------------------------')
+
     #     # average similarity between Keras and DeepSpeech alignments
     #     av_similarity = df_alignments_keras.join(df_alignments_ds, lsuffix='_keras', rsuffix='_ds')[
     #         ['alignment_keras', 'alignment_ds']] \

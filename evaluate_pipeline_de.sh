@@ -15,6 +15,6 @@ echo ${me} > ${target_dir}/${me}.log
 
 cd ./src/
 python3 evaluate_pipeline_de.py \
-    --keras_path /home/daniel/Documents/_runs/lc_rl_de_wiki_synth/1000_min \
+    --keras_path /media/D1/daniel.tiefenauer/_runs/lc_rl_de_wiki_synth/1000_min \
     --gpu ${gpu} \
-    --target_dir /media/daniel/IP9/demos/performance_rl_de | tee ${target_dir}/${me}.log
+    --target_dir /media/D1/daniel.tiefenauer/performance_rl_de | tee ${target_dir}/${me}.log

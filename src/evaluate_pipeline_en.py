@@ -1,6 +1,6 @@
 import argparse
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 from glob import glob
 from itertools import chain
 from os import makedirs

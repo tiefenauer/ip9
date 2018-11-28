@@ -40,7 +40,7 @@ The functionality of the spell checker can be summarized as follows (a more deta
 Above steps are repeated until the whole sentence is processed. For each word this yields a cascade of possible combinations. Each of these combinations can be scored by the \ac{LM} as the sentence is being processed whereas only the $b$ most likely prefixes are kept at each step (beam search). For this project, a beam width of $b = 1.024$ was used. Figure \ref{spell-checker} illustrates how the spell-checker works.
 
 \begin{figure}
-	\includegraphics[width=\linewidth]{./img/placeholder.png}
+	\includegraphics[width=\linewidth]{./img/spell_checker.png}
 	\caption{Example of how the spell checker works}
 	\label{spell-checker}
 \end{figure}

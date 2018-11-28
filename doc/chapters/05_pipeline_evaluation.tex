@@ -13,7 +13,7 @@ Assessing the quality of alignments is not trivial because there is often no ref
 	\item The aligned partial transcripts should be at the correct position, i.e. they should cover the actually spoken text
 \end{enumerate}
 
-The first criterion is enforced by changing the type of algorithm used for sequence alignment from a local to a global alignment algorithm. The \textit{Smith-Waterman} algorithm was used in the \ac{LSA} stage in the IP8 project, which finds a local optimum for each transcript in isolation. The \ac{LSA} stage in this project uses global sequence alignment (\textit{Needle-Wunsch} algorithm), which finds an optimal alignment for all partial transcrips at once. 
+The first criterion is enforced by changing the type of algorithm used for sequence alignment from a local to a global alignment algorithm. The \textit{Smith-Waterman} algorithm was used in the \ac{SA} stage in the IP8 project, which finds a local optimum for each transcript in isolation. The \ac{SA} stage in this project uses global sequence alignment (\textit{Needle-Wunsch} algorithm), which finds an optimal alignment for all partial transcrips at once. 
 
 The second criterion is ensured by adjusting some of the alignments so that they fall exactly on word boundaries. This is done by moving the alignment boundaries produced by the \textit{Needle-Wunsch} algorithm to the left or right, depending on which one is closer. 
 
@@ -39,21 +39,13 @@ Because the first metric measures how much of the target transcript is covered b
 F = 2\cdot \frac{P\cdot R}{P+R}
  \]
 
-Figure \ref{example_alignment} shows a constructed example of how the inferred partial transcripts (predictions) are aligned with the known full transcript (ground truth) of an audio/text sample.
-
-\begin{figure}
-	\includegraphics[width=\linewidth]{./img/example_alignment.png}
-	\caption{Example for a partially correct alignment of parts of a sentence}
-	\label{example_alignment}
-\end{figure}
-
 \subsection{Test and results}
 
 The pipeline was evaluated on the test set of the \textit{LibriSpeech} corpus containing 87 audio/text samples. Each sample was run through the pipeline twice using different \ac{STT} models in the \ac{ASR} stage:
 
 \begin{enumerate}
-	\item Simplified Keras model: the dropout-regularized model trained on 1.000 minutes was used, because it had the lowest average \ac{LER} value on the validation data. Training was stopped early after 15 epochs to prevent overfitting. 
-	\item Reference model: the pre-trained model downloaded from the project page of the Mozilla implementation\footnote{\url{https://github.com/mozilla/DeepSpeech\#getting-the-pre-trained-model}} was used
+	\item \textbf{Reference model}: the pre-trained model downloaded from the project page of the Mozilla implementation\footnote{\url{https://github.com/mozilla/DeepSpeech\#getting-the-pre-trained-model}} was used	
+	\item \textbf{Simplified Keras model}: the dropout-regularized model trained on 1.000 minutes was used, because it had the lowest average \ac{LER} value on the validation data. Training was stopped early after 15 epochs to prevent overfitting. 
 \end{enumerate}
 
 Running the samples through both pipelines should help comparing the results produced by the first pipeline against a hypothetical optimum. Apart from the model used in the \ac{ASR} stage, all other stages in the pipeline were identical. The average values of $P$, $R$ and $F$ over all test samples was calculated for each pipeline. Figure \ref{pipeline_boxplot_ls_en} 

@@ -65,9 +65,6 @@ def main(args):
     num_files = len(demo_files)
     print(f'Processing {num_files} audio/transcript samples. All results will be written to {target_dir}')
 
-    if gpu:
-        os.environ['CUDA_VISIBLE_DEVICES'] = gpu
-
     lm = load_lm(lm_path) if lm_path else None
     vocab = load_vocab(vocab_path) if vocab_path else None
 

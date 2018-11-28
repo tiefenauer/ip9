@@ -15,13 +15,7 @@ Assessing the quality of alignments is not trivial because there is often no ref
 
 The first criterion is enforced by changing the type of algorithm used for sequence alignment from a local to a global alignment algorithm. The \textit{Smith-Waterman} algorithm was used in the \ac{LSA} stage in the IP8 project, which finds a local optimum for each transcript in isolation. The \ac{LSA} stage in this project uses global sequence alignment (\textit{Needle-Wunsch} algorithm), which finds an optimal alignment for all partial transcrips at once. 
 
-The second criterion is ensured by adjusting some of the alignments so that they fall exactly on word boundaries. This is done by moving the alignment boundaries produced by the \textit{Needle-Wunsch} algorithm to the left or right, depending on which one is closer. Figure \ref{needle_wunsch_adjustment} shows an example.
-
-\begin{figure}
-	\includegraphics[width=\linewidth]{./img/placeholder.png}
-	\caption{Examples of how the alignment boundaries calculated by \textit{Needle-Wunsch} to the left or right}
-	\label{needle_wunsch_adjustment}
-\end{figure}
+The second criterion is ensured by adjusting some of the alignments so that they fall exactly on word boundaries. This is done by moving the alignment boundaries produced by the \textit{Needle-Wunsch} algorithm to the left or right, depending on which one is closer. 
 
 The remaining two criteria can be quantified with the following metrics (note the corellation\footnote{positive correlation: higher is better, negative correlation: lower is better}):
 
@@ -29,17 +23,17 @@ The remaining two criteria can be quantified with the following metrics (note th
 	\centering
 	\begin{tabular}{llll}
 		\toprule
-		\thead{criterion} & \thead{metric} & \thead{symbol} & \thead{correlation} \\
+		\thead{criterion} & \thead{metric} & \thead{correlation} \\
 		\midrule
-		1 & \makecell[l]{length of text in ground truth that is not aligned\\vs. total length of the ground truth} & $C$ & negative\\ \\ 	
-		3 & \makecell[l]{average Levensthein similarity between the transcript\\and the text in the ground truth corresponding to its alignment} & $D$ & positive \\ 
+		3 & \makecell[l]{length of text in ground truth that is not aligned\\vs. total length of the ground truth} & negative\\ \\ 	
+		4 & \makecell[l]{average Levensthein similarity between the transcript\\and the text in the ground truth corresponding to its alignment} & positive \\ 
 		\bottomrule
 	\end{tabular}
 	\caption{Metrics to evaluate the quality of alignments}
 	\label{LM_evaluation}
 \end{table}
 
-Because the first metric measures how much of the target transcript is covered by the alignments, it is similar to the Recall metric ($R$) usually used for classification tasks. The second metric measures how well the produced results match up with the underlying parts of the transcript and is therefore similar to Precision ($P$). Both metrics can hence be reduced to the \textit{F-score} ($F$):
+Because the first metric measures how much of the target transcript is covered by the alignments, it is similar to the Recall metric ($R$) usually used for classification tasks, which measures how much of the target class was correctly classified. The second metric measures how well the produced results match up with the underlying parts of the transcript and is therefore similar to Precision ($P$), which the correctness of the classified results. Both metrics can hence be reduced to the \textit{F-score} ($F$):
 
 \[ 
 F = 2\cdot \frac{P\cdot R}{P+R}

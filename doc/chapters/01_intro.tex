@@ -1,0 +1,54 @@
+\section{Introduction}\label{intro}
+This report documents the progress of the project \textit{Speech-To-Text Engine for Forced Alignment}, my master thesis at \ac{FHNW} (referred to as \textit{IP9}). Some preliminary work has been done in a previous project (referred to as \textit{IP8}). The overall goal, project situation and some background information are described in detail in the project report for IP8 and shall not be repeated here. Only a quick recap of the relevant terms and aspects is given as far as they are relevant for the understanding of this document. A list of abbreviations used is given \hyperref[acronyms]{at the end of the document}. 
+
+\subsection{Scope and overall goal}
+\ac{RL} is a Swiss-based company that develops tools and produces content for language learning. Some of this content consists of audio/video data with an accompanying transcript. The overall goal is to enrich the textual data with temporal information, so that for each part of the transcript the corresponding location in the audio/video data can be found. This process is called \textit{\ac{FA}}. An \textit{InnoSuisse} project was started in 2018 to research how this could be achieved. The \textit{InnoSuisse} project plan contains three different approaches, one of which is pursued in this project.
+
+\subsection{Chosen approach and previous work}
+The approach chosen for this project is based on speech pauses, which can be detected using \textit{\ac{VAD}}. The utterances in between are transcribed using \textit{\ac{ASR}}, for which a \textit{\ac{RNN}} is used. The resulting partial transcripts contain the desired temporal information and can be matched up with the full transcript by means of \ac{SA}.
+
+All theses parts can be treated as stages of a pipeline:
+
+\begin{itemize}
+	\item \textbf{\ac{VAD}}: the audio is split into non-silent parts (\textit{speech segments})
+	\item \textbf{\ac{ASR}}: each speech segment is transcribed resulting in a partial (possibly faulty) transcript
+	\item \textbf{\ac{SA}}: each partial transcript is localized within the original transcript	
+\end{itemize}
+
+Since the quality of the \ac{ASR} stage has an imminent impact on the subsequent \ac{SA} stage, the quality of the alignments depends heavily on the quality of the partial transcripts. This makes the \ac{ASR} stage the crucial stage of the pipeline. However, \ac{ASR} is highly prone to external influences like background noise, properties of the speaker (gender, speaking rate, pitch, loudness). Apart from that, language is inherently abiguous (e.g. accents), inconsistent (e.g. linguistic subtleties like homonyms or homophones) and messy (stuttering, unwanted repetitions, mispronunciation).
+
+\subsubsection{Previous results and problems}
+For the \ac{VAD} stage, an implementation\footnote{\url{https://github.com/wiseman/py-webrtcvad}} of \textit{WebRTC}\footnote{\url{https://webrtc.org/}} was used. This implementation has proved itself capable of detecting utterances with very high accuracy within reasonable time. For the \ac{SA} stage a combination of the \ac{SW} algorithm and the Levenshtein distance was used to produce a local alignment for each partial transcript. This combination included tunable parameters like the minimum required similarity between an alignment and its underlying text from the transcript. It and was able to localize potentially erroneous partial transcripts within the full transcript pretty well, provided the similarity between actual and predicted text was high enough. Since each partial transcript was aligned in isolation, the \ac{SA} stage was actually a \ac{LSA} stage. 
+
+For the \ac{ASR} stage on the other hand, no \ac{RNN} could be trained that was capable of transcribing the audio segments with a quality high enough for the \ac{LSA} stage. The main problems were the lack of readily available high-grade training data, very long training times and as a result also very long feedback cycles. Because the \ac{ASR} stage is at the heart of the pipeline, the self-trained model was replaced by a proprietary solution from Google. For this, API-calls to \ac{GCS}\footnote{\url{https://cloud.google.com/speech-to-text/}} provided the necessary partial transcripts. Using this engine, the pipeline was able to produce very good (although not perfect) transcripts for the individual utterances. Therefore the chosen approach was validated and the pipeline could shown to be generally functional. On the other hand, embedding \ac{GCS} as the \ac{ASR} part of the pipeline made the pipeline dependent on a commercial product, whose inner workings remain unknown and who cannot be tuned to the project's needs. Furthermore, although the transcriptions produced by \ac{GCS} are very accurate, this quality might be an overkill for the purpose of this project. Last but not least the API calls are subject to charges incurring considerably high costs when used on large amounts of data. For these reasons, a partial goal of this project is to research under what circumstances a standalone \ac{STT} model can be trained which is able to infer transcripts with sufficiently high quality.
+
+The IP8 project proposed the use of \textit{DeepSpeech} for the \ac{ASR} stage, which uses \ac{CTC} \parencite{ctc_paper} as its cost function. Some experiments were made to find out what features can be used to train a \ac{RNN} for the \ac{ASR} stage. The features considered were raw power-spectrograms (as stipulated by the \textit{DeepSpeech} paper), Mel-Spectrograms and \ac{MFCC}. It was found that training on \ac{MFCC} features would probably require the least amount of training data because. An \ac{RNN} using a simplified version of the \textit{DeepSpeech} architecture was trained on data from the \textit{LibriSpeech} project (containing only English samples).
+
+\subsection{Goal of this project}
+
+In this project, the chosen pipelined approach shall further be refined. Because the \ac{VAD} and the \ac{LSA} stage already work pretty well, the focus in this project lies on the \ac{ASR} stage. Because the pipeline should become language-agnostic and self-contained, a \ac{RNN} must be trained that can be used in this stage in the pipeline. Such a \ac{RNN} could be a simplified variant of the \textit{DeepSpeech} model, like the one implemented in the IP8 projects. 
+
+The sequence alignment stage in the pipeline is tolerant to a certain amount of errors in the transcripts. This means training the \ac{RNN} will happen under the following premises:
+
+\begin{itemize}
+	\item The \ac{RNN} should be as simple as possible and as complex as necessary.
+	\item The \ac{RNN} only needs to be \textit{good enough} for the task at hand which is \ac{FA} and not speech recognition.	
+\end{itemize}
+
+The reason for the first premise is that more complex neural networks usually require more training data. A network architecture requiring only little training data opens up to minority languages like Swiss German, where training data might be scarce.
+
+The reason for the second premise data efficiency. While a simpler model will probably not be able to produce transcripts with the same accuracy as a complex model, this quality may not be required in the first place. 
+
+The goal of this project is therefore to make statements as to under what conditions the \ac{ASR} stage can be implemented. For this, various combinations of network or data properties are explored as well as varying amounts of training data. Concretely, the following questions shall be addressed:
+
+\begin{itemize}
+	\item \textbf{How does the quality of the simplified \textit{DeepSpeech}-\ac{RNN} change with increasing training data?} By plotting the learning curve we should be able to see whether the RNN is able to learn something useful at all and also get some intuition about how much training data is needed to get reasonably accurate partial transcripts.
+	\item \textbf{How does the quality of the partial transcripts change when using synthesized training data?} Neural Network usually require large amounts of training data and often improve with increasing size of the training set. However, labelled training data is usually difficult and/or expensive to acquire. For the purpose of Forced Alignment however, synthesized training data can be easily obtained by adding some distortion to the original signal (reverb, change of pitch, change of tempo, etc.).
+	\item \textbf{How does the quality of the partial transcript change when integrating a \ac{LM}?} \ac{STT}-engines traditionally use a \ac{LM} that models the probabilities of characters, words or sentences. A \ac{LM} can help producing valid transcripts by mapping sequences of characters (that may sound similar to what was actually said) to orthographically correct sentences.
+	\item \textbf{How can we assess the quality of the alignments?} This should give us some insight about how the quality of the alignment changes with varying capability of the \ac{STT}-engine and what quality of transcripts is required.
+\end{itemize}
+
+Answering above questions should help estimating the effort to create a generic pipeline. \footnote{Because \ac{ASR} is highly dependent on the language that should be recognized, a different \ac{STT} system has to be trained for each language.}
+
+\subsection{Summary}
+This chapter gave an introduction into the project, its scope and goal. It also gave a quick overview over the preliminary work done in the IP8 project by outlining problems and impediments experienced there.

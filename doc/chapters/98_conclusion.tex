@@ -1,0 +1,11 @@
+\section{Conclusion}\label{conclusion}
+
+
+
+\subsection{Outlook and further work}
+
+The pipeline works very well with normalized audio and transcripts. However, this does probably not represent exactly how the pipeline will be used by \textit{ReadyLingua} in production. Depending on its use it may be required to align the partial transcript with an unnormalized full transcript (containing uppercase letters, punctuation, etc.). This evaluation on unnormalized transcripts was not done because for the \textit{LibriSpeech} corpus only the normalized transcripts were available. Efforts have been made to find the text passage in the original book corresponding to the concatenated sequence of transcripts, but this was only done by normalizing the book text too.
+
+Furthermore, it may be interesting how the pipeline behaves with transcripts containing errors, unspoken or missing texts as well as audio that contains distortion like noise, music or multiple speakers. For that, corresponding recordings and transcripts have to be collected first. It might also be possible to generate such samples from the existing data through augmentation.
+
+Both of these topics should provide enough work for a follow-up project. Finally there are some tools encountered during the project that were not tried out because there was no time. One example is the \textit{Hunspell Checker}\footnote{\url{http://hunspell.github.io}} that could be used instead of the self-implemented spell-checker\footnote{There is a Python module available at \url{https://github.com/blatinier/pyhunspell}. Dictionaries (needed by Hunspell) for various languages can be downloaded at \url{https://github.com/wooorm/dictionaries}}.

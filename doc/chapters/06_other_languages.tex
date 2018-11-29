@@ -1,16 +1,16 @@
 \section{Forced Alignment for other languages}
 
-So far, only audio and transcripts in English were considered. A fully automated solution however should be able to align text and audio in any other language. Because of linguistic characteristics like sound patterns and morphology the results might vary a lot between languages when tested underwise identical circumstances. To get some intuition about the influence of language and whether above conclusions are transferable to other languages, the pipeline was evaluated on the German samples received from \textit{ReadyLingua}.
+So far, only audio and transcripts in English were considered. A fully automated solution however should be able to align text and audio in any other language. Because of linguistic characteristics like sound patterns and morphology the results might vary a lot between languages when tested under identical circumstances. To get some intuition about the influence of language and whether above conclusions are transferable to other languages, the pipeline was evaluated on the German samples received from \textit{ReadyLingua}.
 
 \subsection{Inferring German transcripts}
 
-Enabling the pipeline to handle German samples means training a German \ac{ASR} as its core element. This required minimal modifications to the network architecture, because German transcripts use a different alphabet. As mentioned before, the apostrophe is far less common in German than in English and was therefore dropped. On the other hand, umlauts are very common in German and were added to the 26 ASCII characters. Since the alphabet represents all possible labels, the output layer consisted of 31 units (one for each character in the alphabet, the three umlauts, space plus a blank token) instead of the 29 units used for English.
+Enabling the pipeline to handle German samples means training a German \ac{ASR} as its core element. This requires minimal modifications to the network architecture, because German transcripts use a different alphabet. As mentioned before, the apostrophe is far less common in German than in English and was therefore dropped. On the other hand, umlauts are very common in German and were added to the 26 ASCII characters. Since the alphabet represents all possible labels, the output layer in the model needs to be changed to contain 31 units (one for each character in the alphabet, the three umlauts, space plus a blank token) instead of the 29 units used for English.
 
-Training an \ac{ASR} model for German and plotting a learning curve also required amounts of training data on a similar scale like the \ac{CV} corpus used for English. Since at the time of this writing, the \ac{CV} was still a work in progress, datasets for languages other than English were not available. High-Quality \ac{ASR} corpora are generally hard to find, especially considering the number of samples needed to train a \ac{RNN}. There are corpora for \ac{ASR} in German, but those are either not freely available or their quality is unknown. An extensive list of German corpora for various purposes can be found at the \ac{BAS}\footnote{\url{https://www.phonetik.uni-muenchen.de/Bas/BasKorporaeng.html}}. Some of the corpora on this list are free for scientific usage. However, not all of these corpora are targeted at \ac{ASR} and their quality is often unknown.
+Training an \ac{ASR} model for German and plotting a learning curve also requires amounts of training data on a similar scale like the \ac{CV} corpus used for English. Since at the time of this writing, the \ac{CV} was still a work in progress, datasets for languages other than English were not available. High-Quality \ac{ASR} corpora are generally hard to find, especially considering the number of samples needed to train a \ac{RNN}. There are corpora for \ac{ASR} in German, but those are either not freely available or their quality is unknown. An extensive list of German corpora for various purposes can be found at the \ac{BAS}\footnote{\url{https://www.phonetik.uni-muenchen.de/Bas/BasKorporaeng.html}}, including exotic corpora like the \textit{ALC} corpus\footnote{\url{http://www.bas.uni-muenchen.de/forschung/Bas/BasALCeng.html}} containing recordings of intoxicated people. Some of the corpora on this list are free for scientific usage and have been used by \cite{budget} to train their German \ac{ASR} model with transfer-learning. However, not all of these corpora are targeted at \ac{ASR} and their quality is often unknown.
 
 \subsection{Data augmentation}
 
-Integrating new raw data means preprocessing the audio (e.g. resampling) and the text (e.g. normalization, tokenization) to make sure it exhibits the same properties as the other corpora and the data conforms to the expected format. This step is usually very time consuming, often using up most of the project time. Because no ASR corpus for German was readily available, training was done on the data received from \textit{ReadyLingua} as a start and see how far we get. The alignment between audio and transcript in this corpus was done manually and is therefore very accurate. Audio and text were already preprocessed in the IP8 project and the metadata was processed and stored as a corpus. The individual training samples could therefore be transformed to the expected format with comparably little effort. Also, the samples exhibited similar properties (average audio and transcript length) like the \ac{CV} corpus (refer to table \ref{corpora_stats}). However, the total length of the samples in the training set was only about one and a half hours, which was much less than the 1000+ minutes of the \ac{CV} corpus and certainly not enough for the 1.000 minutes needed to plot a learning curve like to the one made for English. 
+Integrating new raw data means preprocessing the audio (e.g. resampling) and the text (e.g. normalization, tokenization) to make sure it exhibits the same properties as the other corpora and the data conforms to the target format. This step is usually very time consuming, often taking most of the project time. Because no ASR corpus for German was readily available, training was done on the data received from \textit{ReadyLingua} as a start. The alignment between audio and transcript in this corpus was done manually and is therefore very accurate. Audio and text were already preprocessed in the IP8 project and the metadata was processed and stored as a corpus. The individual training samples could therefore be transformed to the format expected by the Mozilla implementation of \textit{DeepSpeech} (and thus by the simplified model) with comparably little effort. Also, the samples exhibited similar properties (average audio and transcript length) like the \ac{CV} corpus (refer to table \ref{corpora_stats}). However, the total length of the samples in the training set was only about one and a half hours, which was much less than the 1000+ minutes in the \ac{CV} corpus and certainly not enough for the $1.000$ minutes needed to plot a learning curve like to the one made for English. 
 
 An easy way to get more training data is augmenting existing data by synthesizing new data from it. This is particularly easy for audio data, which can be distorted in order to get new samples corresponding to the same transcript. The following distortions were applied in isolation to each sample in the training set:
 
@@ -22,17 +22,17 @@ An easy way to get more training data is augmenting existing data by synthesizin
 	\item \textbf{Volume}: The loudness of the speaker was artificially reduced or increased by a random value within the range of $[-15..-5]$ resp. $[5..15]$ db. This resulted in two additional sample.
 \end{itemize}
 
-With above methods eight synthetisized samples can be created for each original sample from the corpus. It turned out however that this was still not enough to plot a learning curve. To augment the data to the 1.000 minutes needed, additional samples were created using a random combination of the distortions. The random parameters differed from the ones used before to prevent overfitting to the distortion. Table \ref{corpus_synth_stats} shows the corpus statistics before and after data augmentation.
+With above methods eight synthetisized samples can be created for each original sample from the corpus. It turned out however that this was still not enough to plot a learning curve. To augment the data to the 1.000 minutes needed, additional samples were created using random combinations of the distortions. The random parameters differed from the ones used before to prevent overfitting to the distortion. Table \ref{corpus_synth_stats} shows the corpus statistics before and after data augmentation.
 
 \begin{table}[!htbp]
 	\centering
-	\begin{tabular}{|l|r|r|r|r|}
-		\hline
+	\begin{tabular}{lrrrr}
+		\toprule
 		\thead{} & \thead{total audio length} & \thead{\# samples} & \thead{Ø sample length (seconds)} \\
-		\hline
+		\midrule
 		before augmentation & $1:36:09$ & $1,700$ & $2.89$ \\ 		
 		after augmentation & $16:40:00$ & $18,955$ & $3.16$ \\ 		
-		\hline
+		\bottomrule
 	\end{tabular}
 	\caption{Comparison of \ac{RL} corpus before and after data augmentation (training set only)}
 	\label{corpus_synth_stats}
@@ -53,7 +53,7 @@ To evaluate an $n$-gram \ac{LM} a metric called \textit{perplexity} is usually u
 
 \subsubsection{Kneser-Ney Smoothing}
 
-Although with Laplace Smoothing a very low probability is assigned to previously unseen $n$-grams (which results in a high perplexity), it performs poorly in application because it discounts frequent $n$-grams too much (i.e. gives too much probability to unknown $n$-grams). A better way of smoothing is achieved using \textit{Kneser-Ney Smoothing}. For unseen $n$-grams, \textit{Kneser-Ney Smoothing} estimates the probability of a particular word $w$ being the continuation of a context based on the number of context it has appeared in the training corpus. For any previously unseen $n$-gram, a word that appears in only few contexts (e.g. the word \textit{Kong}, which only follows the words \textit{King} or \textit{Hong} in most corpora) will yield a lower probability than a word that has appeared in many contexts, even if the word itself may be very frequent. The intuition behind this is that such a word is assumed less likely to be the novel continuation for any new $n$-gram than a word that has already proved to be the continuation of many $n$-grams.
+Although with Laplace Smoothing a low probability is assigned to previously unseen $n$-grams (which results in a high perplexity), it performs poorly in application because it discounts frequent $n$-grams too much (i.e. gives too much probability to unknown $n$-grams). A better way of smoothing is achieved using \textit{Kneser-Ney Smoothing}. For unseen $n$-grams, \textit{Kneser-Ney Smoothing} estimates the probability of a particular word $w$ being the continuation of a context based on the number of context it has appeared in the training corpus. For any previously unseen $n$-gram, a word that appears in only few contexts (e.g. the word \textit{Kong}, which only follows the words \textit{King} or \textit{Hong} in most corpora) will yield a lower probability than a word that has appeared in many contexts, even if the word itself may be very frequent. The intuition behind this is that such a word is assumed less likely to be the novel continuation for any new $n$-gram than a word that has already proved to be the continuation of many $n$-grams.
 
 \subsection{Creating a raw text corpus}
 
@@ -148,20 +148,16 @@ All sentences have been normalized the same way sentences were preprocessed for 
 
 \begin{table}[!htbp]
 	\centering
-	\begin{tabular}{|l|r|l|r|}
-		\hline
+	\begin{tabular}{lrlr}
+		\toprule
 		\thead{original sentence (normalized)} & \thead{score} & \thead{permuation} & \thead{score} \\
-		\hline
+		\midrule
 		\makecell[l]{seine pressebeauftragte\\ist ratlos} & -17.58 & \makecell[l]{ist ratlos\\pressebeauftragte seine} & -21.52 \\
-		\hline
 		\makecell[l]{fünf minuten später steht\\er im eingang des kulturcafes\\an der zürcher europaallee} & -40.23 & \makecell[l]{des er minuten zürcher kulturcafes\\steht europaallee eingang\\fünf im später an der} & -57.69 \\
-		\hline
 		\makecell[l]{den leuten wird bewusst\\dass das system des \\ neoliberalismus nicht\\länger tragfähig ist} & -35.52 & \makecell[l]{system nicht das ist\\dass leuten tragfähig des\\neoliberalismus den\\bewusst länger wird} & -51.27 \\
-		\hline
 		\makecell[l]{doch daneben gibt es die\\beeindruckende zahl von \code{<num>}\\bienenarten die man unter dem\\begriff wildbienen zusammenfasst} & -48.36 & \makecell[l]{dem gibt wildbienen zahl\\beeindruckende doch man\\zusammenfasst es daneben bienenarten\\von die unter die \code{<num>} begriff} & -75.95 \\
-		\hline
 		\makecell[l]{bereits \code{<num>} plante\\die usairline pan american\\touristische weltraumflüge\\für das jahr \code{<num>}} & -58.04 & \makecell[l]{plante touristische für\\jahr pan american das\\bereits usairline \code{<num>}\\\code{<num>} weltraumflüge die} & -64.02 \\
-		\hline
+		\bottomrule
 	\end{tabular}
 	\caption{Comparison of log10-probabilities calculated for news sentences and a permutation of their words}
 	\label{LM_evaluation}
@@ -179,6 +175,24 @@ The second experiment tests whether the trained \ac{LM} is able to continue a se
 
 Although prediction was slow we can observe that the words suggested by the \ac{LM} are generally grammatically correct continuations and often make sense, although the probability for some of the predicted words (like \textit{Michelangelo}) is sometimes unexplicably high. Nevertheless it was possible to create a valid German sentence from the stump using only the suggested words. The \ac{LM} even seems to have captured some notion about grammatical concepts like German cases (e.g. that \foreignquote{french}{\textit{die Geschichte Chinas}} is more likely than \foreignquote{french}{\textit{die Geschichte China}}). On the other hand we can observe that the meaningfulness of the suggestions decreases with the progress because some long-distance relationships between words are lost for small values of $n$.
 
-\subsection{Results}
+\subsection{\ac{STT} model performance}
 
-The following figures show the learning curve for training on the German with synthetisation.
+The observations made when training the simplified Keras model on German audio data are similar to the ones made when training on English data in that the spell-checker will not help and the CTC validation loss will decrease until epoch 15 and then plateau or increase slightly.
+
+When evaluating the \ac{LER} metric on the test set, the best performance was achieved with a regularized model that was trained on 1.000 minutes of audio, including synthesized samples. The average \ac{LER} value was then $0.4918$, which is even better than the $0.5125$ achieved when training on English samples from the \ac{LS} corpus. This result has to be taken with a pinch of salt though, because the test data in the \ac{RL} corpus is not as extensive as the one from the \ac{LS} corpus and it has also not been extracted with the same diligence. 
+
+The effect of regularisation and/or use of synthesized training data can be visualized. Figure \ref{regularization_synthetisation} shows both measures in isolation and in combination. From the plot on the left it becomes evident that transcripts inferred by a regularized model will generally have a lower \ac{LER} than without regularisation. The plot in the middle shows how the use of synthesized training data has a smoothing effect on the curve of the \ac{LER}. Finally, the plot on the right shows the progress of the average \ac{LER} values when combining both measures, i.e. training a regularized model with training data including synthesized samples. The effect is bot a smoother curve and mostly lower \ac{LER} rates, although there is an awkward spike between epoch 15 and 20.
+
+\begin{figure}[h!]
+	\includegraphics[width=\linewidth]{./img/regularization_synthetisation.png}
+	\caption{Impact of regularization and/or synthetisation on the progress of average \ac{LER} values. Regularization alone (left) will lead to lower \ac{LER} rates. Synthesized training data (middle) will lead to a smoother curve and lower \ac{LER} rates. Both measures combined will also combine their effects, although the trend is less obvious.}
+	\label{regularization_synthetisation}
+\end{figure}
+
+\subsection{Pipeline performance}
+
+Because the regularized model trained with synthesized data has both the lowest \ac{LER} rates and a smoother curve, this model is used in the \ac{ASR} stage of the pipeline when aligning German samples. The pipeline can then be evaluated like it was evaluated for English samples. However, while for English samples the Mozilla implementation of \textit{DeepSpeech} could be used as a reference model, such a reference model is not available for German\footnote{except proprietary \ac{STT} engines like \textit{Google Cloud Speech}, which are only available online} because the \textit{CommonVoice} German dataset is not mature enough. To still evaluate how well the pipeline does for German audio/transcript samples, the segmentation information available in the test data is used instead of splitting the audio signal into voiced parts. The speech segments are put through the other stages (\ac{ASR} and \ac{GSA}) like before. By doing so, the \ac{VAD} stage is canceled out and the results reflect the impact of the last two stages. The final alignments are then evaluated as before, i.e. by calculating $P$recision, $R$ecall and $F$-score, but without comparing the values to a reference model. Because there was no reference model, the inferred transcripts were not concatenated and compared to the original transcript.
+
+\subsection{Summary}
+
+This gave an overview on how $n$-gram \ac{LM} work and how a $5$-gram model for German similar to the one downloaded from Mozilla was trained on Wikipedia corpus and validated empirically. It also showed how a pipeline was built that aligns German audio/text samples. A \ac{STT} model was trained using augmented data from \textit{ReadyLingua}. Like with the English samples, the training progress was visualized with a learning curve. The best performance was achieved using an unregularized model that has been trained on $1.000$ minutes of original and synthetisized data. Likewise the pipeline performance was evaluated, yielding similar results like the English pipeline. However, the pipeline was evaluated on only 6 samples (12 minutes 29 seconds). This is not enough and does not reflect a realistic distribution of speakers, genders, accents, etc. The pipeline for German needs to be evaluated further to make statements about its general capability.

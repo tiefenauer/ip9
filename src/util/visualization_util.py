@@ -194,12 +194,12 @@ def visualize_pipeline_performance(csv_keras, csv_ds, silent=False):
     print(f'saved Precision/Recall/F-Score (Boxplot) to {p_r_f_boxplot_png}')
 
     fig, (ax_ler, ax_sim) = plt.subplots(1, 2, figsize=(10, 5))
-    df.plot.scatter(x='transcript length', y='LER', c='b', label='Keras', ax=ax_ler)
+    df.plot.scatter(x='# words', y='LER', c='b', label='Keras', ax=ax_ler)
     if df_ds is not None:
-        df_ds.plot.scatter(x='transcript length', y='LER', c='g', label='DeepSpeech', ax=ax_ler)
+        df_ds.plot.scatter(x='# words', y='LER', c='g', label='DeepSpeech', ax=ax_ler)
 
     if 'similarity' in df.keys():
-        df.plot.scatter(x='transcript length', y='similarity', c='k', label='Keras', ax=ax_sim)
+        df.plot.scatter(x='# words', y='similarity', c='k', label='Keras', ax=ax_sim)
 
     ax_ler.set_xlabel('transcript length (characters)')
     ax_ler.set_ylabel('LER')

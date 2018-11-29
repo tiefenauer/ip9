@@ -111,7 +111,7 @@ def main(args):
         for ix, row in df_stats_ds.iterrows():
             stats_ds.append(row.tolist() + [av_similarity])
 
-    columns = ['model path', 'transcript length', 'precision', 'recall', 'f-score', 'LER', 'similarity']
+    columns = ['model path', '# alignments', '# words', '# characters', 'precision', 'recall', 'f-score', 'LER', 'similarity']
     df_keras = pd.DataFrame(stats_keras, columns=columns)
     csv_keras = join(target_dir, 'performance_keras.csv')
     df_keras.to_csv(csv_keras)

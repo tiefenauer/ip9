@@ -14,7 +14,7 @@ echo ${me} > ${target_dir}/${me}.log
 
 cd ./src/
 python3 evaluate_pipeline_en.py \
-    --corpus /media/D1/daniel.tiefenauer/corpora/librispeech \
+    --source_dir /media/D1/daniel.tiefenauer/corpora/librispeech-test \
     --language en \
     --keras_path /media/D1/daniel.tiefenauer/_runs/lc_cv_en_ds_dropouts/1000_min \
     --ds_path /media/D1/daniel.tiefenauer/asr/output_graph.pbmm \

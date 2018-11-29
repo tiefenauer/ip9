@@ -16,7 +16,7 @@ from util.audio_util import frame_to_ms
 from util.lm_util import ler_norm
 
 
-def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, stats):
+def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, df_stats):
     audio_dst_path = join(target_dir, 'audio.mp3')
     copyfile(audio_src_path, audio_dst_path)
     print(f'saved audio to {audio_dst_path}')
@@ -33,8 +33,8 @@ def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, st
     print(f'saved alignment information to {alignment_json_path}')
 
     demo_id = basename(target_dir)
-    add_demo_to_index(target_dir, demo_id, stats)
-    create_demo_index(target_dir, demo_id, audio_src_path, transcript, stats)
+    add_demo_to_index(target_dir, demo_id, df_stats)
+    create_demo_index(target_dir, demo_id, audio_src_path, transcript, df_stats)
 
     assets_dir = join(ASSETS_DIR, 'demo')
     for file in [file for _, _, files in os.walk(assets_dir) for file in files]:
@@ -52,19 +52,35 @@ def create_alignment_json(df_transcripts):
     return {'alignments': alignments}
 
 
-def create_demo_index(target_dir, demo_id, audio_src_path, transcript, stats):
+def create_demo_index(target_dir, demo_id, audio_src_path, transcript, df_transcripts, df_stats):
     template_path = join(ASSETS_DIR, '_template.html')
     soup = BeautifulSoup(open(template_path), 'html.parser')
     soup.title.string = demo_id
     soup.find(id='demo_title').string = f'Forced Alignment for {demo_id}'
     soup.find(id='target').string = transcript.replace('\n', ' ')
 
-    metrics_table = soup.find(id='metrics')
-    metrics_table.append(create_tr(target_dir=target_dir))
-    metrics_table.append(create_tr(audio_src_path=audio_src_path))
+    def create_tr(*args):
+        tr = soup.new_tag('tr')
+        for arg in args:
+            td = soup.new_tag('td')
+            td.string = str(arg)
+            tr.append(td)
+        return tr
 
-    for key, value in stats.items():
-        metrics_table.append(create_tr(key=value))
+    metrics_table = soup.find(id='metrics')
+    metrics_table.append(create_tr('directory', target_dir))
+    metrics_table.append(create_tr('audio file', audio_src_path))
+    metrics_table.append(
+        create_tr('transcript length', f'{len(transcript)} characters, {len(transcript.split())} words'))
+    metrics_table.append(create_tr('#alignments/segments', f'{len(df_transcripts)}'))
+
+    for ix, (model_path, transcript_len, p, r, f, ler_avg) in df_stats.iterrows():
+        metrics_table.append(create_tr('ASR model path', model_path))
+        metrics_table.append(create_tr('Transcript length', transcript_len))
+        metrics_table.append(create_tr('Precision (Ø similarity inference/alignment)', p))
+        metrics_table.append(create_tr('Recall (coverage)', r))
+        metrics_table.append(create_tr('F-Score', f))
+        metrics_table.append(create_tr('Ø LER', ler_avg))
 
     demo_index_path = join(target_dir, 'index.html')
     with open(demo_index_path, 'w', encoding='utf-8') as f:
@@ -73,7 +89,7 @@ def create_demo_index(target_dir, demo_id, audio_src_path, transcript, stats):
     return demo_index_path
 
 
-def add_demo_to_index(target_dir, demo_id, stats):
+def add_demo_to_index(target_dir, demo_id, df_stats):
     index_path = join(join(target_dir, pardir), 'index.html')
     if not exists(index_path):
         copyfile(join(ASSETS_DIR, '_index_template.html'), index_path)
@@ -91,41 +107,21 @@ def add_demo_to_index(target_dir, demo_id, stats):
         tr.append(td)
 
         td = soup.new_tag('td')
-        td.string = stats['precision']
+        td.string = str(df_stats.loc[0, 'precision'])
         tr.append(td)
 
         td = soup.new_tag('td')
-        td.string = soup['recall']
+        td.string = str(df_stats.loc[0, 'recall'])
         tr.append(td)
 
         td = soup.new_tag('td')
-        td.string = soup['f-score']
+        td.string = str(df_stats.loc[0, 'f-score'])
         tr.append(td)
 
         table.append(tr)
 
         with open(index_path, 'w') as f:
             f.write(soup.prettify())
-
-
-def create_html_table(table, **kwargs):
-    table = table if table else BeautifulSoup('<table>')
-    for k, v in kwargs.items():
-        table.append(create_tr(table, k=v))
-
-
-def create_tr(soup, **kwargs):
-    tr = soup.new_tag('tr')
-    for k, v in kwargs.items():
-        tr.append(create_td(soup, k))
-        tr.append(create_td(soup, v))
-    return tr
-
-
-def create_td(soup, content):
-    td = soup.new_tag('td')
-    td.string = str(content)
-    return td
 
 
 def update_index(target_dir, lang, num_aligned, df_keras=None, keras_path=None, df_ds=None, ds_path=None, lm_path=None,
@@ -243,15 +239,6 @@ def calculate_stats(df_alignments, model_path, transcript):
 
     ler_avg = np.mean([ler_norm(gt, al) for gt, al in zip(partial_transcripts, alignments)])
 
-    stats = {
-        'model path': model_path,
-        '# alignments': len(df_alignments),
-        '# words': len(transcript.split()),
-        '# characters': len(transcript),
-        'transcript length': len(transcript),
-        'precision': p,
-        'recall': r,
-        'f-score': f,
-        'average ler': ler_avg
-    }
-    return stats
+    data = [[model_path, len(transcript), p, r, f, ler_avg]]
+    columns = ['model path', 'transcript length', 'precision', 'recall', 'f-score', 'LER']
+    return pd.DataFrame(data, columns=columns)

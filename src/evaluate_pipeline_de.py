@@ -87,9 +87,9 @@ def main(args):
             print(f'saving alignments to {alignments_csv}')
             df_alignments.to_csv(alignments_csv)
 
-        stats = calculate_stats(df_alignments, keras_path, entry.transcript)
-        create_demo_files(target_dir_entry, entry.audio_path, entry.transcript, df_alignments, stats)
-        stats.append(stats)
+        df_stats = calculate_stats(df_alignments, keras_path, entry.transcript)
+        create_demo_files(target_dir_entry, entry.audio_path, entry.transcript, df_alignments, df_stats)
+        stats.append(df_stats)
 
     df_keras = pd.concat(stats)
     csv_keras = join(target_dir, 'performance.csv')

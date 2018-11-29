@@ -48,11 +48,11 @@ def main(args):
                                                keras_model=keras_model, ds_model=ds_model,
                                                lm=lm, vocab=vocab, target_dir=target_dir)
 
-    stats = calculate_stats(df_alignments, transcript)
-    create_demo_files(target_dir, audio_path, transcript, df_alignments, stats)
+    df_stats = calculate_stats(df_alignments, transcript)
+    create_demo_files(target_dir, audio_path, transcript, df_alignments, df_stats)
 
     print()
-    print_dataframe(stats)
+    print_dataframe(df_stats)
     print()
 
     stats_csv = join(target_dir, 'stats.csv')

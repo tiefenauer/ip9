@@ -20,11 +20,10 @@ def infer_batches_keras(batch_generator, decoder_greedy, decoder_beam, language,
         if 'source_str' in batch_inputs:
             y = batch_inputs['source_str']
         else:
-            y = [str(i) for i in range(ix * batch_generator.batch_size, ix * batch_generator.batch_size + len(x))]
+            y = [str(i) for i in range(ix * batch_generator.batch_size, (ix + 1) * batch_generator.batch_size)]
 
-        batch_inferences = infer_batch(x, x_len, y, decoder_greedy, decoder_beam,language, lm, vocab)
+        batch_inferences = infer_batch(x, x_len, y, decoder_greedy, decoder_beam, language, lm, vocab)
         inferences.append(batch_inferences)
-        ix += 1
 
     df_inferences = pd.concat(inferences, sort=False)
     df_inferences.index.name = 'ground truth'

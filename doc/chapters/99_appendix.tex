@@ -1,0 +1,66 @@
+\section*{Acronyms used in this document}
+\label{acronyms}
+\begin{acronym}[Bash]
+	\acro{ASR}{Automatic Speech Recognition}
+	\acro{BAS}{Bavarian Archive for Speech Signals}
+	\acro{CNN}{Convolutional Neural Network}
+	\acro{CTC}{Connectionist Temporal Classification}
+	\acro{CV}{CommonVoice}
+	\acro{DS}{Deep Speech}
+	\acro{E2E}{end-to-end}
+	\acro{FA}[FA]{Forced Alignment}
+	\acro{FHNW}{University of Applied Sciences}
+	\acro{GCS}{Google Cloud Speech}
+	\acro{GPU}[GPU]{Graphics Processing Unit}
+	\acro{GRU}{Gated Recurrent Unit}
+	\acro{GSA}{Global Sequence Alignment}
+	\acro{LER}{Label Error Rate}
+	\acro{LM}{Language Model}
+	\acro{LS}{LibriSpeech}
+	\acro{LSTM}{Long Short Term Memory}
+	\acro{LSA}{Local Sequence Alignment}
+	\acro{MFCC}{Mel-Frequency Cepstral Coefficients}
+	\acro{NN}{Neural Network}
+	\acro{RL}{ReadyLingua}
+	\acro{RNN}{Recurrent Neural Network}
+	\acro{SA}{Sequence Alignment}
+	\acro{SGD}{Stochastic Gradient Descent}
+	\acro{STT}{Speech-To-Text}
+	\acro{OOV}{Out Of Vocabulary}
+	\acro{SRILM}{the SRI Language Modelling Toolkit}
+	\acro{SW}{Smith Waterman}
+	\acro{VAD}{Voice Activity Detection}
+	\acro{WER}{Word Error Rate}
+\end{acronym}
+
+\section*{The simple spell checker in detail}
+
+\label{spellchecker}
+
+\begin{itemize}
+	\item split the sentence into words 
+	\item for each word $w_i$ in the sentence check the spelling by generating the set $C_i$ of possible corrections by looking it up in $V$, the vocabulary of the \ac{LM}, as follows:
+	\begin{itemize}
+		\item if $w_i \in V$ its spelling is already correct and $w_i$ is kept as the only possible correction, i.e.
+		\begin{equation*}
+		C_i = C_j^0 = \{ w_i \}
+		\end{equation*}
+		\item if $w_i \not\in V$ generate $C_i^1$ as the set of all possible words $w_i^1$ with $ed(w_i, w_i^1) = 1$. This is the combined set of all possible words with one character inserted, deleted or replaced. Keep the words from this combined set that appear in $V$, i.e.
+		\begin{equation*}
+		C_i = C_i^1 = \left \{ w_i^1 \mid (w_i, w_i^1) = 1 \land w_i^1 \in V \right \}
+		\end{equation*}
+		\item if $C_i^1 = \emptyset$ generate $C_i^2$ as the set of all possible words $w_i^2$ with $ed(w_i, w_i^2) = 2$. $C_i^2$ can be recursively calculated from $C_i^1$. Again only keep the words that appear in $V$, i.e.
+		\begin{equation*}
+		C_i = C_i^2 = \left \{ w_i^2 \mid ed(w_i, w_i^2) = 2 \land w_i^2 \in V) \right \}
+		\end{equation*}
+		\item if $C_i^2 = \emptyset$ keep $w_i$ as the only word, accepting that it might be either misspelled, a wrong word, gibberish or simply has never been seen by the \ac{LM}, i.e.
+		\begin{equation*}
+		C_i = C_i{>2} = \left \{ w_i  \right \}
+		\end{equation*}
+	\end{itemize}
+	\item for each possible spelling in $C_i$ build the set $P$ of all possible 2-grams with the possible spellings in the next word as the cartesian product of all words, i.e.
+	\begin{flalign*}
+	&	P = \{ (w_j, w_{j+1} | w_j \in C_j \land w_{j+1} \in C_{j+1} \}{,} && C_j \in \{C_i^0, C_i^1, C_i^2, C_i^{>2} \}
+	\end{flalign*}
+	\item score each 2-gram calculating the log-based probability using a pre-trained 2-gram-\ac{LM}
+\end{itemize}

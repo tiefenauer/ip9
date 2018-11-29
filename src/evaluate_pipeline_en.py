@@ -7,7 +7,6 @@ from os import makedirs
 from os.path import abspath, splitext, exists, basename, join
 
 import pandas as pd
-from keras import backend as K
 from pattern3.metrics import levenshtein_similarity
 
 from pipeline import pipeline
@@ -64,9 +63,6 @@ def main(args):
     demo_files, target_dir, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, vocab_path, gpu = setup(args)
     num_files = len(demo_files)
     print(f'Processing {num_files} audio/transcript samples. All results will be written to {target_dir}')
-
-    if gpu:
-        os.environ['CUDA_VISIBLE_DEVICES'] = gpu
 
     lm = load_lm(lm_path) if lm_path else None
     vocab = load_vocab(vocab_path) if vocab_path else None

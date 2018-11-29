@@ -100,7 +100,7 @@ def pipeline(audio_file, transcript_file=None, language=None, keras_path=None, d
     PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript 
     --------------------------------------------------
     """)
-    if 'alignment' in df_alignments.keys():
+    if False and 'alignment' in df_alignments.keys():
         print(f'transcripts are already aligned')
     else:
         print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')

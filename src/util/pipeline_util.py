@@ -234,6 +234,6 @@ def calculate_stats(df_alignments, model_path, transcript):
 
     ler_avg = np.mean([ler_norm(gt, al) for gt, al in zip(partial_transcripts, alignments)])
 
-    data = [[model_path, len(alignments), len(transcript), len(transcript.split()), p, r, f, ler_avg]]
+    data = [[model_path, len(alignments), len(transcript.split()), len(transcript), p, r, f, ler_avg]]
     columns = ['model path', '# alignments', '# words', '# characters', 'precision', 'recall', 'f-score', 'LER']
     return pd.DataFrame(data, columns=columns)

@@ -33,7 +33,7 @@ def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, st
     print(f'saved alignment information to {alignment_json_path}')
 
     demo_id = basename(target_dir)
-    add_demo_to_index(target_dir, demo_id)
+    add_demo_to_index(target_dir, demo_id, stats)
     create_demo_index(target_dir, demo_id, audio_src_path, transcript, stats)
 
     assets_dir = join(ASSETS_DIR, 'demo')
@@ -73,20 +73,36 @@ def create_demo_index(target_dir, demo_id, audio_src_path, transcript, stats):
     return demo_index_path
 
 
-def add_demo_to_index(target_dir, demo_id):
+def add_demo_to_index(target_dir, demo_id, stats):
     index_path = join(join(target_dir, pardir), 'index.html')
     if not exists(index_path):
         copyfile(join(ASSETS_DIR, '_index_template.html'), index_path)
 
     soup = BeautifulSoup(open(index_path), 'html.parser')
+    table = soup.find(id='demo_list')
 
     if not soup.find(id=demo_id):
+        tr = soup.new_tag('tr', id=demo_id)
+
         a = soup.new_tag('a', href=demo_id)
         a.string = demo_id
-        li = soup.new_tag('li', id=demo_id)
-        li.append(a)
-        ul = soup.find(id='demo_list')
-        ul.append(li)
+        td = soup.new_tag('td')
+        td.append(a)
+        tr.append(td)
+
+        td = soup.new_tag('td')
+        td.string = stats['precision']
+        tr.append(td)
+
+        td = soup.new_tag('td')
+        td.string = soup['recall']
+        tr.append(td)
+
+        td = soup.new_tag('td')
+        td.string = soup['f-score']
+        tr.append(td)
+
+        table.append(tr)
 
         with open(index_path, 'w') as f:
             f.write(soup.prettify())
@@ -108,7 +124,7 @@ def create_tr(soup, **kwargs):
 
 def create_td(soup, content):
     td = soup.new_tag('td')
-    td.string = str(v)
+    td.string = str(content)
     return td
 
 

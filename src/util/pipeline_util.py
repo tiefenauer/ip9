@@ -98,16 +98,19 @@ def add_demo_to_index(target_dir, demo_id, df_stats):
         td.append(a)
         tr.append(td)
 
+        precision = df_stats.loc[0, 'precision']
         td = soup.new_tag('td')
-        td.string = str(df_stats.loc[0, 'precision'])
+        td.string = f'{precision:.4f}'
         tr.append(td)
 
+        recall = df_stats.loc[0, 'recall']
         td = soup.new_tag('td')
-        td.string = str(df_stats.loc[0, 'recall'])
+        td.string = f'{recall:.4f}'
         tr.append(td)
 
+        f_score = df_stats.loc[0, 'f-score']
         td = soup.new_tag('td')
-        td.string = str(df_stats.loc[0, 'f-score'])
+        td.string = f'{f_score:.4f}'
         tr.append(td)
 
         table.append(tr)

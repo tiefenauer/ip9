@@ -83,8 +83,8 @@ def main(args):
                                                           ds_trie_path=ds_trie_path,
                                                           lm_path=lm_path,
                                                           target_dir=target_dir_ds)
-        df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
-        create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
+        stats = calculate_stats(df_alignments_ds, ds_path, transcript)
+        create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, stats)
 
         target_dir_keras = join(target_dir, run_id + '_keras')
         print(f'Using Keras model at {keras_path}, saving results in {target_dir_keras}')
@@ -95,8 +95,8 @@ def main(args):
                                                              keras_path=keras_path,
                                                              lm=lm, vocab=vocab,
                                                              target_dir=target_dir_keras)
-        df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)
-        create_demo_files(target_dir_keras, audio_file, transcript, df_alignments_keras, df_stats_keras)
+        stats = calculate_stats(df_alignments_keras, keras_path, transcript)
+        create_demo_files(target_dir_keras, audio_file, transcript, df_alignments_keras, stats)
         print('-----------------------------------------------------------------')
 
         # average similarity between Keras and DeepSpeech alignments
@@ -105,10 +105,10 @@ def main(args):
             .apply(lambda x: levenshtein_similarity(x[0], x[1]), axis=1) \
             .mean()
 
-        for ix, row in df_stats_keras.iterrows():
+        for ix, row in stats.iterrows():
             stats_keras.append(row.tolist() + [av_similarity])
 
-        for ix, row in df_stats_ds.iterrows():
+        for ix, row in stats.iterrows():
             stats_ds.append(row.tolist() + [av_similarity])
 
     columns = ['model path', 'transcript length', 'precision', 'recall', 'f-score', 'LER', 'similarity']

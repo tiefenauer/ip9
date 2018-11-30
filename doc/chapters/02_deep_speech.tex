@@ -11,17 +11,17 @@ The idea of training a \ac{STT} model on limited data has also been researched b
 
 Similar to \textit{DeepSpeech}, the model trained by \cite{budget} uses a \ac{LM} to decode the model output into character sequences, \ac{CTC} as its loss function\footnote{although the original \textit{Wav2Letter} model uses an alternative loss function} and (mel-scaled) spectrograms as features. The German audio and text data used to train the higher layers were taken from several (very heterogenous) corpora from the Bavarian Archive for Speech Signals (BAS). 
 
-\cite{budget} were lead by the assumption that languages -- especially such belonging to the same family -- share common features that can be transferred by sharing the pre-trained lower layers that detect them. This assumption was proved true, yielding a model that could be trained faster and with fewer training data while producing results of similar quality up to a certain training time.
+\cite{budget} were lead by the assumption that languages -- especially such belonging to the same family -- share common features that can be transferred by sharing the pre-trained lower layers that detect them. This assumption was proved true, yielding a model that could be trained faster and with less training data while producing results of similar quality provided the network was trained for a certain amount of time.
 
 Although the experiments conducted by \cite{budget} suggest an interesting starting point to train a model for the \ac{ASR} stage in this pipeline, this is not the path taken in this project for the following reasons:
 
 \begin{itemize}
-	\item The training data used by \cite{budget} is still much larger than the data available from the IP8 project. Achieving the same amount of training data would require some heavy preprocessing, which according to experience eats up most of the project time. It would also mean that the efforts made in the IP8 project are discarded.
+	\item The training data used by \cite{budget} is still much larger (300+ hours) than the data available from the IP8 project. Achieving the same amount of training data would require some heavy preprocessing, which according to experience eats up most of the project time. It would also mean that the efforts made in the IP8 project are discarded.
 	\item Because \cite{budget} follow a completely different approach than this project, it would mean starting from scratch and neglecting the insights made in the IP8 project.
-	\item Since \textit{DeepSpeech} is used as the reference model, it may make more sense comparing it to a simplified version of itself rather than a completely different model using a \ac{CNN} architecture, because the impact of the architecture is much more limited.
+	\item Since \textit{DeepSpeech} is used as the reference model, it may make more sense comparing it to a simplified version of itself rather than a completely different model using a \ac{CNN} architecture. Because the impact of non-trivial properties like architecture is much more limited, this makes the two networks much more comparable in that different results can be attributed to the simplifications made.
 \end{itemize}
 
-For those reasons I consider the experiments made by \cite{budget} an interesting alternative. However, to leverage the efforts made in the IP8 project, the goal for this project is still to train a stripped-down version of the \textit{DeepSpeech} model.
+For those reasons I consider the experiments made by \cite{budget} an interesting alternative. However, to leverage the efforts made in the IP8 project, the goal for this project is still to train a stripped-down version of the \textit{DeepSpeech} model rather than transfer-learning.
 
 \subsection{Exploiting the \textit{DeepSpeech} model}
 

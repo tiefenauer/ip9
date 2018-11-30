@@ -62,6 +62,7 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
         if target_dir:
             print(f'saving alignments to {alignments_csv}')
             df_alignments.to_csv(join(target_dir, alignments_csv))
+    df_alignments.replace(np.nan, '', regex=True, inplace=True)
     print(f"""STAGE #3 COMPLETED: Saved transcript to {alignments_csv}""")
 
     print("""PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript""")
@@ -79,7 +80,6 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
             print(f'saving alignments to {alignments_csv}')
             df_alignments.to_csv(alignments_csv)
     print(f"""STAGE #4 COMPLETED""")
-    df_alignments.replace(np.nan, '', regex=True, inplace=True)
     return df_alignments
 
 

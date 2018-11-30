@@ -69,11 +69,11 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {subsection}{\numberline {5.2}Test and results}{20}{subsection.5.2}
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {5.3}Summary}{22}{subsection.5.3}
+\contentsline {subsection}{\numberline {5.3}Summary}{21}{subsection.5.3}
 \defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {6}Forced Alignment for other languages}{23}{section.6}
+\contentsline {section}{\numberline {6}Forced Alignment for other languages}{22}{section.6}
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {6.1}Inferring German transcripts}{23}{subsection.6.1}
+\contentsline {subsection}{\numberline {6.1}Inferring German transcripts}{22}{subsection.6.1}
 \defcounter {refsection}{0}\relax 
 \contentsline {subsection}{\numberline {6.2}Data augmentation}{23}{subsection.6.2}
 \defcounter {refsection}{0}\relax 
@@ -83,11 +83,11 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {subsection}{\numberline {6.5}Training the \ac {LM}}{25}{subsection.6.5}
 \defcounter {refsection}{0}\relax 
-\contentsline {subsubsection}{\numberline {6.5.1}Data structures}{26}{subsubsection.6.5.1}
+\contentsline {subsubsection}{\numberline {6.5.1}Data structures}{25}{subsubsection.6.5.1}
 \defcounter {refsection}{0}\relax 
-\contentsline {subsubsection}{\numberline {6.5.2}Quantization}{26}{subsubsection.6.5.2}
+\contentsline {subsubsection}{\numberline {6.5.2}Quantization}{25}{subsubsection.6.5.2}
 \defcounter {refsection}{0}\relax 
-\contentsline {subsubsection}{\numberline {6.5.3}Pointer Compression}{26}{subsubsection.6.5.3}
+\contentsline {subsubsection}{\numberline {6.5.3}Pointer Compression}{25}{subsubsection.6.5.3}
 \defcounter {refsection}{0}\relax 
 \contentsline {subsubsection}{\numberline {6.5.4}Building the model}{26}{subsubsection.6.5.4}
 \defcounter {refsection}{0}\relax 
@@ -95,19 +95,19 @@
 \defcounter {refsection}{0}\relax 
 \contentsline {subsubsection}{\numberline {6.6.1}Extrinsic and intrinsic evaluation}{26}{subsubsection.6.6.1}
 \defcounter {refsection}{0}\relax 
-\contentsline {subsubsection}{\numberline {6.6.2}Evaluation of KenLM}{27}{subsubsection.6.6.2}
+\contentsline {subsubsection}{\numberline {6.6.2}Evaluation of KenLM}{26}{subsubsection.6.6.2}
 \defcounter {refsection}{0}\relax 
-\contentsline {subsubsection}{\numberline {6.6.3}Evaluation of the German Wikipedia \ac {LM}}{27}{subsubsection.6.6.3}
+\contentsline {subsubsection}{\numberline {6.6.3}Evaluation of the German Wikipedia \ac {LM}}{26}{subsubsection.6.6.3}
 \defcounter {refsection}{0}\relax 
 \contentsline {subsubsection}{\numberline {6.6.4}Evaluation 1: Comparing scores of randomized sentences}{27}{subsubsection.6.6.4}
 \defcounter {refsection}{0}\relax 
-\contentsline {subsubsection}{\numberline {6.6.5}Experiment 2: Word predictor}{28}{subsubsection.6.6.5}
+\contentsline {subsubsection}{\numberline {6.6.5}Experiment 2: Word predictor}{27}{subsubsection.6.6.5}
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {6.7}\ac {STT} model performance}{29}{subsection.6.7}
+\contentsline {subsection}{\numberline {6.7}\ac {STT} model performance}{28}{subsection.6.7}
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {6.8}Pipeline performance}{30}{subsection.6.8}
+\contentsline {subsection}{\numberline {6.8}Pipeline performance}{29}{subsection.6.8}
 \defcounter {refsection}{0}\relax 
-\contentsline {subsection}{\numberline {6.9}Summary}{30}{subsection.6.9}
+\contentsline {subsection}{\numberline {6.9}Summary}{29}{subsection.6.9}
 \defcounter {refsection}{0}\relax 
 \contentsline {section}{\numberline {7}Conclusion}{31}{section.7}
 \defcounter {refsection}{0}\relax 

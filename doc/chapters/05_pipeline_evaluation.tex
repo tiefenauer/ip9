@@ -41,17 +41,34 @@ F = 2\cdot \frac{P\cdot R}{P+R}
 
 \subsection{Test and results}
 
-The pipeline was evaluated on the test set of the \textit{LibriSpeech} corpus containing 87 audio/text samples. Each sample was run through the pipeline twice using different \ac{STT} models in the \ac{ASR} stage:
+The pipeline was evaluated on the test set of the \textit{LibriSpeech} corpus containing 87 audio/text samples. Each sample was run through the pipeline twice, once using the simplified model and once using the pre-trained \textit{DeepSpeech} model (reference model) in its \ac{ASR} stage. Apart from the model used in the \ac{ASR} stage, all other stages in the pipeline were identical. For the simplified model, the dropout-regularized variant of the simplified architecture was used and trained on $1.000$ minutes of the original and synthesized data because this combination had the lowest average \ac{LER} on the validation data. Training was stopped early after 15 epochs to prevent overfitting.
 
-\begin{enumerate}
-	\item \textbf{Reference model}: the pre-trained model downloaded from the project page of the Mozilla implementation\footnote{\url{https://github.com/mozilla/DeepSpeech\#getting-the-pre-trained-model}} was used	
-	\item \textbf{Simplified Keras model}: the dropout-regularized model trained on 1.000 minutes was used, because it had the lowest average \ac{LER} value on the validation data. Training was stopped early after 15 epochs to prevent overfitting. 
-\end{enumerate}
+The average values of $P$, $R$ and $F$ over all test samples was calculated for each pipeline as described above. Running the samples through both pipelines should help comparing the results produced by the first pipeline against a hypothetical optimum. Figure \ref{pipeline_boxplot_ls_en} shows for each model how the pipeline performs. 
 
-Running the samples through both pipelines should help comparing the results produced by the first pipeline against a hypothetical optimum. Apart from the model used in the \ac{ASR} stage, all other stages in the pipeline were identical. The average values of $P$, $R$ and $F$ over all test samples was calculated for each pipeline. Figure \ref{pipeline_boxplot_ls_en} 
+Obviously the \textit{DeepSpeech} model provides very accurate transcripts which makes alignment easy in the following \ac{GSA} stage. Most values for $P$ lie therefore within a range of about $0.8$ and nearly $1.0$, except for a few outliers. The mean value is $0.865$. Because the simplified model was not trained for maximum speech recognition capabilities, the $P$-values are naturally lower and lie in a range of about $0.35$ and $0.55$ with a mean value of $0.435$. This is consistent with the average normalized \ac{LER} on the validation set of about $0.52$\footnote{the \textit{Levenshtein Similarity is the inverse of the normalized average \ac{LER}}}. 
 
-\begin{figure}
-	\includegraphics[width=\linewidth]{./img/placeholder.png}
-	\caption{Average values of $P$, $R$ and $F$ for a pipeline using the simplified \ac{STT} model compared to a pipeline using a state of the art model}
+In terms of coverage, both pipelines perform similarly well yielding mean $R$-values of $>0.999$. This is no surprise, because each alignment ends where the next one starts, thus there are no gaps in between unaligned parts can only occur at the very start or end of a transcript. 
+
+The $F$-score for the pipeline using the \textit{DeepSpeech} model is quite compact with most values lying in the interval $[0.875, 0.975]$ (mean value: $0.926$), whereas the range is a bit bigger for the pipeline using the simplified model (mean value: $0.602$).
+
+When testing the alignments with the web application, the subjective quality is very good for both pipeline variants. Only in a few cases the first or last word of an alignment should be assigned to the next resp. previous alignment.
+
+\begin{figure}[h!]
+	\includegraphics[width=\linewidth]{./img/boxplot_ls.png}
+	\caption{Average values of $P$, $R$ and $F$ for a pipeline using the simplified \ac{STT} model compared to a pipeline using a state of the art model}. The \textit{DeepSpeech} model produces very accurate transcriptions and therefore very precise alignments ($P$ mean: $0.865$, median: $0.879$) and also a very high $F$-Score (mean: $0.926$, median: $0.935$). On the other hand, the simplified model produces only low-quality transcriptions, resulting in a lower Precision (mean: $0.435$, median: $0.443$). The $F$-Score is thus also lower (mean: $0.602$, median: $0.614$).
 	\label{pipeline_boxplot_ls_en}
 \end{figure}
+
+Figure \ref{pipeline_scatterplot_ls_en} shows how the pipeline using the simplified model holds up against the pipeline using the reference model. It is evident that the \ac{LER} values between transcription and alignment are very low when using the reference model. When using the simplified model, the distribution of \ac{LER} values follows a similar pattern but is maybe a bit less compact on the y-axis and has a few more outliers. The length of the transcript resp. the recording does not seem to affect the performance of the alignment stage. Both pipeline variants have however one striking outlier belonging to a very long transcript ($>15.000$ characters), which was read by a fast-speaking woman. 
+
+When comparing the similarity between the alignments made using the reference model and those made using the simplified model it is evident that the Levenshtein Similarity is at about $0.9$, regardless of the transcript length. This means the alignments are virtually identical, only differring in single words sometimes at beginnings/endings of alignments being assigned to the previous/next alignment. There are a few cases where the similarity is lower (and the long transcript mentioned before, where the alignments are not similar at all). However it can be generally said that despite the simplified model producing low-quality transcriptions, the alignments do not differ much from the ones produced by a high-quality \ac{STT} engine.
+
+\begin{figure}[h!]
+	\includegraphics[width=\linewidth]{./img/scatterplot_ls.png}
+	\caption{average \ac{LER} between transcript and alignment (left plot) and similarity between alignments made by using the pre-trained \textit{DeepSpeech} model and the simplified model (right plot). The average \ac{LER} values when using the simplified model follow the same pattern like when using the reference model, but are generally higher due to the lower quality of the transcriptions. However, this does not seem to affect the alignments produced by the two pipelines. The average similarity between alignments produced by the pipeline using the simplified model are roughly the same like when using the reference model.}
+	\label{pipeline_scatterplot_ls_en}
+\end{figure}
+
+\subsection{Summary}
+
+This chapter demonstrated how the quality of alignments produced by the pipeline was measured. Since this quality is subjective, the results of the pipeline using the simplified \ac{STT} model were compared to the results of the same pipeline using the pre-trained \textit{DeepSpeech} model as a reference model. It was observed that although the quality of transcriptions is notably lower for the former pipeline, the resulting alignments are very similar for both pipelines. This means the \ac{GSA} stage can handle transcripts of much lower quality and still produce a good alignment.

@@ -1,0 +1,64 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [2][-]{subsection.1.1}{Scope and overall goal}{section.1}% 2
+\BOOKMARK [2][-]{subsection.1.2}{Chosen approach and previous work}{section.1}% 3
+\BOOKMARK [3][-]{subsubsection.1.2.1}{Previous results and problems}{subsection.1.2}% 4
+\BOOKMARK [2][-]{subsection.1.3}{Goal of this project}{section.1}% 5
+\BOOKMARK [2][-]{subsection.1.4}{Summary}{section.1}% 6
+\BOOKMARK [1][-]{section.2}{Training a Neural Network for Speech Recognition}{}% 7
+\BOOKMARK [2][-]{subsection.2.1}{DeepSpeech: A reference model}{section.2}% 8
+\BOOKMARK [2][-]{subsection.2.2}{Related research}{section.2}% 9
+\BOOKMARK [2][-]{subsection.2.3}{Exploiting the DeepSpeech model}{section.2}% 10
+\BOOKMARK [2][-]{subsection.2.4}{A simpler model}{section.2}% 11
+\BOOKMARK [3][-]{subsubsection.2.4.1}{Differences between the IP8- and the IP9-model}{subsection.2.4}% 12
+\BOOKMARK [3][-]{subsubsection.2.4.2}{Differences between the simplified and the reference model}{subsection.2.4}% 13
+\BOOKMARK [2][-]{subsection.2.5}{Summary}{section.2}% 14
+\BOOKMARK [1][-]{section.3}{Integrating a Language Model}{}% 15
+\BOOKMARK [2][-]{subsection.3.1}{Measuring and improving the performance of a Speech-To-Text engine}{section.3}% 16
+\BOOKMARK [2][-]{subsection.3.2}{Language Models in Speech Recognition}{section.3}% 17
+\BOOKMARK [2][-]{subsection.3.3}{A simple spell checker}{section.3}% 18
+\BOOKMARK [3][-]{subsubsection.3.3.1}{Reducing the vocabulary size}{subsection.3.3}% 19
+\BOOKMARK [2][-]{subsection.3.4}{Further thoughts and considerations}{section.3}% 20
+\BOOKMARK [2][-]{subsection.3.5}{Summary}{section.3}% 21
+\BOOKMARK [1][-]{section.4}{Plotting a learning curve}{}% 22
+\BOOKMARK [2][-]{subsection.4.1}{Previous corpora and their problems}{section.4}% 23
+\BOOKMARK [2][-]{subsection.4.2}{The CommonVoice Corpus}{section.4}% 24
+\BOOKMARK [2][-]{subsection.4.3}{Plotting the learning curve}{section.4}% 25
+\BOOKMARK [3][-]{subsubsection.4.3.1}{Decoder dimension}{subsection.4.3}% 26
+\BOOKMARK [3][-]{subsubsection.4.3.2}{LM dimension}{subsection.4.3}% 27
+\BOOKMARK [2][-]{subsection.4.4}{Results and interpretation}{section.4}% 28
+\BOOKMARK [2][-]{subsection.4.5}{Regularization}{section.4}% 29
+\BOOKMARK [2][-]{subsection.4.6}{Final thoughts and considerations}{section.4}% 30
+\BOOKMARK [3][-]{subsubsection.4.6.1}{Summary}{subsection.4.6}% 31
+\BOOKMARK [1][-]{section.5}{Measuring the performance of the pipeline}{}% 32
+\BOOKMARK [2][-]{subsection.5.1}{The quality of alignments}{section.5}% 33
+\BOOKMARK [2][-]{subsection.5.2}{Test and results}{section.5}% 34
+\BOOKMARK [2][-]{subsection.5.3}{Summary}{section.5}% 35
+\BOOKMARK [1][-]{section.6}{Forced Alignment for other languages}{}% 36
+\BOOKMARK [2][-]{subsection.6.1}{Inferring German transcripts}{section.6}% 37
+\BOOKMARK [2][-]{subsection.6.2}{Data augmentation}{section.6}% 38
+\BOOKMARK [2][-]{subsection.6.3}{Creating a Language Model for German}{section.6}% 39
+\BOOKMARK [2][-]{subsection.6.4}{Creating a raw text corpus}{section.6}% 40
+\BOOKMARK [2][-]{subsection.6.5}{Training the LM}{section.6}% 41
+\BOOKMARK [3][-]{subsubsection.6.5.1}{Data structures}{subsection.6.5}% 42
+\BOOKMARK [3][-]{subsubsection.6.5.2}{Quantization}{subsection.6.5}% 43
+\BOOKMARK [3][-]{subsubsection.6.5.3}{Pointer Compression}{subsection.6.5}% 44
+\BOOKMARK [3][-]{subsubsection.6.5.4}{Building the model}{subsection.6.5}% 45
+\BOOKMARK [2][-]{subsection.6.6}{Evaluating the LM}{section.6}% 46
+\BOOKMARK [3][-]{subsubsection.6.6.1}{Extrinsic and intrinsic evaluation}{subsection.6.6}% 47
+\BOOKMARK [3][-]{subsubsection.6.6.2}{Evaluation of KenLM}{subsection.6.6}% 48
+\BOOKMARK [3][-]{subsubsection.6.6.3}{Evaluation of the German Wikipedia LM}{subsection.6.6}% 49
+\BOOKMARK [3][-]{subsubsection.6.6.4}{Evaluation 1: Comparing scores of randomized sentences}{subsection.6.6}% 50
+\BOOKMARK [3][-]{subsubsection.6.6.5}{Experiment 2: Word predictor}{subsection.6.6}% 51
+\BOOKMARK [2][-]{subsection.6.7}{STT model performance}{section.6}% 52
+\BOOKMARK [2][-]{subsection.6.8}{Pipeline performance}{section.6}% 53
+\BOOKMARK [2][-]{subsection.6.9}{Summary}{section.6}% 54
+\BOOKMARK [1][-]{section.7}{Conclusion}{}% 55
+\BOOKMARK [2][-]{subsection.7.1}{Outlook and further work}{section.7}% 56
+\BOOKMARK [1][-]{section.8}{Appendix}{}% 57
+\BOOKMARK [2][-]{subsection.8.1}{Acronyms used in this document}{section.8}% 58
+\BOOKMARK [2][-]{subsection.8.2}{The simple spell checker in detail}{section.8}% 59
+\BOOKMARK [2][-]{subsection.8.3}{How CTC works}{section.8}% 60
+\BOOKMARK [2][-]{subsection.8.4}{n-Gram Language Models}{section.8}% 61
+\BOOKMARK [3][-]{subsubsection.8.4.1}{Perplexity, discount and smoothing}{subsection.8.4}% 62
+\BOOKMARK [3][-]{subsubsection.8.4.2}{Kneser-Ney Smoothing}{subsection.8.4}% 63
+\BOOKMARK [1][-]{section.9}{Author's declaration}{}% 64

@@ -127,13 +127,13 @@ def main(args):
     # df_ds.to_csv(csv_ds)
     # print(f'summary saved to {csv_keras}')
 
-    visualize_pipeline_performance(csv_keras, csv_ds, silent=True)
-    update_index(target_dir, lang='en', num_aligned=len(demo_files),
-                 df_keras=df_keras, keras_path=keras_path,
-                 ds_path=ds_path, df_ds=df_ds,
-                 lm_path=lm_path, vocab_path=vocab_path)
-
-    print(f'Done! Demos have been saved to {target_dir}')
+    # visualize_pipeline_performance(csv_keras, csv_ds, silent=True)
+    # update_index(target_dir, lang='en', num_aligned=len(demo_files),
+    #              df_keras=df_keras, keras_path=keras_path,
+    #              ds_path=ds_path, df_ds=df_ds,
+    #              lm_path=lm_path, vocab_path=vocab_path)
+    #
+    # print(f'Done! Demos have been saved to {target_dir}')
 
 
 def setup(args):

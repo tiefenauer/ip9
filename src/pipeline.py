@@ -215,4 +215,4 @@ def gsa(transcript, partial_transcripts):
     """
     inference = ' '.join(partial_transcripts)
     beginnings = reduce(lambda x, y: x + [len(y) + x[-1] + 1], partial_transcripts[:-1], [0])
-    return needle_wunsch(transcript, inference, beginnings)
+    return needle_wunsch(transcript.lower(), inference, beginnings)

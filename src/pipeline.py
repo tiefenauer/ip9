@@ -76,7 +76,7 @@ def pipeline(audio_file, transcript_file=None, language=None, keras_path=None, d
     alignments_csv = join(target_dir, 'alignments.csv')
     if target_dir and exists(alignments_csv):
         print(f'found inferences from previous run in {alignments_csv}')
-        df_alignments = pd.read_csv(alignments_csv, header=0, index_col=0).replace(np.nan, '')
+        df_alignments = pd.read_csv(alignments_csv, header=0, index_col=0)
     else:
         if ds_path:
             print(f'using DeepSpeech model')
@@ -89,7 +89,6 @@ def pipeline(audio_file, transcript_file=None, language=None, keras_path=None, d
         if target_dir:
             print(f'saving alignments to {alignments_csv}')
             df_alignments.to_csv(join(target_dir, alignments_csv))
-    df_alignments.replace(np.nan, '', regex=True, inplace=True)
     print(f"""
     --------------------------------------------------
     STAGE #3 COMPLETED: Saved transcript to {alignments_csv}
@@ -118,6 +117,7 @@ def pipeline(audio_file, transcript_file=None, language=None, keras_path=None, d
     STAGE #4 COMPLETED
     ==================================================
     """)
+    df_alignments.replace(np.nan, '', regex=True, inplace=True)
     return df_alignments, transcript, language
 
 

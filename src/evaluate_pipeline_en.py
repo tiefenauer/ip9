@@ -7,6 +7,7 @@ from itertools import chain
 from os import makedirs
 from os.path import abspath, splitext, exists, basename, join
 
+import numpy as np
 import pandas as pd
 from pattern3.metrics import levenshtein_similarity
 
@@ -102,6 +103,7 @@ def main(args):
         # average similarity between Keras and DeepSpeech alignments
         av_similarity = df_alignments_keras.join(df_alignments_ds, lsuffix='_keras', rsuffix='_ds')[
             ['alignment_keras', 'alignment_ds']] \
+            .replace(np.nan, '') \
             .apply(lambda x: levenshtein_similarity(x[0], x[1]), axis=1) \
             .mean()
 
@@ -126,6 +128,8 @@ def main(args):
                  df_keras=df_keras, keras_path=keras_path,
                  ds_path=ds_path, df_ds=df_ds,
                  lm_path=lm_path, vocab_path=vocab_path)
+
+    print(f'Done! Demos have been saved to {target_dir}')
 
 
 def setup(args):

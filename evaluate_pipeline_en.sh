@@ -8,13 +8,13 @@ fi
 echo "using GPU #${gpu} for all inferences!"
 
 me=`basename "$0"`
-target_dir="/media/D1/daniel.tiefenauer/performance_ls_en"
+target_dir="/media/D1/daniel.tiefenauer/performance_ls_en_unnormalized"
 
 echo ${me} > ${target_dir}/${me}.log
 
 cd ./src/
 python3 evaluate_pipeline_en.py \
-    --source_dir /media/D1/daniel.tiefenauer/corpora/librispeech-test \
+    --source_dir /media/D1/daniel.tiefenauer/corpora/librispeech-test-unnormalized \
     --language en \
     --keras_path /media/D1/daniel.tiefenauer/_runs/lc_cv_en_ds_dropouts/1000_min \
     --ds_path /media/D1/daniel.tiefenauer/asr/output_graph.pbmm \

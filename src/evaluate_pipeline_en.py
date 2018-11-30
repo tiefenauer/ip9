@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from pattern3.metrics import levenshtein_similarity
 
-from pipeline import pipeline
+from pipeline import pipeline, preprocess, vad
 from util.corpus_util import get_corpus
 from util.lm_util import load_lm, load_vocab
 from util.log_util import create_args_str
@@ -71,34 +71,36 @@ def main(args):
 
     stats_keras, stats_ds = [], []
     for i, (audio_file, transcript_file) in enumerate(demo_files):
-        print(f'{i}/{num_files}: Evaluating pipeline on {audio_file}')
-        run_id = splitext(basename(audio_file))[0]
-        target_dir_ds = join(target_dir, run_id + '_ds')
-        print(f'Using DS model at {ds_path}, saving results in {target_dir_ds}')
         print('-----------------------------------------------------------------')
-        df_alignments_ds, transcript, language = pipeline(audio_file,
-                                                          transcript_file=transcript_file,
-                                                          language='en',
-                                                          ds_path=ds_path,
-                                                          ds_alpha_path=ds_alpha_path,
-                                                          ds_trie_path=ds_trie_path,
-                                                          lm_path=lm_path,
-                                                          target_dir=target_dir_ds)
+        print(f'{i}/{num_files}: Evaluating pipeline on {audio_file}')
+        print('-----------------------------------------------------------------')
+        demo_id = splitext(basename(audio_file))[0]
+        target_dir_ds = join(target_dir, demo_id + '_ds')
+        target_dir_keras = join(target_dir, demo_id + '_keras')
+
+        print("""PIPELINE STAGE #1 (preprocessing): Converting audio to 16-bit PCM wave and normalizing transcript""")
+        audio_bytes, sample_rate, transcript, language = preprocess(audio_file, transcript_file, 'en')
+        print(f"""STAGE #1 COMPLETED: Got {len(audio_bytes)} audio samples and {len(transcript)} labels""")
+
+        print("""PIPELINE STAGE #2 (VAD): splitting input audio into voiced segments""")
+        voiced_segments = vad(audio_bytes, sample_rate)
+        print(f"""STAGE #2 COMPLETED: Got {len(voiced_segments)} segments.""")
+
+        print(f'Running pipeline using DS model at {ds_path}, saving results in {target_dir_ds}')
+
+        df_alignments_ds = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, language='en',
+                                    ds_path=ds_path, ds_alpha_path=ds_alpha_path, ds_trie_path=ds_trie_path,
+                                    lm_path=lm_path,
+                                    target_dir=target_dir_ds)
         df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
         create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
 
-        target_dir_keras = join(target_dir, run_id + '_keras')
-        print(f'Using Keras model at {keras_path}, saving results in {target_dir_keras}')
-        print('-----------------------------------------------------------------')
-        df_alignments_keras, transcript, language = pipeline(audio_file,
-                                                             transcript_file=transcript_file,
-                                                             language='en',
-                                                             keras_path=keras_path,
-                                                             lm=lm, vocab=vocab,
-                                                             target_dir=target_dir_keras)
+        print(f'Running pipeline using Keras model at {keras_path}, saving results in {target_dir_keras}')
+        df_alignments_keras = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, language='en',
+                                       keras_path=keras_path, lm=lm, vocab=vocab,
+                                       target_dir=target_dir_keras)
         df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)
         create_demo_files(target_dir_keras, audio_file, transcript, df_alignments_keras, df_stats_keras)
-        print('-----------------------------------------------------------------')
 
         # average similarity between Keras and DeepSpeech alignments
         av_similarity = df_alignments_keras.join(df_alignments_ds, lsuffix='_keras', rsuffix='_ds')[
@@ -113,7 +115,8 @@ def main(args):
         for ix, row in df_stats_ds.iterrows():
             stats_ds.append(row.tolist() + [av_similarity])
 
-    columns = ['model path', '# alignments', '# words', '# characters', 'precision', 'recall', 'f-score', 'LER', 'similarity']
+    columns = ['model path', '# alignments', '# words', '# characters', 'precision', 'recall', 'f-score', 'LER',
+               'similarity']
     df_keras = pd.DataFrame(stats_keras, columns=columns)
     csv_keras = join(target_dir, 'performance_keras.csv')
     df_keras.to_csv(csv_keras)

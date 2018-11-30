@@ -21,19 +21,18 @@ from util.string_util import normalize
 from util.vad_util import webrtc_split
 
 
-def pipeline(audio_file, transcript_file=None, language=None, keras_path=None, ds_path=None, ds_alpha_path=None,
-             ds_trie_path=None, lm_path=None, lm=None, vocab=None, target_dir=None):
+def pipeline(voiced_segments, sample_rate, language=None, keras_path=None, ds_path=None, ds_alpha_path=None, ds_trie_path=None,
+             lm_path=None, lm=None, vocab=None, target_dir=None):
     """
     Forced Alignment using pipeline.
 
-    :param audio_file: path to audio file to align with transcript (wav or mp3)
-    :param transcript_file: (optional) path to txt file containing transcript. If not set, a text file with the same name as
-                       the audio file will be searched
+    :param voiced_segments: list of Voice objects
+    :param sample_rate: sampling rate of voiced segments
     :param language: (optional) language of the audio file. If not set, the language will be guessed from the transcript
     :param keras_path: (optional) path to directory containing Keras model (*.h5)
     :param ds_path: (optional) path to pre-trained DeepSpeech model (*.pbmm). If set, this model will be preferred
-    :param keras_model: (optional) path to directory containing Keras model (*.h5)
-    :param ds_model: (optional) path to pre-trained DeepSpeech model (*.pbmm). If set, this model will be preferred
+    :param keras_path: (optional) path to directory containing Keras model (*.h5)
+    :param das_path: (optional) path to pre-trained DeepSpeech model (*.pbmm). If set, this model will be preferred
                     over Keras model
     :param ds_alpha_path: (optional) path to txt file containing alphabet for DS model. Required if ds_path is set
     :param ds_trie_path: (optional) path to binary file containing trie for DS model. Only used if ds_path is set
@@ -41,38 +40,12 @@ def pipeline(audio_file, transcript_file=None, language=None, keras_path=None, d
     :param vocab: (optional) path to text file containing LM vocabulary
     :param target_dir: (optional) path to directory to save results. If set, intermediate results are written and need
                        not be recalculated upon subsequent runs
-    :param gpu: the GPU to use for inference
     :return:
     """
     if not exists(target_dir):
         makedirs(target_dir)
-    print("""
-    ==================================================
-    PIPELINE STAGE #1 (preprocessing): Converting audio to 16-bit PCM wave and normalizing transcript 
-    --------------------------------------------------
-    """)
-    audio_bytes, sample_rate, transcript, language = preprocess(audio_file, transcript_file, language)
-    print(f"""
-    --------------------------------------------------
-    STAGE #1 COMPLETED: Got {len(audio_bytes)} audio samples and {len(transcript)} labels
-    ==================================================
-    """)
-    print("""
-    ==================================================
-    PIPELINE STAGE #2 (VAD): splitting input audio into voiced segments 
-    --------------------------------------------------
-    """)
-    voiced_segments = vad(audio_bytes, sample_rate)
-    print(f"""
-    --------------------------------------------------
-    STAGE #2 COMPLETED: Got {len(voiced_segments)} segments.
-    ==================================================
-    """)
-    print("""
-    ==================================================
-    PIPELINE STAGE #3 (ASR): transcribing voice segments
-    --------------------------------------------------
-    """)
+
+    print("""PIPELINE STAGE #3 (ASR): transcribing voice segments""")
     alignments_csv = join(target_dir, 'alignments.csv')
     if target_dir and exists(alignments_csv):
         print(f'found inferences from previous run in {alignments_csv}')
@@ -89,16 +62,9 @@ def pipeline(audio_file, transcript_file=None, language=None, keras_path=None, d
         if target_dir:
             print(f'saving alignments to {alignments_csv}')
             df_alignments.to_csv(join(target_dir, alignments_csv))
-    print(f"""
-    --------------------------------------------------
-    STAGE #3 COMPLETED: Saved transcript to {alignments_csv}
-    ==================================================
-    """)
-    print("""
-    ==================================================
-    PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript 
-    --------------------------------------------------
-    """)
+    print(f"""STAGE #3 COMPLETED: Saved transcript to {alignments_csv}""")
+
+    print("""PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript""")
     if 'alignment' in df_alignments.keys():
         print(f'transcripts are already aligned')
     else:
@@ -112,13 +78,9 @@ def pipeline(audio_file, transcript_file=None, language=None, keras_path=None, d
         if target_dir:
             print(f'saving alignments to {alignments_csv}')
             df_alignments.to_csv(alignments_csv)
-    print(f"""
-    --------------------------------------------------
-    STAGE #4 COMPLETED
-    ==================================================
-    """)
+    print(f"""STAGE #4 COMPLETED""")
     df_alignments.replace(np.nan, '', regex=True, inplace=True)
-    return df_alignments, transcript, language
+    return df_alignments
 
 
 def preprocess(audio_path, transcript_path, language=None):

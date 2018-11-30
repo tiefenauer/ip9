@@ -147,31 +147,34 @@ def needle_wunsch(str_1, str_2, beginnings, match_score=10, mismatch_score=-5, g
     # Traceback: start from the bottom right cell
     i, j = m - 1, n - 1
     end = i
-    while i > 0 and j > 0:
-        if j - 1 in beginnings:
-            beginnings.remove(j - 1)
-            start = snap_to_closest_word_boundary(i - 1, str_1)
-            alignments.insert(0, {'start': start, 'end': end, 'text': str_1[start:end]})
-            end = start - 1
+    with tqdm(total=min(i, j)) as pbar:
+        while i > 0 and j > 0:
+            if j - 1 in beginnings:
+                beginnings.remove(j - 1)
+                start = snap_to_closest_word_boundary(i - 1, str_1)
+                alignments.insert(0, {'start': start, 'end': end, 'text': str_1[start:end]})
+                end = start - 1
 
-        score_current = scores[i][j]
-        score_diagonal = scores[i - 1][j - 1]
-        score_up = scores[i][j - 1]
-        score_left = scores[i - 1][j]
+            score_current = scores[i][j]
+            score_diagonal = scores[i - 1][j - 1]
+            score_up = scores[i][j - 1]
+            score_left = scores[i - 1][j]
 
-        if score_current == score_diagonal + match_score(str_1[i - 1], str_2[j - 1]):
-            source_str = str_1[i - 1] + source_str
-            target_str = str_2[j - 1] + target_str
-            i -= 1
-            j -= 1
-        elif score_current == score_left + gap_score:
-            source_str = str_1[i - 1] + source_str
-            target_str = '-' + target_str
-            i -= 1
-        elif score_current == score_up + gap_score:
-            source_str = '-' + source_str
-            target_str = str_2[j - 1] + target_str
-            j -= 1
+            if score_current == score_diagonal + match_score(str_1[i - 1], str_2[j - 1]):
+                source_str = str_1[i - 1] + source_str
+                target_str = str_2[j - 1] + target_str
+                i -= 1
+                j -= 1
+            elif score_current == score_left + gap_score:
+                source_str = str_1[i - 1] + source_str
+                target_str = '-' + target_str
+                i -= 1
+            elif score_current == score_up + gap_score:
+                source_str = '-' + source_str
+                target_str = str_2[j - 1] + target_str
+                j -= 1
+
+            pbar.update()
 
     if beginnings and end:
         alignments.insert(0, {'start': 0, 'end': end, 'text': str_1[0:end]})

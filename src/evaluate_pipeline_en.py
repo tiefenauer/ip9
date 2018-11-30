@@ -86,15 +86,15 @@ def main(args):
         voiced_segments = vad(audio_bytes, sample_rate)
         print(f"""STAGE #2 COMPLETED: Got {len(voiced_segments)} segments.""")
 
-        print(f'Running pipeline using DS model at {ds_path}, saving results in {target_dir_ds}')
-
-        df_alignments_ds = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
-                                    language='en',
-                                    ds_path=ds_path, ds_alpha_path=ds_alpha_path, ds_trie_path=ds_trie_path,
-                                    lm_path=lm_path,
-                                    target_dir=target_dir_ds)
-        df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
-        create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
+        # print(f'Running pipeline using DS model at {ds_path}, saving results in {target_dir_ds}')
+        #
+        # df_alignments_ds = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
+        #                             language='en',
+        #                             ds_path=ds_path, ds_alpha_path=ds_alpha_path, ds_trie_path=ds_trie_path,
+        #                             lm_path=lm_path,
+        #                             target_dir=target_dir_ds)
+        # df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
+        # create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
 
         print(f'Running pipeline using Keras model at {keras_path}, saving results in {target_dir_keras}')
         df_alignments_keras = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
@@ -104,37 +104,37 @@ def main(args):
         df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)
         create_demo_files(target_dir_keras, audio_file, transcript, df_alignments_keras, df_stats_keras)
 
-        # average similarity between Keras and DeepSpeech alignments
-        av_similarity = df_alignments_keras.join(df_alignments_ds, lsuffix='_keras', rsuffix='_ds')[
-            ['alignment_keras', 'alignment_ds']] \
-            .replace(np.nan, '') \
-            .apply(lambda x: levenshtein_similarity(x[0], x[1]), axis=1) \
-            .mean()
-
-        for ix, row in df_stats_keras.iterrows():
-            stats_keras.append(row.tolist() + [av_similarity])
-
-        for ix, row in df_stats_ds.iterrows():
-            stats_ds.append(row.tolist() + [av_similarity])
-
-    columns = ['model path', '# alignments', '# words', '# characters', 'precision', 'recall', 'f-score', 'LER',
-               'similarity']
-    df_keras = pd.DataFrame(stats_keras, columns=columns)
-    csv_keras = join(target_dir, 'performance_keras.csv')
-    df_keras.to_csv(csv_keras)
-
-    df_ds = pd.DataFrame(stats_ds, columns=columns)
-    csv_ds = join(target_dir, 'performance_ds.csv')
-    df_ds.to_csv(csv_ds)
-    print(f'summary saved to {csv_keras}')
-
-    visualize_pipeline_performance(csv_keras, csv_ds, silent=True)
-    update_index(target_dir, lang='en', num_aligned=len(demo_files),
-                 df_keras=df_keras, keras_path=keras_path,
-                 ds_path=ds_path, df_ds=df_ds,
-                 lm_path=lm_path, vocab_path=vocab_path)
-
-    print(f'Done! Demos have been saved to {target_dir}')
+    #     # average similarity between Keras and DeepSpeech alignments
+    #     av_similarity = df_alignments_keras.join(df_alignments_ds, lsuffix='_keras', rsuffix='_ds')[
+    #         ['alignment_keras', 'alignment_ds']] \
+    #         .replace(np.nan, '') \
+    #         .apply(lambda x: levenshtein_similarity(x[0], x[1]), axis=1) \
+    #         .mean()
+    #
+    #     for ix, row in df_stats_keras.iterrows():
+    #         stats_keras.append(row.tolist() + [av_similarity])
+    #
+    #     for ix, row in df_stats_ds.iterrows():
+    #         stats_ds.append(row.tolist() + [av_similarity])
+    #
+    # columns = ['model path', '# alignments', '# words', '# characters', 'precision', 'recall', 'f-score', 'LER',
+    #            'similarity']
+    # df_keras = pd.DataFrame(stats_keras, columns=columns)
+    # csv_keras = join(target_dir, 'performance_keras.csv')
+    # df_keras.to_csv(csv_keras)
+    #
+    # df_ds = pd.DataFrame(stats_ds, columns=columns)
+    # csv_ds = join(target_dir, 'performance_ds.csv')
+    # df_ds.to_csv(csv_ds)
+    # print(f'summary saved to {csv_keras}')
+    #
+    # visualize_pipeline_performance(csv_keras, csv_ds, silent=True)
+    # update_index(target_dir, lang='en', num_aligned=len(demo_files),
+    #              df_keras=df_keras, keras_path=keras_path,
+    #              ds_path=ds_path, df_ds=df_ds,
+    #              lm_path=lm_path, vocab_path=vocab_path)
+    #
+    # print(f'Done! Demos have been saved to {target_dir}')
 
 
 def setup(args):

@@ -88,7 +88,8 @@ def main(args):
 
         print(f'Running pipeline using DS model at {ds_path}, saving results in {target_dir_ds}')
 
-        df_alignments_ds = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, language='en',
+        df_alignments_ds = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
+                                    language='en',
                                     ds_path=ds_path, ds_alpha_path=ds_alpha_path, ds_trie_path=ds_trie_path,
                                     lm_path=lm_path,
                                     target_dir=target_dir_ds)
@@ -96,7 +97,8 @@ def main(args):
         create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
 
         print(f'Running pipeline using Keras model at {keras_path}, saving results in {target_dir_keras}')
-        df_alignments_keras = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, language='en',
+        df_alignments_keras = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
+                                       language='en',
                                        keras_path=keras_path, lm=lm, vocab=vocab,
                                        target_dir=target_dir_keras)
         df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)

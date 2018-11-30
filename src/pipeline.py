@@ -21,7 +21,7 @@ from util.string_util import normalize
 from util.vad_util import webrtc_split
 
 
-def pipeline(voiced_segments, sample_rate, language=None, keras_path=None, ds_path=None, ds_alpha_path=None, ds_trie_path=None,
+def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path=None, ds_path=None, ds_alpha_path=None, ds_trie_path=None,
              lm_path=None, lm=None, vocab=None, target_dir=None):
     """
     Forced Alignment using pipeline.

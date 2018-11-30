@@ -154,8 +154,6 @@ def setup(args):
         demo_files = []
         for audio_file in chain.from_iterable(glob(e) for e in (f'{source_dir}/*.{ext}' for ext in ('mp3', 'wav'))):
             transcript_file = splitext(audio_file)[0] + '.txt'
-            # _id = basename(transcript_file)[:-4]
-            # if exists(transcript_file) and exists(join(target_dir, _id + '_ds')) and exists(join(target_dir, _id + '_keras')):
             if exists(transcript_file):
                 print(f'adding: {basename(audio_file)} / {basename(transcript_file)}')
                 demo_files.append((audio_file, transcript_file))

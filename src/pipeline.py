@@ -65,7 +65,7 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
     print(f"""STAGE #3 COMPLETED: Saved transcript to {alignments_csv}""")
 
     print("""PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript""")
-    if 'alignment' in df_alignments.keys():
+    if False and 'alignment' in df_alignments.keys():
         print(f'transcripts are already aligned')
     else:
         print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')

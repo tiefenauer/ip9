@@ -16,9 +16,11 @@
 
         alignments.forEach(alignment => align(alignment, player[0], target[0]));
 
-        // add .unaligned clas to all unaligned text nodes
+        // add .unaligned class to all unaligned text nodes
         $('#target').contents()
-            .filter(function(){return this.nodeType === 3 && $(this).text() !== ' '})
+            .filter(function () {
+                return this.nodeType === 3 && $(this).text() !== ' '
+            })
             .wrap("<span class='unaligned'></span>")
 
         // enable popovers
@@ -29,7 +31,9 @@
         // align a simple entry from alignments.json: [text::strt, start::float, stop::float] (time in seconds)
         let transcript = alignment_entry.transcript
         let alignment = alignment_entry.text;
-        let node = createNode(target, transcript, alignment);
+        let audio_start = alignment_entry.start
+        let audio_end = alignment_entry.end
+        let node = createNode(target, transcript, alignment, audio_start, audio_end);
         alignment_entry.node = node
         $(node).click(() => player.currentTime = alignment_entry.start)
     };
@@ -44,16 +48,17 @@
         }
     }
 
-    let createNode = function (target, transcript, alignment) {
+    let createNode = function (target, transcript, alignment, audio_start, audio_end) {
         // replaces all occurrences of {text} in target with a <span class='aligned'>{text}</span>
         let textNodes = getTextNodesIn(target);
         let node = textNodes.find(isTextNodeContaining(alignment));
         if (node) {
             let alignmentNode = node.splitText(node.data.toLowerCase().indexOf(alignment.toLowerCase()));
             alignmentNode.splitText(alignment.length)
+            let tooltipText = transcript + ' (' + toHHMMSS(audio_start) + ' - ' + toHHMMSS(audio_end) + ')'
             let highlightedNode = $('<span></span>')
                 .addClass('aligned')
-                .attr({'data-toggle': 'tooltip', 'title': transcript});
+                .attr({'data-toggle': 'tooltip', 'title': tooltipText});
             $(alignmentNode).replaceWith(highlightedNode);
             highlightedNode.append(alignmentNode);
             return highlightedNode;
@@ -63,6 +68,7 @@
     let getTextNodesIn = function (node, includeWhitespaceNodes) {
         // find all text node children in a parent node
         let textNodes = [], nonWhitespaceMatcher = /\S/;
+
         function getTextNodes(node) {
             if (node.nodeType === 3) {
                 if (includeWhitespaceNodes || nonWhitespaceMatcher.test(node.nodeValue)) {
@@ -74,6 +80,7 @@
                 }
             }
         }
+
         getTextNodes(node);
         return textNodes;
     };
@@ -90,5 +97,22 @@
             }
         })
     };
+
+    let toHHMMSS = function (s) {
+        let hours = Math.floor(s / 3600)
+        var minutes = Math.floor((s - (hours * 3600)) / 60);
+        var seconds = s - (hours * 3600) - (minutes * 60);
+
+        if (hours < 10) {
+            hours = "0" + hours;
+        }
+        if (minutes < 10) {
+            minutes = "0" + minutes;
+        }
+        if (seconds < 10) {
+            seconds = "0" + seconds;
+        }
+        return hours + ':' + minutes + ':' + seconds;
+    }
 
 })($)

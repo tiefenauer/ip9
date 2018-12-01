@@ -202,6 +202,12 @@ class ReadyLinguaCorpus(Corpus):
         super().__init__('rl', 'ReadyLingua', df_path, df)
 
 
+class PodClubCorpus(Corpus):
+
+    def __init__(self, df_path, df=None):
+        super().__init__('pc', 'PodClub', df_path, df)
+
+
 class LibriSpeechCorpus(Corpus):
 
     def __init__(self, df_path, df=None):

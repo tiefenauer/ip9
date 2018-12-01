@@ -1,5 +1,6 @@
 import argparse
 import os
+
 os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 from os import makedirs
 from os.path import abspath, exists, join, splitext, basename
@@ -49,12 +50,17 @@ def main(args):
     lm = load_lm(lm_path) if lm_path else None
     vocab = load_vocab(vocab_path) if vocab_path else None
 
-    corpus = get_corpus(args.corpus, 'de')
+    corpus = get_corpus('rl', 'de')
     corpus.summary()
     test_entries = list(set((segment.entry for segment in corpus.test_set())))
+    # add 6 entries from PodClub corpus
+    corpus = get_corpus('pc', 'de')
+    corpus.summary()
+    test_entries += [corpus['record1058'], corpus['record1063'], corpus['record1076'], corpus['record1523'],
+                     corpus['record1548'], corpus['record1556']]
     stats = []
     for i, entry in enumerate(test_entries):
-        print(f'entry {i}/{len(test_entries)}')
+        print(f'entry {i+1}/{len(test_entries)}')
         target_dir_entry = join(target_dir, splitext(basename(entry.audio_path))[0])
         if not exists(target_dir_entry):
             makedirs(target_dir_entry)

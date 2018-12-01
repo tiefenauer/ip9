@@ -1,6 +1,8 @@
 import argparse
 import os
 
+from pattern3.metrics import levenshtein_similarity
+
 os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 from os import makedirs
 from os.path import abspath, exists, join, splitext, basename
@@ -60,7 +62,7 @@ def main(args):
                      corpus['record1548'], corpus['record1556']]
     stats = []
     for i, entry in enumerate(test_entries):
-        print(f'entry {i+1}/{len(test_entries)}')
+        print(f'entry {i + 1}/{len(test_entries)}')
         target_dir_entry = join(target_dir, splitext(basename(entry.audio_path))[0])
         if not exists(target_dir_entry):
             makedirs(target_dir_entry)
@@ -95,6 +97,12 @@ def main(args):
 
         df_stats = calculate_stats(df_alignments, keras_path, entry.transcript)
         create_demo_files(target_dir_entry, entry.audio_path, entry.transcript, df_alignments, df_stats)
+
+        # calculate average similarity between Keras-alignment and original aligments
+        keras_alignments = df_alignments['alignment'].values
+        original_alignments = [s.transcript for s in entry.segments]
+        av_similarity = np.mean([levenshtein_similarity(ka, oa) for (ka, oa) in zip(keras_alignments, original_alignments)])
+        df_stats['similarity'] = av_similarity
         stats.append(df_stats)
 
     df_keras = pd.concat(stats)

@@ -188,4 +188,22 @@ All these ideas produces many more combinations to try out, but preparing and ru
 
 \subsection{Summary}
 
-This chapter gave an overview over the available corpora and showed how the training progress developed with varying amounts of training data, different decoding strategies and the use of a spell-checker (learning curve). Post-processing the inferences with a spell-checker will not always lead to better transcripts. Training was done using samples from the \textit{CommonVoice} corpus. A regularized model was created by adding dropouts to the simplified model. The best results were obtained with the regularized model not using the spell-checker. When training this model on $1.000$ minutes of data the average \ac{LER} on test data is only slightly higher than $0.5$ when using beam-search decoding, meaning the model will get about 50\% of the characters in the transcript right. However it was also observed that both the regularized and unregularized model start to overfit after about 15 epochs.
+This chapter gave an overview over the available corpora and showed how the training progress developed with varying amounts of training data, different decoding strategies and the use of a spell-checker (learning curve). Post-processing the inferences with a spell-checker will not always lead to better transcripts. Training was done using samples from the \textit{CommonVoice} corpus. A regularized model was created by adding dropouts to the simplified model. The best results were obtained with the regularized model not using the spell-checker.  When training this model on $1.000$ minutes of data the average \ac{LER} on test data is only slightly higher than $0.5$ when using beam-search decoding, meaning the model will get about 50\% of the characters in the transcript right. However it was also observed that both the regularized and unregularized model start to overfit after about 15 epochs. Table \ref{inference_samples} shows a few inferences made with this model when trained for 15 epochs.
+
+\begin{table*}[h!]
+	\centering
+	\ra{1.3}
+	\begin{tabular}{llrr}
+		\toprule
+		ground truth & inference & \ac{WER} & \ac{LER} \\
+		\midrule
+		he wasn't asking for help & he wasen't asking for help & 0.2 & 0.04 \\
+		this is for you & this sfor yo & 0.75 & 0.2 \\
+		only a minority of literature is written this way & ol e mi ordy leterita es matem thes way & 0.89 & 0.43 \\
+		henderson stood up with a spade in his hand	& eno i sod opor haspain is and & 1 & 0.49 \\	
+		he's the man the ads are written for & hes the man thet ar ra nor & 0.75 & 0.36 \\
+		\bottomrule
+	\end{tabular}
+	\caption{Examples of inferences made with a a simplified, regularized model trained on 1.000 minutes of data from the \ac{CV} corpus. Decoding was done using beam search. A spell-checker was not used. Training was early stopped after 15 epochs.}
+	\label{inference_samples}
+\end{table*}

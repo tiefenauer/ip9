@@ -57,15 +57,15 @@ The new model is a simplified variant of the Mozilla implementation of the \text
 	\item \textbf{no convolution in input layer}: The \textit{DeepSpeech} paper proposes a series of optimization to reduce computational cost. Among these optimization is a convolution over time in the input layer with by striding with step size $2$. Because the context frame was dropped in this project, the striding was also not applied in order not to lose the information from the intermediate frames.
 \end{itemize}
 
-
-Figure \ref{model_architecture} shows the architecture proposed in the \textit{DeepSpeech} with the changes applied for this project. It looks similar to the one shown in the paper. Note the missing context frame, the use of \ac{MFCC} features and \ac{LSTM} cells in the recurrent layer.
-
 \begin{figure}[h!]
 	\includegraphics[width=\linewidth]{./img/model_architecture.png}
 	\caption{Architecture of the simplified model. The cell type and the activation function is indicated in brackets for each layer (FC=Fully-Connected, ReLU=Rectified Linear Unit)}
 	\label{model_architecture}
 \end{figure}
 
+Figure \ref{model_architecture} shows the architecture proposed in the \textit{DeepSpeech} with the changes applied for this project. It looks similar to the one shown in the paper. Note the missing context frame, the use of \ac{MFCC} features and \ac{LSTM} cells in the recurrent layer.
+
+\clearpage
 \subsection{Summary}
 
 This chapter described how a simplified variant of the \textit{DeepSpeech} model was derived from the Mozilla implementation. It also described the changes applied to the model from the IP8 project to help the model converge during training.

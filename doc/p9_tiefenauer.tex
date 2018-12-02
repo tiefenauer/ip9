@@ -37,6 +37,7 @@
 \usepackage{setspace} % line space
 \usepackage{acronym} % acronym index
 %\numberwithin{equation}{section} %Metadata
+\usepackage[export]{adjustbox}
 
 % Tables
 \usepackage{array}
@@ -104,7 +105,8 @@
 \fancypagestyle{firststyle}{ %Style of the first page
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
- \lhead{\includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
+ \lhead{\includegraphics[scale=0.8,valign=M]{./img/fhnw_logo.jpg}}
+ \rhead{\includegraphics[scale=0.3,valign=M]{./img/mse_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \lfoot{Institute for Data Science,\linebreak www.fhnw.ch }
 }
@@ -112,8 +114,8 @@
 \fancypagestyle{documentstyle}{ %Style of the rest of the document
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
- \lhead{\includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
- \rhead{\includegraphics[scale=0.3]{./img/mse_logo.jpg}}
+ \lhead{\includegraphics[scale=0.8,valign=M]{./img/fhnw_logo.jpg}}
+ \rhead{\includegraphics[scale=0.3,valign=M]{./img/mse_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \lfoot{Speech-To-Text Engine for Forced Alignment}
  \rfoot{\thepage\ / \pageref{LastPage} }
@@ -122,8 +124,8 @@
 \fancypagestyle{tableofcontent}{ %Style of the rest of the document
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
-\lhead{
- \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
+ \lhead{\includegraphics[scale=0.8,valign=M]{./img/fhnw_logo.jpg}}
+ \rhead{\includegraphics[scale=0.3,valign=M]{./img/mse_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \cfoot{\thepage}
 }
@@ -131,8 +133,8 @@
 \fancypagestyle{abstract}{ %Style of the first page
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
- \lhead{
- \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
+ \lhead{\includegraphics[scale=0.8,valign=M]{./img/fhnw_logo.jpg}}
+ \rhead{\includegraphics[scale=0.3,valign=M]{./img/mse_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \cfoot{}
 }

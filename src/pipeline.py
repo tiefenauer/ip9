@@ -21,8 +21,8 @@ from util.string_util import normalize
 from util.vad_util import webrtc_split
 
 
-def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path=None, ds_path=None, ds_alpha_path=None, ds_trie_path=None,
-             lm_path=None, lm=None, vocab=None, target_dir=None):
+def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path=None, ds_path=None, ds_alpha_path=None,
+             ds_trie_path=None, lm_path=None, lm=None, vocab=None, target_dir=None, force_realignment=False):
     """
     Forced Alignment using pipeline.
 
@@ -40,6 +40,7 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
     :param vocab: (optional) path to text file containing LM vocabulary
     :param target_dir: (optional) path to directory to save results. If set, intermediate results are written and need
                        not be recalculated upon subsequent runs
+    :param force_realignment: if set to True this will globally align the inferences with the transcript and override existing alignment information
     :return:
     """
     if not exists(target_dir):
@@ -65,7 +66,7 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
     print(f"""STAGE #3 COMPLETED: Saved transcript to {alignments_csv}""")
 
     print("""PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript""")
-    if 'alignment' in df_alignments.keys():
+    if 'alignment' in df_alignments.keys() and not force_realignment:
         print(f'transcripts are already aligned')
     else:
         print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')

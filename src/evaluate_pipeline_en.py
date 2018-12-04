@@ -92,6 +92,7 @@ def main(args):
                                     language='en',
                                     ds_path=ds_path, ds_alpha_path=ds_alpha_path, ds_trie_path=ds_trie_path,
                                     lm_path=lm_path,
+                                    force_realignment=True,
                                     target_dir=target_dir_ds)
         df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
         create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
@@ -100,6 +101,7 @@ def main(args):
         df_alignments_keras = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                                        language='en',
                                        keras_path=keras_path, lm=lm, vocab=vocab,
+                                       force_realignment=True,
                                        target_dir=target_dir_keras)
         df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)
         create_demo_files(target_dir_keras, audio_file, transcript, df_alignments_keras, df_stats_keras)

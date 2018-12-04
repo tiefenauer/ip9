@@ -120,7 +120,7 @@ def preprocess(audio_path, transcript_path, language=None):
         remove(tmp_file)
 
     with open(transcript_path, 'r') as f:
-        transcript = normalize(f.read(), language)
+        transcript = f.read()
 
     if not language:
         language = langdetect.detect(transcript)

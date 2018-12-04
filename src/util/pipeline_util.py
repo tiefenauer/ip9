@@ -46,8 +46,10 @@ def create_alignment_json(df_transcripts):
     alignments = [{'id': ix,
                    'transcript': row['transcript'],
                    'text': row['alignment'],
-                   'start': row['audio_start'],
-                   'end': row['audio_end']
+                   'audio_start': row['audio_start'],
+                   'audio_end': row['audio_end'],
+                   'text_start': row['text_start'],
+                   'text_end': row['text_end']
                    } for ix, row in df_transcripts.iterrows()]
     return {'alignments': alignments}
 

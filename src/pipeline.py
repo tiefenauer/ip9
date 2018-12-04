@@ -17,12 +17,11 @@ from util.audio_util import to_wav, read_pcm16_wave, ms_to_frames
 from util.lsa_util import needle_wunsch
 from util.pipeline_util import create_alignments_dataframe
 from util.rnn_util import load_keras_model, load_ds_model
-from util.string_util import normalize
 from util.vad_util import webrtc_split
 
 
-def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path=None, ds_path=None, ds_alpha_path=None, ds_trie_path=None,
-             lm_path=None, lm=None, vocab=None, target_dir=None):
+def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path=None, ds_path=None, ds_alpha_path=None,
+             ds_trie_path=None, lm_path=None, lm=None, vocab=None, target_dir=None, force_realignment=False):
     """
     Forced Alignment using pipeline.
 
@@ -40,6 +39,7 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
     :param vocab: (optional) path to text file containing LM vocabulary
     :param target_dir: (optional) path to directory to save results. If set, intermediate results are written and need
                        not be recalculated upon subsequent runs
+    :param force_realignment: if set to True this will globally align the inferences with the transcript and override existing alignment information
     :return:
     """
     if not exists(target_dir):
@@ -66,7 +66,7 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
     print(f"""STAGE #3 COMPLETED: Saved transcript to {alignments_csv}""")
 
     print("""PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript""")
-    if False and 'alignment' in df_alignments.keys():
+    if 'alignment' in df_alignments.keys() and not force_realignment:
         print(f'transcripts are already aligned')
     else:
         print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')
@@ -213,6 +213,11 @@ def gsa(transcript, partial_transcripts):
     :param partial_transcripts: list of partial transcripts (predictions)
     :return:
     """
+    # concatenate transcripts
     inference = ' '.join(partial_transcripts)
-    beginnings = reduce(lambda x, y: x + [len(y) + x[-1] + 1], partial_transcripts[:-1], [0])
-    return needle_wunsch(transcript.lower(), inference, beginnings)
+    # calculate boundaries [(start_index, end_index)] of partial transcripts within concatenated partial transcripts
+    boundaries = reduce(
+        lambda bs, t: bs + [
+            ((bs[-1][1] + 1 if bs else 0), (bs[-1][1] + len(t) + 1 if bs else len(t)))],
+        partial_transcripts, [])
+    return needle_wunsch(transcript.lower(), inference, boundaries)

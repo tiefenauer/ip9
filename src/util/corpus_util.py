@@ -4,8 +4,8 @@ Utility functions to work with corpora
 from os import listdir
 from os.path import join, isdir, abspath, exists, isfile, pardir
 
-from constants import LS_ROOT, RL_ROOT, CV_ROOT
-from corpus.corpus import ReadyLinguaCorpus, LibriSpeechCorpus, DeepSpeechCorpus
+from constants import LS_ROOT, RL_ROOT, CV_ROOT, PC_ROOT
+from corpus.corpus import ReadyLinguaCorpus, LibriSpeechCorpus, DeepSpeechCorpus, PodClubCorpus
 
 
 def get_corpus(corpus_id_or_file, language=None):
@@ -16,6 +16,9 @@ def get_corpus(corpus_id_or_file, language=None):
     elif corpus_id_or_file == 'ls' or 'librispeech' in corpus_id_or_file:
         index_csv = join(corpus_root, 'index.csv')
         corpus = LibriSpeechCorpus(index_csv)
+    elif corpus_id_or_file == 'pc' or 'podclub' in corpus_id_or_file:
+        index_csv = join(corpus_root, 'index.csv')
+        corpus = PodClubCorpus(index_csv)
     elif corpus_id_or_file == 'cv' or 'cv_corpus_v1' in corpus_id_or_file or 'cv' in corpus_id_or_file:
         train_csv = join(corpus_root, 'cv-valid-train-rel.csv')
         dev_csv = join(corpus_root, 'cv-valid-dev-rel.csv')
@@ -29,7 +32,7 @@ def get_corpus(corpus_id_or_file, language=None):
 
 
 def get_corpus_root(corpus_id_or_path):
-    if corpus_id_or_path in ['ls', 'rl', 'cv']:
+    if corpus_id_or_path in ['ls', 'rl', 'pc', 'cv']:
         return get_corpus_root_by_id(corpus_id_or_path)
     return get_corpus_path(corpus_id_or_path)
 
@@ -37,6 +40,7 @@ def get_corpus_root(corpus_id_or_path):
 def get_corpus_root_by_id(corpus_id):
     id_map = {'rl': {'name': 'RL_ROOT', 'value': RL_ROOT},
               'ls': {'name': 'LS_ROOT', 'value': LS_ROOT},
+              'pc': {'name': 'PC_ROOT', 'value': PC_ROOT},
               'cv': {'name': 'CV_ROOT', 'value': CV_ROOT}
               }
     if corpus_id not in id_map.keys():

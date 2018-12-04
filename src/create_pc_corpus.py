@@ -4,8 +4,9 @@ import math
 import os
 import sys
 from collections import Counter
-from os import makedirs, walk
-from os.path import exists, join, splitext, basename
+from glob import glob
+from os import makedirs
+from os.path import exists, join, basename, dirname
 from pathlib import Path
 from shutil import copyfile
 
@@ -13,11 +14,10 @@ import pandas as pd
 from lxml import etree
 from tqdm import tqdm
 
-from constants import RL_ROOT, RL_RAW
 from util.audio_util import resample_frame, resample, crop_segments
 from util.corpus_util import find_file_by_suffix
 from util.log_util import create_args_str
-from util.string_util import create_filename, normalize, contains_numeric
+from util.string_util import normalize, contains_numeric
 
 LANGUAGES = {  # mapping from folder names to language code
     'Deutsch': 'de',
@@ -27,12 +27,12 @@ LANGUAGES = {  # mapping from folder names to language code
     'Spanisch': 'es'
 }
 
-parser = argparse.ArgumentParser(description="""Create ReadyLingua corpus from raw files""")
+parser = argparse.ArgumentParser(description="""Create PodClub corpus from raw files""")
 parser.add_argument('-f', '--file', help='Dummy argument for Jupyter Notebook compatibility')
-parser.add_argument('-s', '--source_root', default=RL_RAW,
-                    help=f'(optional) source root directory (default: {RL_RAW}')
-parser.add_argument('-t', '--target_root', default=RL_ROOT,
-                    help=f'(optional) target root directory (default: {RL_ROOT})')
+parser.add_argument('-s', '--source_root', default='/media/daniel/Data/corpus/podclub-raw/PodClubDaten/Deutsch',
+                    help=f'(optional) source root directory')
+parser.add_argument('-t', '--target_root', default='/media/daniel/IP9/corpora/podclub',
+                    help=f'(optional) target root directory')
 parser.add_argument('-m', '--max_entries', type=int, default=None,
                     help='(optional) maximum number of corpus entries to process. Default=None=\'all\'')
 parser.add_argument('-o', '--overwrite', default=False, action='store_true',
@@ -65,10 +65,7 @@ def create_segments(source_dir, target_dir, max_entries):
     """ Iterate through all leaf directories that contain the audio and the alignment files """
     print('Collecting files')
 
-    directories = [root for root, subdirs, files in walk(source_dir)
-                   if not subdirs  # only include leaf directories
-                   and not root.endswith(os.sep + 'old')  # '/old' leaf-folders are considered not reliable
-                   and not os.sep + 'old' + os.sep in root][:max_entries]  # also exclude /old/ non-leaf folders
+    directories = [dirname(wav_file) for wav_file in glob(source_dir + '/**/*.wav', recursive=True)]
 
     segments = []
     progress = tqdm(directories, total=min(len(directories), max_entries or math.inf), file=sys.stderr, unit='entries')
@@ -129,11 +126,7 @@ def create_segments(source_dir, target_dir, max_entries):
 
 
 def collect_files(source_dir):
-    project_file = find_file_by_suffix(source_dir, ' - Project.xml')
-    if project_file:
-        audio_file, transcript_file, segmentation_file, index_file = parse_project_file(join(source_dir, project_file))
-    else:
-        audio_file, transcript_file, segmentation_file, index_file = scan_content_dir(source_dir)
+    audio_file, transcript_file, segmentation_file, index_file = scan_content_dir(source_dir)
 
     # check if files are set
     if not audio_file:
@@ -195,7 +188,7 @@ def scan_content_dir(content_dir):
 
 def collect_corpus_entry_parms(directory, index_file, audio_file):
     entry_name = basename(directory)
-    entry_id = create_filename(splitext(basename(audio_file))[0])
+    entry_id = entry_name
 
     # find language
     lang = [folder for folder in directory.split(os.sep) if folder in LANGUAGES.keys()]

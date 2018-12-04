@@ -2,6 +2,7 @@
 Utility functions for LSA stage
 """
 import itertools
+import string
 
 import numpy as np
 from pattern3.metrics import levenshtein_similarity
@@ -107,7 +108,7 @@ def traceback(H, b, b_='', old_i=0):
     return traceback(H[0:i, 0:j], b, b_, i)
 
 
-def needle_wunsch(str_1, str_2, beginnings, match_score=10, mismatch_score=-5, gap_score=-5):
+def needle_wunsch(str_1, str_2, boundaries, match_score=10, mismatch_score=-5, gap_score=-5):
     """
     Needle-Wunsch algorithm for global sequence alignemnt. Performs a global alignment to match a string with a
     reference string.
@@ -145,39 +146,50 @@ def needle_wunsch(str_1, str_2, beginnings, match_score=10, mismatch_score=-5, g
     source_str, target_str = '', ''
 
     # Traceback: start from the bottom right cell
-    i, j = m - 1, n - 1
-    end = i
-    with tqdm(total=min(i, j)) as pbar:
-        while i > 0 and j > 0:
-            if j - 1 in beginnings:
-                beginnings.remove(j - 1)
-                start = snap_to_closest_word_boundary(i - 1, str_1)
-                alignments.insert(0, {'start': start, 'end': end, 'text': str_1[start:end]})
-                end = start - 1
+    i, j = m - 1, n - 1  # i/j point to the row/column in the alignment matrix
+    i_start, i_end = None, i  # markers for the alignment in str_1
+    j_start, j_end = boundaries[-1]  # markers for the aligned text in str_2
+    while i > 0 and j > 0:
+        score_current = scores[i][j]
+        score_diagonal = scores[i - 1][j - 1]
+        score_up = scores[i][j - 1]
+        score_left = scores[i - 1][j]
 
-            score_current = scores[i][j]
-            score_diagonal = scores[i - 1][j - 1]
-            score_up = scores[i][j - 1]
-            score_left = scores[i - 1][j]
+        if score_current == score_diagonal + match_score(str_1[i - 1], str_2[j - 1]):
+            source_str = str_1[i - 1] + source_str
+            target_str = str_2[j - 1] + target_str
+            i -= 1
+            j -= 1
+        elif score_current == score_left + gap_score:
+            source_str = str_1[i - 1] + source_str
+            target_str = '-' + target_str
+            i -= 1
+        elif score_current == score_up + gap_score:
+            source_str = '-' + source_str
+            target_str = str_2[j - 1] + target_str
+            j -= 1
 
-            if score_current == score_diagonal + match_score(str_1[i - 1], str_2[j - 1]):
-                source_str = str_1[i - 1] + source_str
-                target_str = str_2[j - 1] + target_str
-                i -= 1
-                j -= 1
-            elif score_current == score_left + gap_score:
-                source_str = str_1[i - 1] + source_str
-                target_str = '-' + target_str
-                i -= 1
-            elif score_current == score_up + gap_score:
-                source_str = '-' + source_str
-                target_str = str_2[j - 1] + target_str
-                j -= 1
+        if j == j_start:
+            i_start = i
+        if j == j_end:
+            i_end = i
 
-            pbar.update()
+        if i_start is not None and i_end is not None:
+            if str_1[i_start] in string.ascii_letters + 'öäü':
+                i_start = snap_to_closest_word_boundary(i_start, str_1)
+            else:
+                while i_start < len(str_1) and str_1[i_start + 1] not in string.ascii_letters + 'öäü':
+                    i_start += 1
 
-    if beginnings and end:
-        alignments.insert(0, {'start': 0, 'end': end, 'text': str_1[0:end]})
+            if str_1[i_end - 1] in string.ascii_letters + 'öäü':
+                i_end = snap_to_closest_word_boundary(i_end, str_1)
+            else:
+                while i_end > 0 and str_1[i_end - 1] not in string.ascii_letters + 'öäü':
+                    i_end -= 1
+            alignments.insert(0, {'start': i_start, 'end': i_end, 'text': str_1[i_start:i_end]})
+            i_start, i_end = None, None
+            boundaries.remove((j_start, j_end))
+            j_start, j_end = boundaries[-1] if boundaries else (None, None)
 
     while j > 0:
         source_str = '-' + source_str
@@ -188,22 +200,14 @@ def needle_wunsch(str_1, str_2, beginnings, match_score=10, mismatch_score=-5, g
         target_str = '-' + target_str
         i -= 1
 
-    alignment_str = ''.join(a if a == b else ' ' for a, b in zip(source_str, target_str))
-    score = sum(match_score(a, b) for a, b in zip(source_str, target_str))
-    match = float(100) * sum(1 if a == b else 0 for a, b in zip(source_str, target_str)) / len(target_str)
-
-    # print(f'Match: {match:3.3f}%')
-    # print(f'Score: {score}', )
-    # print(f'Source   : {source_str}')
-    # print(f'Alignment: {alignment_str}')
-    # print(f'Target   : {target_str}')
     return alignments
 
 
 def snap_to_closest_word_boundary(ix, text):
     left, right = 0, 0
-    while ix - left > 0 and text[ix - left - 1] != ' ':
+    while ix - left > 0 and text[ix - left - 1] not in [' ', '\n']:
         left += 1
-    while ix + right < len(text) and text[ix + right] != ' ':
+    while ix + right < len(text) and text[ix + right] not in [' ', '\n']:
         right += 1
-    return max(ix - left, 0) if left <= right else min(ix + right + 1, len(text))
+
+    return max(ix - left, 0) if left <= right else min(ix + right, len(text))

@@ -3,92 +3,90 @@
 
     let onAlignmentLoaded = function (content) {
         // bootstrap alignment
-        let player = $('#player')
-        let target = $('#target')
+        let $player = $('#player')
+        let $target = $('#target')
         let alignments = content.alignments
 
-        player.attr('src', 'audio.mp3')
-        player.on('timeupdate', alignments, highlightAlignment);
-        player.on('seeked', alignments, highlightAlignment);
-        player.on('timeupdate', alignments, highlightAlignment);
-        player.on('seeked', alignments, highlightAlignment);
-        player[0].load();
+        $.ajax({
+            url: 'transcript.txt',
+            dataType: 'text',
+            success: function (transcript) {
+                align($target, transcript, alignments, $player[0])
+            }
+        })
 
-        alignments.forEach(alignment => align(alignment, player[0], target[0]));
-
-        // add .unaligned clas to all unaligned text nodes
-        $('#target').contents()
-            .filter(function(){return this.nodeType === 3 && $(this).text() !== ' '})
-            .wrap("<span class='unaligned'></span>")
+        $player.attr('src', 'audio.mp3')
+        $player.on('timeupdate seeked', alignments, highlightAlignment);
+        $player[0].load();
 
         // enable popovers
         $('[data-toggle="tooltip"]').tooltip({'placement': 'bottom', 'trigger': 'hover'})
     };
 
-    let align = function (alignment_entry, player, target) {
-        // align a simple entry from alignments.json: [text::strt, start::float, stop::float] (time in seconds)
-        let transcript = alignment_entry.transcript
-        let alignment = alignment_entry.text;
-        let node = createNode(target, transcript, alignment);
-        alignment_entry.node = node
-        $(node).click(() => player.currentTime = alignment_entry.start)
-    };
+    let align = function ($target, transcript, alignments, player) {
+        $target.empty()
 
-    let isTextNodeContaining = function (text) {
-        // checks if a given HTML node contains {text}
-        return node => {
-            let isTextNode = [3, 4].includes(node.nodeType);
-            let containsText = node.data.toLowerCase().includes(text.toLowerCase());
-            let isAligned = $(node).hasClass('aligned') || $(node.parentElement).hasClass('aligned');
-            return isTextNode && containsText && !isAligned
-        }
-    }
+        let prevEnd = 0
+        alignments.forEach(function (alignment) {
+            let audioStart = alignment.audio_start;
+            let audioEnd = alignment.audio_end;
+            let textStart = alignment.text_start;
+            let textEnd = alignment.text_end;
+            let inference = alignment.transcript;
 
-    let createNode = function (target, transcript, alignment) {
-        // replaces all occurrences of {text} in target with a <span class='aligned'>{text}</span>
-        let textNodes = getTextNodesIn(target);
-        let node = textNodes.find(isTextNodeContaining(alignment));
-        if (node) {
-            let alignmentNode = node.splitText(node.data.toLowerCase().indexOf(alignment.toLowerCase()));
-            alignmentNode.splitText(alignment.length)
-            let highlightedNode = $('<span></span>')
-                .addClass('aligned')
-                .attr({'data-toggle': 'tooltip', 'title': transcript});
-            $(alignmentNode).replaceWith(highlightedNode);
-            highlightedNode.append(alignmentNode);
-            return highlightedNode;
-        }
-    };
-
-    let getTextNodesIn = function (node, includeWhitespaceNodes) {
-        // find all text node children in a parent node
-        let textNodes = [], nonWhitespaceMatcher = /\S/;
-        function getTextNodes(node) {
-            if (node.nodeType === 3) {
-                if (includeWhitespaceNodes || nonWhitespaceMatcher.test(node.nodeValue)) {
-                    textNodes.push(node);
-                }
-            } else {
-                for (var i = 0, len = node.childNodes.length; i < len; ++i) {
-                    getTextNodes(node.childNodes[i]);
-                }
+            if (alignment.text_start > prevEnd + 1) { // single spaces between are never aligned
+                let unalignedText = transcript.substring(prevEnd, textStart)
+                    .replace(/(?:\r\n|\r|\n)/g, '<br/>')
+                    .trim();
+                $target.append($('<span></span>').html(unalignedText).addClass('unaligned'));
+                $target.append(document.createTextNode(' '));
             }
-        }
-        getTextNodes(node);
-        return textNodes;
-    };
+
+            let alignedText = transcript.substring(textStart, textEnd)
+                .replace(/(?:\r\n|\r|\n)/g, '<br/>')
+                .trim();
+            let tooltipText = inference + ' (' + toHHMMSS(audioStart) + ' - ' + toHHMMSS(audioEnd) + ')';
+
+            let $node = $('<span></span>').html(alignedText)
+                .addClass('aligned')
+                .attr({'data-toggle': 'tooltip', 'title': tooltipText})
+                .click(() => player.currentTime = audioStart);
+
+            alignment.node = $node
+            $target.append($node)
+            $target.append(document.createTextNode(' '));
+            prevEnd = textEnd
+        })
+    }
 
     let highlightAlignment = function (e) {
         // selects a word by setting the classes and focus
         let alignments = e.data
         $('.current').removeClass('current')
         alignments.forEach(alignment => {
-            if (player.currentTime >= alignment.start && player.currentTime <= alignment.end && alignment.node) {
+            if (player.currentTime >= alignment.audio_start && player.currentTime <= alignment.audio_end && alignment.node) {
                 let node = alignment.node;
                 $(node).addClass('current')
                 node.focus();
             }
         })
     };
+
+    let toHHMMSS = function (s) {
+        let hours = Math.floor(s / 3600)
+        var minutes = Math.floor((s - (hours * 3600)) / 60);
+        var seconds = Math.round(s - (hours * 3600) - (minutes * 60));
+
+        if (hours < 10) {
+            hours = "0" + hours;
+        }
+        if (minutes < 10) {
+            minutes = "0" + minutes;
+        }
+        if (seconds < 10) {
+            seconds = "0" + seconds;
+        }
+        return hours + ':' + minutes + ':' + seconds;
+    }
 
 })($)

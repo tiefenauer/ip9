@@ -17,7 +17,6 @@ from util.audio_util import to_wav, read_pcm16_wave, ms_to_frames
 from util.lsa_util import needle_wunsch
 from util.pipeline_util import create_alignments_dataframe
 from util.rnn_util import load_keras_model, load_ds_model
-from util.string_util import normalize
 from util.vad_util import webrtc_split
 
 
@@ -63,6 +62,7 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
         if target_dir:
             print(f'saving alignments to {alignments_csv}')
             df_alignments.to_csv(join(target_dir, alignments_csv))
+    df_alignments.replace(np.nan, '', regex=True, inplace=True)
     print(f"""STAGE #3 COMPLETED: Saved transcript to {alignments_csv}""")
 
     print("""PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript""")
@@ -214,6 +214,11 @@ def gsa(transcript, partial_transcripts):
     :param partial_transcripts: list of partial transcripts (predictions)
     :return:
     """
+    # concatenate transcripts
     inference = ' '.join(partial_transcripts)
-    beginnings = reduce(lambda x, y: x + [len(y) + x[-1] + 1], partial_transcripts[:-1], [0])
-    return needle_wunsch(transcript, inference, beginnings)
+    # calculate boundaries [(start_index, end_index)] of partial transcripts within concatenated partial transcripts
+    boundaries = reduce(
+        lambda bs, t: bs + [
+            ((bs[-1][1] + 1 if bs else 0), (bs[-1][1] + len(t) + 1 if bs else len(t)))],
+        partial_transcripts, [])
+    return needle_wunsch(transcript.lower(), inference, boundaries)

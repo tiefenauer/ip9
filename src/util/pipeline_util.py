@@ -28,8 +28,8 @@ def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, df
 
     json_data = create_alignment_json(df_transcripts)
     alignment_json_path = join(target_dir, 'alignment.json')
-    with open(alignment_json_path, 'w') as f:
-        json.dump(json_data, f, indent=2)
+    with open(alignment_json_path, 'w', encoding='utf-8') as f:
+        json.dump(json_data, f, indent=2, ensure_ascii=False)
     print(f'saved alignment information to {alignment_json_path}')
 
     demo_id = basename(target_dir)
@@ -59,7 +59,7 @@ def create_demo_index(target_dir, demo_id, audio_src_path, transcript, df_stats)
     soup = BeautifulSoup(open(template_path), 'html.parser')
     soup.title.string = demo_id
     soup.find(id='demo_title').string = f'Forced Alignment for {demo_id}'
-    soup.find(id='target').string = transcript.replace('\n', ' ')
+    soup.find(id='target').string = transcript
 
     def create_tr(*args):
         tr = soup.new_tag('tr')

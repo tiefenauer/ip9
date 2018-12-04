@@ -7,6 +7,7 @@ from collections import Counter
 from os import makedirs, walk
 from os.path import exists, join, splitext, basename
 from pathlib import Path
+from shutil import copyfile
 
 import pandas as pd
 from lxml import etree
@@ -90,10 +91,8 @@ def create_segments(source_dir, target_dir, max_entries):
         if not exists(wav_file) or args.overwrite:
             resample(audio_file, wav_file, crop_start, crop_end)
 
-        # write full transcript
-        with open(transcript_file) as f_src, open(join(target_dir, f'{entry_id}.txt'), 'w') as f_dst:
-            transcript = normalize(f_src.read(), lang)
-            f_dst.write(transcript)
+        # copy unnormalized audio file to target destination
+        copyfile(transcript_file, join(target_dir, f'{entry_id}.txt'))
 
         # create segment
         for segment_info in segment_infos:
@@ -219,11 +218,14 @@ def extract_segment_infos(index_file, transcript_file, src_rate, language):
     for speech_meta in speeches:
         start_text = speech_meta['start_text']
         end_text = speech_meta['end_text'] + 1  # komische Indizierung
+        speech_transcript = normalize(transcript[start_text:end_text], language)
+        if len(speech_transcript.strip()) == 0:
+            continue
 
         segment_infos.append({
             'start_frame': resample_frame(speech_meta['start_frame'], src_rate=src_rate),
             'end_frame': resample_frame(speech_meta['end_frame'], src_rate=src_rate),
-            'transcript': normalize(transcript[start_text:end_text], language)
+            'transcript': speech_transcript
         })
 
     return segment_infos

@@ -3,6 +3,8 @@ import os
 
 from pattern3.metrics import levenshtein_similarity
 
+from corpus.alignment import Voice
+
 os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 from os import makedirs
 from os.path import abspath, exists, join, splitext, basename
@@ -11,22 +13,19 @@ import numpy as np
 import pandas as pd
 from keras import backend as K
 
-from corpus.alignment import Voice
-from pipeline import asr_keras, gsa
+from pipeline import pipeline
 from util.corpus_util import get_corpus
 from util.lm_util import load_lm, load_vocab
 from util.log_util import create_args_str
-from util.pipeline_util import create_alignments_dataframe, query_lm_params, calculate_stats, create_demo_files, \
+from util.pipeline_util import query_lm_params, calculate_stats, create_demo_files, \
     update_index
 from util.rnn_util import query_gpu
 from util.visualization_util import visualize_pipeline_performance
 
 parser = argparse.ArgumentParser(description="""
     Evaluate the pipeline using German samples from the ReadyLingua corpus. Because there is no reference model for
-    German, the VAD stage is skipped and the inference is only made 
+    German, the VAD stage is skipped and segmentation information is taken from corpus metadata instead.
     """)
-parser.add_argument('--corpus', type=str, required=True,
-                    help='corpus ID or path to corpus root directory')
 parser.add_argument('--target_dir', type=str, required=False,
                     help=f'Path to target directory where results will be written. '
                     f'If not set, the source directory will be used.')
@@ -63,7 +62,12 @@ def main(args):
     stats = []
     for i, entry in enumerate(test_entries):
         print(f'entry {i + 1}/{len(test_entries)}')
-        target_dir_entry = join(target_dir, splitext(basename(entry.audio_path))[0])
+        audio_file = entry.audio_path
+        transcript = open(entry.transcript_path, encoding='utf-8').read()
+        sample_rate = entry.rate
+
+        demo_id = splitext(basename(audio_file))[0]
+        target_dir_entry = join(target_dir, demo_id)
         if not exists(target_dir_entry):
             makedirs(target_dir_entry)
         alignments_csv = join(target_dir_entry, 'alignments.csv')
@@ -72,36 +76,26 @@ def main(args):
             print(f'found inferences from previous run in {alignments_csv}')
             df_alignments = pd.read_csv(alignments_csv, header=0, index_col=0).replace(np.nan, '')
         else:
-            print(f'using simplified Keras model')
+            print(f'Running pipeline using Keras model at {keras_path}, saving results in {target_dir_entry}')
             voiced_segments = [Voice(s.audio, s.rate, s.start_frame, s.end_frame) for s in entry]
-            transcripts = asr_keras(voiced_segments, 'de', entry.rate, keras_path, lm, vocab)
-            df_alignments = create_alignments_dataframe(voiced_segments, transcripts, entry.rate)
+            df_alignments = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
+                                     language='de',
+                                     keras_path=keras_path, lm=lm, vocab=vocab,
+                                     target_dir=target_dir_entry)
             if target_dir:
                 print(f'saving alignments to {alignments_csv}')
                 df_alignments.to_csv(join(target_dir, alignments_csv))
 
         df_alignments.replace(np.nan, '', regex=True, inplace=True)
 
-        if 'alignment' in df_alignments.keys():
-            print(f'transcripts are already aligned')
-        else:
-            print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')
-            alignments = gsa(entry.transcript, df_alignments['transcript'].tolist())
-
-            df_alignments['alignment'] = [a['text'] for a in alignments]
-            df_alignments['text_start'] = [a['start'] for a in alignments]
-            df_alignments['text_end'] = [a['end'] for a in alignments]
-
-            print(f'saving alignments to {alignments_csv}')
-            df_alignments.to_csv(alignments_csv)
-
-        df_stats = calculate_stats(df_alignments, keras_path, entry.transcript)
-        create_demo_files(target_dir_entry, entry.audio_path, entry.transcript, df_alignments, df_stats)
+        df_stats = calculate_stats(df_alignments, keras_path, transcript)
+        create_demo_files(target_dir_entry, audio_file, transcript, df_alignments, df_stats)
 
         # calculate average similarity between Keras-alignment and original aligments
         keras_alignments = df_alignments['alignment'].values
         original_alignments = [s.transcript for s in entry.segments]
-        av_similarity = np.mean([levenshtein_similarity(ka, oa) for (ka, oa) in zip(keras_alignments, original_alignments)])
+        av_similarity = np.mean(
+            [levenshtein_similarity(ka, oa) for (ka, oa) in zip(keras_alignments, original_alignments)])
         df_stats['similarity'] = av_similarity
         stats.append(df_stats)
 

@@ -28,23 +28,24 @@
 
         let prevEnd = 0
         alignments.forEach(function (alignment) {
+            let audioStart = alignment.audio_start;
+            let audioEnd = alignment.audio_end;
+            let textStart = alignment.text_start;
+            let textEnd = alignment.text_end;
+            let inference = alignment.transcript;
+
             if (alignment.text_start > prevEnd + 1) { // single spaces between are never aligned
-                let unalignedText = transcript.substring(prevEnd, alignment.text_start)
+                let unalignedText = transcript.substring(prevEnd, textStart)
                     .replace(/(?:\r\n|\r|\n)/g, '<br/>')
-                    .trim()
-                $target.append($('<span></span>').html(unalignedText).addClass('unaligned'))
+                    .trim();
+                $target.append($('<span></span>').html(unalignedText).addClass('unaligned'));
                 $target.append(document.createTextNode(' '));
             }
-            let audioStart = alignment.audio_start
-            let audioEnd = alignment.audio_end
-            let textStart = alignment.text_start
-            let textEnd = alignment.text_end + 1
-            let inference = alignment.transcript
 
             let alignedText = transcript.substring(textStart, textEnd)
                 .replace(/(?:\r\n|\r|\n)/g, '<br/>')
-                .trim()
-            let tooltipText = inference + ' (' + toHHMMSS(audioStart) + ' - ' + toHHMMSS(audioEnd) + ')'
+                .trim();
+            let tooltipText = inference + ' (' + toHHMMSS(audioStart) + ' - ' + toHHMMSS(audioEnd) + ')';
 
             let $node = $('<span></span>').html(alignedText)
                 .addClass('aligned')

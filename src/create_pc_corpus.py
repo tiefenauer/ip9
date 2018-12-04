@@ -5,19 +5,19 @@ import os
 import sys
 from collections import Counter
 from glob import glob
-from os import makedirs, walk
-from os.path import exists, join, splitext, basename, dirname
+from os import makedirs
+from os.path import exists, join, basename, dirname
 from pathlib import Path
+from shutil import copyfile
 
 import pandas as pd
 from lxml import etree
 from tqdm import tqdm
 
-from constants import RL_ROOT, RL_RAW
 from util.audio_util import resample_frame, resample, crop_segments
 from util.corpus_util import find_file_by_suffix
 from util.log_util import create_args_str
-from util.string_util import create_filename, normalize, contains_numeric
+from util.string_util import normalize, contains_numeric
 
 LANGUAGES = {  # mapping from folder names to language code
     'Deutsch': 'de',
@@ -88,10 +88,8 @@ def create_segments(source_dir, target_dir, max_entries):
         if not exists(wav_file) or args.overwrite:
             resample(audio_file, wav_file, crop_start, crop_end)
 
-        # write full transcript
-        with open(transcript_file) as f_src, open(join(target_dir, f'{entry_id}.txt'), 'w') as f_dst:
-            transcript = normalize(f_src.read(), lang)
-            f_dst.write(transcript)
+        # copy unnormalized audio file to target destination
+        copyfile(transcript_file, join(target_dir, f'{entry_id}.txt'))
 
         # create segment
         for segment_info in segment_infos:

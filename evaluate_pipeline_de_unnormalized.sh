@@ -9,11 +9,11 @@ echo "using GPU #${gpu} for all inferences!"
 
 echo "Force re-alignment? (Y/n)"
 read force_realignment
-for v in "N" "n" do
+for v in "N" "n"
+do
     if [[ "$force_realignment" = v ]]; then
         force_realignment=false
     fi
-do
 done
 
 if [[ "$force_realignment" = false ]]; then

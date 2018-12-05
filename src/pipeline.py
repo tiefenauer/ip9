@@ -21,7 +21,8 @@ from util.vad_util import webrtc_split
 
 
 def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path=None, ds_path=None, ds_alpha_path=None,
-             ds_trie_path=None, lm_path=None, lm=None, vocab=None, target_dir=None, force_realignment=False):
+             ds_trie_path=None, lm_path=None, lm=None, vocab=None, target_dir=None, force_realignment=False,
+             align_endings=True):
     """
     Forced Alignment using pipeline.
 
@@ -40,6 +41,7 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
     :param target_dir: (optional) path to directory to save results. If set, intermediate results are written and need
                        not be recalculated upon subsequent runs
     :param force_realignment: if set to True this will globally align the inferences with the transcript and override existing alignment information
+    :param align_endings: align endings (not just beginnings) of partial transcripts within original transcript
     :return:
     """
     if not exists(target_dir):
@@ -70,7 +72,7 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
         print(f'transcripts are already aligned')
     else:
         print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')
-        alignments = gsa(transcript, df_alignments['transcript'].tolist())
+        alignments = gsa(transcript, df_alignments['transcript'].tolist(), align_endings=align_endings)
         print(len(alignments))
 
         df_alignments['alignment'] = [a['text'] for a in alignments]
@@ -209,7 +211,7 @@ def asr_ds(voiced_segments, sample_rate, ds_path, ds_alphabet_path, lm_path, ds_
     return transcripts
 
 
-def gsa(transcript, partial_transcripts):
+def gsa(transcript, partial_transcripts, align_endings):
     """
     Pipeline Stage 4: Global Sequence Alignment (GSA)
     This stage will try to align a list of partial, possibly incorrect transcripts (prediction) within a known, whole
@@ -217,6 +219,7 @@ def gsa(transcript, partial_transcripts):
 
     :param transcript: whole transcript (ground truth)
     :param partial_transcripts: list of partial transcripts (predictions)
+    :param align_endings: align endings (not just beginnings) of partial transcripts within original transcript
     :return:
     """
     # concatenate transcripts
@@ -226,4 +229,4 @@ def gsa(transcript, partial_transcripts):
         lambda bs, t: bs + [
             ((bs[-1][1] + 1 if bs else 0), (bs[-1][1] + len(t) + 1 if bs else len(t)))],
         partial_transcripts, [])
-    return needle_wunsch(transcript.lower(), inference, boundaries)
+    return needle_wunsch(transcript.lower(), inference, boundaries, align_endings=align_endings)

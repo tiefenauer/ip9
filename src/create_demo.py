@@ -29,6 +29,13 @@ parser.add_argument('--lm_path', type=str,
                     help=f'path to directory with KenLM binary model to use for inference')
 parser.add_argument('--vocab_path', type=str, required=False,
                     help=f'(optional) Path to vocabulary for LM')
+parser.add_argument('--force_realignment', type=bool, default=False,
+                    help='force realignment of partial transcript with original transcript, even if alignment'
+                         'information is available from previous runs.')
+parser.add_argument('--align_endings', type=bool, default=True,
+                    help='align endings of partial transcripts, not just beginnings. If set to True, transcript may'
+                         'contain unaligned parts between alignments. If set to False, each alignment ends where the'
+                         'next one starts.')
 parser.add_argument('--target_dir', type=str, nargs='?', help=f'path to write stats file to')
 parser.add_argument('--gpu', type=str, required=False, default=None,
                     help='(optional) GPU(s) to use for training. If not set, you will be asked at runtime.')
@@ -49,7 +56,7 @@ def main(args):
     df_alignments = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                              language='en',
                              keras_path=keras_path, lm=lm, vocab=vocab,
-                             force_realignment=True,
+                             force_realignment=args.force_realignment, align_endings=args.align_endings,
                              target_dir=target_dir)
 
     df_stats = calculate_stats(df_alignments, ds_path, transcript)

@@ -7,6 +7,22 @@ if [[ ${gpu} = '' ]]; then
 fi
 echo "using GPU #${gpu} for all inferences!"
 
+echo "Force re-alignment? (Y/n)"
+read force_realignment
+for v in "N" "n" do
+    if [[ "$force_realignment" = v ]]; then
+        force_realignment=false
+    fi
+do
+done
+
+if [[ "$force_realignment" = false ]]; then
+    force_realignment=""
+else
+    force_realignment="--force_realignment"
+fi
+
+
 me=`basename "$0"`
 target_dir="/media/D1/daniel.tiefenauer/performance_ls_en"
 
@@ -21,5 +37,6 @@ python3 evaluate_pipeline_en.py \
     --ds_alpha_path /media/D1/daniel.tiefenauer/asr/alphabet.txt \
     --ds_trie_path /media/D1/daniel.tiefenauer/asr/trie \
     --lm_path /media/D1/daniel.tiefenauer/asr/lm.binary \
+    ${force_realignment}
     --gpu ${gpu} \
     --target_dir ${target_dir} | tee ${target_dir}/${me}.log

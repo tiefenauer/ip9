@@ -55,6 +55,13 @@ parser.add_argument('--lm_path', type=str, required=False,
                     help=f'(optional) Path to binary file containing KenLM n-gram Language Model')
 parser.add_argument('--vocab_path', type=str, required=False,
                     help=f'(optional) Path to vocabulary for LM')
+parser.add_argument('--force_realignment', type=bool, default=False,
+                    help='force realignment of partial transcript with original transcript, even if alignment'
+                         'information is available from previous runs.')
+parser.add_argument('--align_endings', type=bool, default=True,
+                    help='align endings of partial transcripts, not just beginnings. If set to True, transcript may'
+                         'contain unaligned parts between alignments. If set to False, each alignment ends where the'
+                         'next one starts.')
 parser.add_argument('--gpu', type=str, required=False, default=None,
                     help='(optional) GPU(s) to use for training. If not set, you will be asked at runtime.')
 args = parser.parse_args()
@@ -85,6 +92,7 @@ def main(args):
                                     language='en',
                                     ds_path=ds_path, ds_alpha_path=ds_alpha_path, ds_trie_path=ds_trie_path,
                                     lm_path=lm_path,
+                                    force_realignment=args.force_realignment, align_endings=args.align_endings,
                                     target_dir=target_dir_ds)
         df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
         create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
@@ -92,6 +100,7 @@ def main(args):
         df_alignments_keras = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                                        language='en',
                                        keras_path=keras_path, lm=lm, vocab=vocab,
+                                       force_realignment=args.force_realignment, align_endings=args.align_endings,
                                        target_dir=target_dir_keras)
         df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)
         create_demo_files(target_dir_keras, audio_file, transcript, df_alignments_keras, df_stats_keras)

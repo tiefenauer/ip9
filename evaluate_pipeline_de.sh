@@ -19,6 +19,7 @@ done
 if [[ "$force_realignment" = false ]]; then
     force_realignment=""
 else
+    echo "Forcing re-alignment"
     force_realignment="--force_realignment"
 fi
 
@@ -34,6 +35,7 @@ python3 evaluate_pipeline_de.py \
     --corpus /media/D1/daniel.tiefenauer/corpora/readylingua \
     --keras_path /media/D1/daniel.tiefenauer/_runs/lc_rl_de_wiki_synth/1000_min \
     ${force_realignment} \
+    --align_endings \
     --norm_transcript \
     --gpu ${gpu} \
     --target_dir ${target_dir} | tee ${target_dir}/${me}.log

@@ -39,10 +39,10 @@ parser.add_argument('--lm_path', type=str, required=False,
 parser.add_argument('--vocab_path', type=str, required=False,
                     help=f'(optional) Path to vocabulary file to use for spell checker.'
                     f'If not set you will be asked at runtime.')
-parser.add_argument('--force_realignment', type=bool, default=False,
+parser.add_argument('--force_realignment', type=bool, action='store_true',
                     help='force realignment of partial transcript with original transcript, even if alignment'
                          'information is available from previous runs.')
-parser.add_argument('--align_endings', type=bool, default=True,
+parser.add_argument('--align_endings', type=bool, action='store_true',
                     help='align endings of partial transcripts, not just beginnings. If set to True, transcript may'
                          'contain unaligned parts between alignments. If set to False, each alignment ends where the'
                          'next one starts.')

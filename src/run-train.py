@@ -137,7 +137,7 @@ def train_model(model, language, target_dir, num_minutes=None):
     K.set_session(create_tf_session(args.gpu))
     print("Creating data batch generators")
     data_train = CSVBatchGenerator(args.train_files, lang=language, sort=True, n_batches=args.train_batches,
-                                   batch_size=args.batch_size, num_minutes=num_minutes, use_synth=args.use_synth)
+                                   batch_size=args.batch_size, n_minutes=num_minutes, use_synth=args.use_synth)
     data_valid = CSVBatchGenerator(args.valid_files, lang=language, sort=False, n_batches=args.valid_batches,
                                    batch_size=args.batch_size)
 

@@ -18,7 +18,24 @@ from util.ctc_util import encode, get_tokens
 
 
 class BatchGenerator(Sequence):
+    """
+    Generates batches of (input, output) tuples that can be fed to the simplified DeepSpeech model.
+    A contains the following items:
+        - input: MFCC features of an audio signal
+        - input_length: the items in each batch must have equal length. The feature sequences are
+          therefore zero-padded and the original length is stored.
+        - the_labels: encoded label sequences for the audio signal, zero-padded (like the feature sequences)
+        - label_length: length of each label sequence
+        - source_str: the original, unencoded transcript (ground truth)
+    """
+
     def __init__(self, batch_items, batch_size, lang):
+        """
+        Initialize BatchGenerator
+        :param batch_items: sequence of anything. This can be a list, a DataFrame, ...
+        :param batch_size: number of elements in each batch
+        :param lang: language to use. This will affect the tokens used for encoding the labels
+        """
         self.batch_items = batch_items
         self.batch_size = batch_size
         self.cur_index = 0
@@ -63,7 +80,7 @@ class BatchGenerator(Sequence):
     @abstractmethod
     def extract_features(self, first, last):
         """
-        Extract unpadded features for a batch of elements with specified indices
+        Extract unpadded features for a batch of elements with matching indices
         :param first: first index to process
         :param last: last index to process
         :return: list of unpadded features (batch_size x num_timesteps x num_features)
@@ -73,7 +90,7 @@ class BatchGenerator(Sequence):
     @abstractmethod
     def extract_labels(self, first, last):
         """
-        Extract unpadded, unencoded labels for a batch of elements with specified indices
+        Extract unpadded, unencoded labels for a batch of elements with matching indices
         :param first: first index to process
         :param last: last index to process
         :return: list of textual labels
@@ -83,8 +100,16 @@ class BatchGenerator(Sequence):
 
 
 class VoiceSegmentsBatchGenerator(BatchGenerator):
+    """
+    Generate batches from voiced segments
+    """
 
     def __init__(self, voiced_segments, sample_rate, batch_size, lang):
+        """
+        Initialize the BatchGenerator
+        :param voiced_segments: list of corpus.alignment.Voice objects
+        :param sample_rate: sampling rate of the audio signal
+        """
         super().__init__(voiced_segments, batch_size, lang)
         self.sample_rate = sample_rate
 
@@ -100,9 +125,20 @@ class VoiceSegmentsBatchGenerator(BatchGenerator):
 
 
 class CSVBatchGenerator(BatchGenerator):
+    """
+    Generate batches from CSV-based corpus
+    """
 
-    def __init__(self, csv_path, lang, sort=False, n_batches=None, batch_size=16, num_minutes=None, use_synth=False):
-        df, total_duration = read_data_from_csv(csv_path=csv_path, sort=sort)
+    def __init__(self, csv_path, lang, sort=False, n_batches=None, batch_size=16, n_minutes=None, use_synth=False):
+        """
+        Initialize BatchGenerator
+        :param csv_path: absolute path to CSV index file containing the segmentation information and transcripts
+        :param sort: whether to sort the samples by audio length
+        :param n_batches: maximum number of batches to generate. When set, only the first n batches are generated.
+        :param n_minutes: maximum number of minutes to process. When set, only batches up to n minutes will be generated
+        :param use_synth: whether to include synthesized data in the generated batches or not
+        """
+        df, duration = read_data_from_csv(csv_path=csv_path, sort=sort)
         if not use_synth:
             synth_suffixes = ['-high', '-low', '-fast', '-slow', '-loud', '-quiet', '-shift', '-echo', '-distorted']
             print(f'keeping only non-synthesized data (samples ending in {synth_suffixes}))')
@@ -117,13 +153,15 @@ class CSVBatchGenerator(BatchGenerator):
 
         if n_batches:
             df = df.head(n_batches * batch_size)
-        elif num_minutes:
+        elif n_minutes:
             # truncate dataset to first {num_minutes} minutes of audio data
-            if num_minutes * 60 > total_duration:
-                print(f"""WARNING: {num_minutes} minutes ({timedelta(seconds=num_minutes)}) is longer than total length of the dataset ({timedelta(seconds=total_duration)})!
+            if n_minutes * 60 > duration:
+                print(f"""
+                WARNING: {n_minutes} minutes ({timedelta(seconds=n_minutes)}) is longer than 
+                total length of the dataset ({timedelta(seconds=duration)})!
                 Training will be done on the whole dataset.""")
             else:
-                df = truncate_dataset(df, batch_size, num_minutes)
+                df = truncate_df(df, batch_size, n_minutes)
 
         if 'wav_length' in df:
             avg_duration = df['wav_length'].mean()
@@ -147,16 +185,15 @@ class CSVBatchGenerator(BatchGenerator):
         return self.transcripts[first:last].tolist()
 
 
-def read_data_from_csv(csv_path, sort=True, create_word_list=False):
+def read_data_from_csv(csv_path, sort=True):
     """
     Read data from CSV into DataFrame.
     :param csv_path: absolute path to CSV file
     :param sort: whether to sort the files by file size
-    :param create_word_list: whether to create a list of unique words
     :return:
         df: pd.DataFrame containing the CSV data
-        total_duration: integer representing the total length of the audio by summing over the 'wav_length' column
-                        from the CSV. If such a column is not present, the value returned is math.inf
+        duration: integer representing the total length of the audio by summing over the 'wav_length' column
+                  from the CSV. If such a column is not present, the value returned is math.inf
     """
     if not isfile(csv_path):
         print(f'ERROR: CSV file {csv_path} does not exist!', file=sys.stderr)
@@ -166,24 +203,21 @@ def read_data_from_csv(csv_path, sort=True, create_word_list=False):
     df = pd.read_csv(csv_path, sep=',', encoding='utf-8')
     print(f'done! ({len(df.index)} samples', end='')
 
-    total_duration = math.inf
+    duration = math.inf
 
     if 'wav_length' in df:
-        total_duration = df['wav_length'].sum()
+        duration = df['wav_length'].sum()
         avg_duration = df['wav_length'].mean()
-        print(f', {timedelta(seconds=total_duration)}, Ø audio length: {avg_duration:.4f} seconds)')
+        print(f', {timedelta(seconds=duration)}, Ø audio length: {avg_duration:.4f} seconds)')
     else:
         print(')')
-
-    if create_word_list:
-        df['transcript'].to_csv(join('lm', 'df_all_word_list.csv'), header=False, index=False)
 
     if sort:
         df = df.sort_values(by='wav_filesize', ascending=True)
 
     avg_trans_length = np.mean([len(trans) for trans in df['transcript']])
     print(f'average transcript length: {avg_trans_length}')
-    return df.reset_index(drop=True), total_duration
+    return df.reset_index(drop=True), duration
 
 
 def extract_mfcc(wav_file_path):
@@ -191,11 +225,20 @@ def extract_mfcc(wav_file_path):
     return mfcc(audio, samplerate=fs, numcep=26)  # (num_timesteps x num_features)
 
 
-def truncate_dataset(df, batch_size, num_minutes):
+def truncate_df(df, batch_size, n_minutes):
+    """
+    Truncate a dataset to contain only the first n minutes of audio. Samples from the DataFrame will be considered
+    until their total length is higher than n minutes. The other samples are discarded.
+
+    :param df: DataFrame containing the segmentation information (samples)
+    :param batch_size: batch size to use. At least one batch will be filled, even if its total length is longer than n.
+    :param n_minutes: number of minutes to include in the dataset
+    :return: the first x rows (samples) of the DataFrame whose cumulative length is about n_minutes
+    """
     clip_ix = 0
     clipped_wav_length = 0.0
     if 'wav_length' in df:
-        while (clipped_wav_length < num_minutes * 60  # total length must be required length
+        while (clipped_wav_length < n_minutes * 60  # total length must be required length
                and clip_ix < len(df.index)  # don't use more samples than available
                or clip_ix < batch_size):  # but use at least enough samples to fill a batch
             clip_ix += 1
@@ -204,7 +247,7 @@ def truncate_dataset(df, batch_size, num_minutes):
         print(f'length of WAV files not present in CSV file. Appending that information (this can take a while)...')
         df['wav_length'] = pd.Series(index=df.index)
         wav_lengths = []
-        while clipped_wav_length < num_minutes * 60:
+        while clipped_wav_length < n_minutes * 60:
             wav_length = mediainfo(df.loc[clip_ix, 'wav_filename'])['duration']
             wav_lengths.append(float(wav_length))
             clipped_wav_length = sum(wav_lengths)
@@ -212,6 +255,6 @@ def truncate_dataset(df, batch_size, num_minutes):
         df.loc[:clip_ix - 1, 'wav_length'] = wav_lengths
 
     print(f'clipping to first {clip_ix} samples ({timedelta(seconds=clipped_wav_length)}).')
-    if clipped_wav_length > num_minutes * 60 and clip_ix == batch_size:
-        print(f'length of clipped dataset is larger than {num_minutes} to fill at least 1 batch')
+    if clipped_wav_length > n_minutes * 60 and clip_ix == batch_size:
+        print(f'length of clipped dataset is larger than {n_minutes} to fill at least 1 batch')
     return df.head(clip_ix)

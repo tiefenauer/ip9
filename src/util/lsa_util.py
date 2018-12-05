@@ -121,12 +121,12 @@ def needle_wunsch(str_1, str_2, boundaries, match_score=10, mismatch_score=-5, g
     :return:
     """
 
-    def match_score(a, b):
+    def calculate_score(a, b):
         if a == b:
-            return 10
+            return match_score
         if a == '-' or b == '-':
-            return -5
-        return -5
+            return gap_score
+        return mismatch_score
 
     # reference string on axis 0, other string on axis 1
     m, n = len(str_1) + 1, len(str_2) + 1
@@ -137,7 +137,7 @@ def needle_wunsch(str_1, str_2, boundaries, match_score=10, mismatch_score=-5, g
     scores[0, :] = np.arange(n) * gap_score
 
     for i, j in itertools.product(range(1, m), range(1, n)):
-        match = scores[i - 1][j - 1] + match_score(str_1[i - 1], str_2[j - 1])
+        match = scores[i - 1][j - 1] + calculate_score(str_1[i - 1], str_2[j - 1])
         delete = scores[i - 1][j] + gap_score
         insert = scores[i][j - 1] + gap_score
         scores[i][j] = max(match, delete, insert)
@@ -155,7 +155,7 @@ def needle_wunsch(str_1, str_2, boundaries, match_score=10, mismatch_score=-5, g
         score_up = scores[i][j - 1]
         score_left = scores[i - 1][j]
 
-        if score_current == score_diagonal + match_score(str_1[i - 1], str_2[j - 1]):
+        if score_current == score_diagonal + calculate_score(str_1[i - 1], str_2[j - 1]):
             source_str = str_1[i - 1] + source_str
             target_str = str_2[j - 1] + target_str
             i -= 1

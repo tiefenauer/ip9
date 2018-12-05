@@ -70,7 +70,7 @@ wav_filename,wav_filesize,wav_length,transcript
 
 whereas the keys have the following meaning:
 
-- `wav_filename`: Path to the wav file. Note that the path must be absolute, which means the corpus is not easily portable.
+- `wav_filename`: Path to the wav file. The path must be relative to the CSV to make the corpus porable. Note that this is contrary to the Mozilla implementation of _DeepSpeech_ which uses absolute paths. Therefore this CSV file can not be used with the Mozilla implementation.
 * `wav_filesize`: size of the wav file in bytes
 * `wav_length`: length of the recording in seconds
 * `transcript`: arbitrary string containing the start frame, end frame and normalized transcript for the recording. The string must be lowercase and only contain characters from the alphabet the model is trained on. 

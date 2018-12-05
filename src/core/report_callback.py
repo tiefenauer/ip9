@@ -74,7 +74,7 @@ class ReportCallback(callbacks.Callback):
             print("shuffling validation data")
             self.data_valid.shuffle_entries()
 
-        print(f'validating epoch {epoch+1} (training on {self.num_minutes} minutes)')
+        print(f'validating epoch {epoch + 1} (training on {self.num_minutes} minutes)')
         df_inferences = infer_batches_keras(self.data_valid, self.decoder_greedy, self.decoder_beam, self.language,
                                             self.lm, self.lm_vocab)
 
@@ -88,7 +88,7 @@ class ReportCallback(callbacks.Callback):
         mean_metrics = calculate_metrics_mean(df_inferences)
 
         print('--------------------------------------------------------')
-        print(f'Validation results after epoch {epoch+1}: {self.target_dir}')
+        print(f'Validation results after epoch {epoch + 1}: {self.target_dir}')
         if self.lm and self.lm_vocab:
             print(f'using LM at: {self.lm_path}')
             print(f'using LM vocab at: {self.vocab_path}')

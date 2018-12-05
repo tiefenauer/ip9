@@ -7,6 +7,7 @@ class Decoder(object):
     """
     Base class for CTC-Decoders
     """
+
     def __init__(self, model, language, greedy):
         """
         Initialize the decoded

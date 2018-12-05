@@ -1,8 +1,7 @@
 from unittest import TestCase
 
 from hamcrest import assert_that, is_
-
-from util.lsa_util import needle_wunsch, snap_to_closest_word_boundary, snap_left, snap_right
+from util.gsa_util import needle_wunsch, snap_to_closest_word_boundary, snap_left, snap_right
 
 
 class TestLsaUtil(TestCase):

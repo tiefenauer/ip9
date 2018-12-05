@@ -37,6 +37,7 @@ python3 evaluate_pipeline_en.py \
     --ds_alpha_path /media/D1/daniel.tiefenauer/asr/alphabet.txt \
     --ds_trie_path /media/D1/daniel.tiefenauer/asr/trie \
     --lm_path /media/D1/daniel.tiefenauer/asr/lm.binary \
-    ${force_realignment}
+    ${force_realignment} \
+    --norm_transcript \
     --gpu ${gpu} \
     --target_dir ${target_dir} | tee ${target_dir}/${me}.log

@@ -17,6 +17,7 @@ from util.audio_util import to_wav, read_pcm16_wave, ms_to_frames
 from util.lsa_util import needle_wunsch
 from util.pipeline_util import create_alignments_dataframe
 from util.rnn_util import load_keras_model, load_ds_model
+from util.string_util import normalize
 from util.vad_util import webrtc_split
 
 
@@ -87,7 +88,7 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
     return df_alignments
 
 
-def preprocess(audio_path, transcript_path, language=None):
+def preprocess(audio_path, transcript_path, language=None, norm_transcript=False):
     """
     Pipeline Stage 1: Preprocessing
     This stage prepares the input by converting it to the expected format and normalizing it
@@ -95,6 +96,7 @@ def preprocess(audio_path, transcript_path, language=None):
     :param audio_path: path to a MP3 or WAV file containing the speech recording
     :param transcript_path: path to a text file containing the transcript for the audio file
     :param language: (optional) hint for a language. If not set the language is detected from the transcript.
+    :param norm_transcript: normalize transcript
     :return:
         raw audio bytes: the audio samples as bytes array (mono, PCM-16)
         sample rate: number of samples per second (usually 16'000)
@@ -126,6 +128,8 @@ def preprocess(audio_path, transcript_path, language=None):
 
     with open(transcript_path, 'r') as f:
         transcript = f.read()
+        if norm_transcript:
+            transcript = normalize(transcript)
 
     if not language:
         language = langdetect.detect(transcript)

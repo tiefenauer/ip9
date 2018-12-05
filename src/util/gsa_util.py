@@ -52,7 +52,7 @@ def needle_wunsch(str_1, str_2, boundaries, match_score=10, mismatch_score=-5, g
 
     # Traceback: start from the bottom right cell
     i, j = m - 1, n - 1  # i/j point to the row/column in the alignment matrix
-    i_start, i_end = len(str_1), i  # markers for the alignment in str_1
+    i_start, i_end = None if align_endings else len(str_1), i  # markers for the alignment in str_1
     j_start, j_end = boundaries[-1]  # markers for the aligned text in str_2
     while i > 0 and j > 0:
         score_current = scores[i][j]
@@ -100,7 +100,7 @@ def needle_wunsch(str_1, str_2, boundaries, match_score=10, mismatch_score=-5, g
         target_str = '-' + target_str
         i -= 1
 
-    return alignments
+    return alignments, source_str, target_str
 
 
 def snap_left(ix, text):

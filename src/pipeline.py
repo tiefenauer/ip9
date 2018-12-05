@@ -232,4 +232,5 @@ def gsa(transcript, partial_transcripts, align_endings):
         lambda bs, t: bs + [
             ((bs[-1][1] + 1 if bs else 0), (bs[-1][1] + len(t) + 1 if bs else len(t)))],
         partial_transcripts, [])
-    return needle_wunsch(transcript.lower(), inference, boundaries, align_endings=align_endings)
+    alignments, _, _ = needle_wunsch(transcript.lower(), inference, boundaries, align_endings=align_endings)
+    return alignments

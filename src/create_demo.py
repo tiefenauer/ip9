@@ -36,7 +36,7 @@ parser.add_argument('--align_endings', type=bool, default=True,
                     help='align endings of partial transcripts, not just beginnings. If set to True, transcript may'
                          'contain unaligned parts between alignments. If set to False, each alignment ends where the'
                          'next one starts.')
-parser.add_argument('--normalize_transcript', type=bool, default=False,
+parser.add_argument('--norm_transcript', type=bool, default=False,
                     help='Normalize transcript before alignment. If set to True, the alignments will be more accurate'
                          'because the transcript does not contain any punctuation, annotations and other clutter. '
                          'However, this might not reflect how the pipeline will be used. If set to False, the '
@@ -114,7 +114,7 @@ def setup(args):
         if args.language and args.language not in ['en', 'de', 'fr', 'it', 'es']:
             raise ValueError('ERROR: Language must be either en or de')
 
-    return args.language, audio_path, transcript_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, vocab_path, target_dir, args.normalize, gpu
+    return args.language, audio_path, transcript_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, vocab_path, target_dir, args.norm_transcript, gpu
 
 
 if __name__ == '__main__':

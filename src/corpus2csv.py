@@ -19,7 +19,7 @@ from util.audio_util import distort_audio
 from util.corpus_util import get_corpus
 from util.log_util import create_args_str
 
-parser = argparse.ArgumentParser(description="""Export speech segments of corpus to CSV and split audio files""")
+parser = argparse.ArgumentParser(description="""Export speech segments of corpus to CSV files and synthesize data""")
 parser.add_argument('-id', type=str, required=True,
                     help='target-ID for processed files')
 parser.add_argument('-s', '--source_dir', type=str, required=True,
@@ -31,7 +31,7 @@ parser.add_argument('-l', '--language', type=str, required=True,
 parser.add_argument('-f', '--force', action='store_true',
                     help='(optional) force override existing files. Default: False')
 parser.add_argument('-x', '--synthesize', action='store_true',
-                    help='create synthesized data')
+                    help='whether to create synthesized data')
 parser.add_argument('-num', '--include_numeric', action='store_true', default=False,
                     help='(optional) whether to include transcripts with numeric chars (default: False)')
 parser.add_argument('-min', '--min_duration', nargs='?', type=int, default=0,
@@ -135,18 +135,10 @@ def split_speech_segments(subset, corpus_id, subset_id, target_dir, synthesize, 
     for i, segment in enumerate(progress):
         segment_id = f'{corpus_id}-{subset_id}-{i:0=4d}'
         wav_path = f'{segment_id}.wav'
-        txt_path = f'{segment_id}.txt'
-
         wav_path_absolute = join(target_dir, wav_path)
-        txt_path_absolute = join(target_dir, txt_path)
 
         if not exists(wav_path_absolute) or not getsize(wav_path_absolute) or force:
             sf.write(wav_path_absolute, segment.audio, segment.rate, subtype='PCM_16')
-
-        if not exists(txt_path_absolute) or not getsize(txt_path_absolute) or force:
-            with open(txt_path_absolute, 'w') as f:
-                transcript = f'{segment.start_frame} {segment.end_frame} {segment.transcript}'
-                f.write(transcript)
 
         segments.append((segment_id, segment.audio, segment.rate, segment.transcript))
         files.append((wav_path, getsize(wav_path_absolute), segment.duration, segment.transcript))

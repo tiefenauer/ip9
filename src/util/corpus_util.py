@@ -13,12 +13,15 @@ def get_corpus(corpus_id_or_file, language=None):
     if corpus_id_or_file == 'rl' or 'readylingua' in corpus_id_or_file:
         index_csv = join(corpus_root, 'index.csv')
         corpus = ReadyLinguaCorpus(index_csv)
+        corpus = corpus(languages=language)
     elif corpus_id_or_file == 'ls' or 'librispeech' in corpus_id_or_file:
         index_csv = join(corpus_root, 'index.csv')
         corpus = LibriSpeechCorpus(index_csv)
+        corpus = corpus(languages=language)
     elif corpus_id_or_file == 'pc' or 'podclub' in corpus_id_or_file:
         index_csv = join(corpus_root, 'index.csv')
         corpus = PodClubCorpus(index_csv)
+        corpus = corpus(languages=language)
     elif corpus_id_or_file == 'cv' or 'cv_corpus_v1' in corpus_id_or_file or 'cv' in corpus_id_or_file:
         train_csv = join(corpus_root, 'cv-valid-train-rel.csv')
         dev_csv = join(corpus_root, 'cv-valid-dev-rel.csv')
@@ -26,8 +29,6 @@ def get_corpus(corpus_id_or_file, language=None):
         corpus = DeepSpeechCorpus(language, train_csv, dev_csv, test_csv)
     else:
         raise ValueError(f'ERROR: could not determine corpus id from {corpus_id_or_file}')
-    if language:
-        return corpus(languages=language)
     return corpus
 
 

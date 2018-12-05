@@ -14,7 +14,7 @@ from core.decoder import BestPathDecoder, BeamSearchDecoder
 from corpus.alignment import Voice
 from util.asr_util import infer_batches_keras, extract_best_transcript
 from util.audio_util import to_wav, read_pcm16_wave, ms_to_frames
-from util.lsa_util import needle_wunsch
+from util.gsa_util import needle_wunsch
 from util.pipeline_util import create_alignments_dataframe
 from util.rnn_util import load_keras_model, load_ds_model
 from util.string_util import normalize

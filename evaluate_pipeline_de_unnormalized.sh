@@ -19,6 +19,7 @@ done
 if [[ "$force_realignment" = false ]]; then
     force_realignment=""
 else
+    echo "Forcing re-alignment"
     force_realignment="--force_realignment"
 fi
 
@@ -32,6 +33,7 @@ echo ${me} > ${target_dir}/${me}.log
 cd ./src/
 python3 evaluate_pipeline_de.py \
     --keras_path /media/D1/daniel.tiefenauer/_runs/lc_rl_de_wiki_synth_dropouts/1000_min \
-    ${force_realignment}
+    ${force_realignment} \
+    --align_endings \
     --gpu ${gpu} \
     --target_dir ${target_dir} | tee ${target_dir}/${me}.log

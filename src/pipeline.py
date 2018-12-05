@@ -52,10 +52,10 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
         df_alignments = pd.read_csv(alignments_csv, header=0, index_col=0)
     else:
         if ds_path:
-            print(f'using DeepSpeech model')
+            print(f'Using DS model at {ds_path}, saving results in {target_dir}')
             transcripts = asr_ds(voiced_segments, sample_rate, ds_path, ds_alpha_path, lm_path, ds_trie_path)
         else:
-            print(f'using simplified Keras model')
+            print(f'Using simplified Keras model at {keras_path}, saving results in {target_dir}')
             transcripts = asr_keras(voiced_segments, language, sample_rate, keras_path, lm, vocab)
 
         df_alignments = create_alignments_dataframe(voiced_segments, transcripts, sample_rate)
@@ -71,6 +71,7 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
     else:
         print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')
         alignments = gsa(transcript, df_alignments['transcript'].tolist())
+        print(len(alignments))
 
         df_alignments['alignment'] = [a['text'] for a in alignments]
         df_alignments['text_start'] = [a['start'] for a in alignments]
@@ -98,6 +99,7 @@ def preprocess(audio_path, transcript_path, language=None):
         transcript: normalized transcript (normalization depends on language!)
         language: inferred language (if argument was omitted), else unchanged argument
     """
+    print("""PIPELINE STAGE #1 (preprocessing): Converting audio to 16-bit PCM wave and normalizing transcript""")
     extension = splitext(audio_path)[-1]
     if extension not in ['.wav', '.mp3']:
         raise ValueError(f'ERROR: can only handle MP3 and WAV files!')
@@ -127,6 +129,7 @@ def preprocess(audio_path, transcript_path, language=None):
         language = langdetect.detect(transcript)
         print(f'detected language from transcript: {language}')
 
+    print(f"""STAGE #1 COMPLETED: Got {len(audio_bytes)} audio samples and {len(transcript)} labels""")
     return audio_bytes, rate, transcript, language
 
 
@@ -139,6 +142,7 @@ def vad(audio_bytes, sample_rate):
     :param sample_rate: sampling rate
     :return: a list of voiced segments
     """
+    print("""PIPELINE STAGE #2 (VAD): splitting input audio into voiced segments""")
     voiced_segments = []
     for voice_frames, voice_rate in webrtc_split(audio_bytes, sample_rate, aggressiveness=3):
         voice_bytes = b''.join([f.bytes for f in voice_frames])
@@ -149,6 +153,7 @@ def vad(audio_bytes, sample_rate):
         start_frame = ms_to_frames(start_time * 1000, sample_rate)
         end_frame = ms_to_frames(end_time * 1000, sample_rate)
         voiced_segments.append(Voice(voice_audio, voice_rate, start_frame, end_frame))
+    print(f"""STAGE #2 COMPLETED: Got {len(voiced_segments)} segments.""")
     return voiced_segments
 
 

@@ -44,18 +44,12 @@ def main(args):
     lm = load_lm(lm_path) if lm_path else None
     vocab = load_vocab(vocab_path) if vocab_path else None
 
-    print("""PIPELINE STAGE #1 (preprocessing): Converting audio to 16-bit PCM wave and normalizing transcript""")
     audio_bytes, sample_rate, transcript, language = preprocess(audio_file, transcript_file, 'en')
-    print(f"""STAGE #1 COMPLETED: Got {len(audio_bytes)} audio samples and {len(transcript)} labels""")
-
-    print("""PIPELINE STAGE #2 (VAD): splitting input audio into voiced segments""")
     voiced_segments = vad(audio_bytes, sample_rate)
-    print(f"""STAGE #2 COMPLETED: Got {len(voiced_segments)} segments.""")
-
-    print(f'Running pipeline')
     df_alignments = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                              language='en',
                              keras_path=keras_path, lm=lm, vocab=vocab,
+                             force_realignment=True,
                              target_dir=target_dir)
 
     df_stats = calculate_stats(df_alignments, ds_path, transcript)

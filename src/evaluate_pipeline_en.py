@@ -78,15 +78,8 @@ def main(args):
         target_dir_ds = join(target_dir, demo_id + '_ds')
         target_dir_keras = join(target_dir, demo_id + '_keras')
 
-        print("""PIPELINE STAGE #1 (preprocessing): Converting audio to 16-bit PCM wave and normalizing transcript""")
         audio_bytes, sample_rate, transcript, language = preprocess(audio_file, transcript_file, 'en')
-        print(f"""STAGE #1 COMPLETED: Got {len(audio_bytes)} audio samples and {len(transcript)} labels""")
-
-        print("""PIPELINE STAGE #2 (VAD): splitting input audio into voiced segments""")
         voiced_segments = vad(audio_bytes, sample_rate)
-        print(f"""STAGE #2 COMPLETED: Got {len(voiced_segments)} segments.""")
-
-        print(f'Running pipeline using DS model at {ds_path}, saving results in {target_dir_ds}')
 
         df_alignments_ds = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                                     language='en',
@@ -96,7 +89,6 @@ def main(args):
         df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
         create_demo_files(target_dir_ds, audio_file, transcript, df_alignments_ds, df_stats_ds)
 
-        print(f'Running pipeline using Keras model at {keras_path}, saving results in {target_dir_keras}')
         df_alignments_keras = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                                        language='en',
                                        keras_path=keras_path, lm=lm, vocab=vocab,

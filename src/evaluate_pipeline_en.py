@@ -62,7 +62,7 @@ parser.add_argument('--align_endings', action='store_true',
                     help='align endings of partial transcripts, not just beginnings. If set to True, transcript may'
                          'contain unaligned parts between alignments. If set to False, each alignment ends where the'
                          'next one starts.')
-parser.add_argument('--normalize_transcript', action='store_true',
+parser.add_argument('--norm_transcript', action='store_true',
                     help='Normalize transcript before alignment. If set to True, the alignments will be more accurate'
                          'because the transcript does not contain any punctuation, annotations and other clutter. '
                          'However, this might not reflect how the pipeline will be used. If set to False, the '

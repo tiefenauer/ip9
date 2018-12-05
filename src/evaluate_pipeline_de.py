@@ -82,7 +82,7 @@ def main(args):
         with open(entry.transcript_path, encoding='utf-8') as f:
             transcript = f.read()
             if args.norm_transcript:
-                transcript = normalize(transcript)
+                transcript = normalize(transcript, 'de')
 
         demo_id = splitext(basename(audio_file))[0]
         target_dir_entry = join(target_dir, demo_id)

@@ -74,7 +74,6 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
     else:
         print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')
         alignments = gsa(transcript, df_alignments['transcript'].tolist(), align_endings=align_endings)
-        print(len(alignments))
 
         df_alignments['alignment'] = [a['text'] for a in alignments]
         df_alignments['text_start'] = [a['start'] for a in alignments]
@@ -129,7 +128,7 @@ def preprocess(audio_path, transcript_path, language=None, norm_transcript=False
     with open(transcript_path, 'r') as f:
         transcript = f.read()
         if norm_transcript:
-            transcript = normalize(transcript)
+            transcript = normalize(transcript, language)
 
     if not language:
         language = langdetect.detect(transcript)

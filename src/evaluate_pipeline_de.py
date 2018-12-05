@@ -94,7 +94,6 @@ def main(args):
             print(f'found inferences from previous run in {alignments_csv}')
             df_alignments = pd.read_csv(alignments_csv, header=0, index_col=0).replace(np.nan, '')
         else:
-            print(f'Running pipeline using Keras model at {keras_path}, saving results in {target_dir_entry}')
             voiced_segments = [Voice(s.audio, s.rate, s.start_frame, s.end_frame) for s in entry]
             df_alignments = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                                      language='de',

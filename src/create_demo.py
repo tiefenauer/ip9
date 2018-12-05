@@ -29,6 +29,20 @@ parser.add_argument('--lm_path', type=str,
                     help=f'path to directory with KenLM binary model to use for inference')
 parser.add_argument('--vocab_path', type=str, required=False,
                     help=f'(optional) Path to vocabulary for LM')
+parser.add_argument('--force_realignment', type=bool, default=False,
+                    help='force realignment of partial transcript with original transcript, even if alignment'
+                         'information is available from previous runs.')
+parser.add_argument('--align_endings', type=bool, default=True,
+                    help='align endings of partial transcripts, not just beginnings. If set to True, transcript may'
+                         'contain unaligned parts between alignments. If set to False, each alignment ends where the'
+                         'next one starts.')
+parser.add_argument('--normalize_transcript', type=bool, default=False,
+                    help='Normalize transcript before alignment. If set to True, the alignments will be more accurate'
+                         'because the transcript does not contain any punctuation, annotations and other clutter. '
+                         'However, this might not reflect how the pipeline will be used. If set to False, the '
+                         'partial transcripts will be aligned will be aligned with the original transcript as-is, '
+                         'resulting in possibly less accurate alignments, but the original transcript will not be '
+                         'changed')
 parser.add_argument('--target_dir', type=str, nargs='?', help=f'path to write stats file to')
 parser.add_argument('--gpu', type=str, required=False, default=None,
                     help='(optional) GPU(s) to use for training. If not set, you will be asked at runtime.')
@@ -37,29 +51,22 @@ args = parser.parse_args()
 
 def main(args):
     print(create_args_str(args))
-    lang, audio_file, transcript_file, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, vocab_path, target_dir, gpu = setup(
-        args)
-    print(f'all artefacts will be saved to {target_dir}')
+    lang, audio, trans, keras, ds, ds_alpha, ds_trie, lm, vocab, target_dir, normalize, gpu = setup(args)
+    print(f'all artifacts will be saved to {target_dir}')
 
-    lm = load_lm(lm_path) if lm_path else None
-    vocab = load_vocab(vocab_path) if vocab_path else None
+    lm = load_lm(lm) if lm else None
+    vocab = load_vocab(vocab) if vocab else None
 
-    print("""PIPELINE STAGE #1 (preprocessing): Converting audio to 16-bit PCM wave and normalizing transcript""")
-    audio_bytes, sample_rate, transcript, language = preprocess(audio_file, transcript_file, 'en')
-    print(f"""STAGE #1 COMPLETED: Got {len(audio_bytes)} audio samples and {len(transcript)} labels""")
-
-    print("""PIPELINE STAGE #2 (VAD): splitting input audio into voiced segments""")
+    audio_bytes, sample_rate, transcript, language = preprocess(audio, trans, 'en', norm_transcript=normalize)
     voiced_segments = vad(audio_bytes, sample_rate)
-    print(f"""STAGE #2 COMPLETED: Got {len(voiced_segments)} segments.""")
-
-    print(f'Running pipeline')
     df_alignments = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                              language='en',
-                             keras_path=keras_path, lm=lm, vocab=vocab,
+                             keras_path=keras, lm=lm, vocab=vocab,
+                             force_realignment=args.force_realignment, align_endings=args.align_endings,
                              target_dir=target_dir)
 
-    df_stats = calculate_stats(df_alignments, ds_path, transcript)
-    create_demo_files(target_dir, audio_file, transcript, df_alignments, df_stats)
+    df_stats = calculate_stats(df_alignments, ds, transcript)
+    create_demo_files(target_dir, audio, transcript, df_alignments, df_stats)
 
     print()
     print_dataframe(df_stats)
@@ -107,7 +114,7 @@ def setup(args):
         if args.language and args.language not in ['en', 'de', 'fr', 'it', 'es']:
             raise ValueError('ERROR: Language must be either en or de')
 
-    return args.language, audio_path, transcript_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, vocab_path, target_dir, gpu
+    return args.language, audio_path, transcript_path, keras_path, ds_path, ds_alpha_path, ds_trie_path, lm_path, vocab_path, target_dir, args.normalize, gpu
 
 
 if __name__ == '__main__':

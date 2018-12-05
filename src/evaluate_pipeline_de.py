@@ -4,6 +4,7 @@ import os
 from pattern3.metrics import levenshtein_similarity
 
 from corpus.alignment import Voice
+from util.string_util import normalize
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 from os import makedirs
@@ -38,6 +39,20 @@ parser.add_argument('--lm_path', type=str, required=False,
 parser.add_argument('--vocab_path', type=str, required=False,
                     help=f'(optional) Path to vocabulary file to use for spell checker.'
                     f'If not set you will be asked at runtime.')
+parser.add_argument('--force_realignment', type=bool, default=False,
+                    help='force realignment of partial transcript with original transcript, even if alignment'
+                         'information is available from previous runs.')
+parser.add_argument('--align_endings', type=bool, default=True,
+                    help='align endings of partial transcripts, not just beginnings. If set to True, transcript may'
+                         'contain unaligned parts between alignments. If set to False, each alignment ends where the'
+                         'next one starts.')
+parser.add_argument('--norm_transcript', type=bool, default=False,
+                    help='Normalize transcript before alignment. If set to True, the alignments will be more accurate'
+                         'because the transcript does not contain any punctuation, annotations and other clutter. '
+                         'However, this might not reflect how the pipeline will be used. If set to False, the '
+                         'partial transcripts will be aligned will be aligned with the original transcript as-is, '
+                         'resulting in possibly less accurate alignments, but the original transcript will not be '
+                         'changed')
 parser.add_argument('--gpu', type=str, required=False, default=None,
                     help='(optional) GPU(s) to use for training. If not set, you will be asked at runtime.')
 args = parser.parse_args()
@@ -63,8 +78,11 @@ def main(args):
     for i, entry in enumerate(test_entries):
         print(f'entry {i + 1}/{len(test_entries)}')
         audio_file = entry.audio_path
-        transcript = open(entry.transcript_path, encoding='utf-8').read()
         sample_rate = entry.rate
+        with open(entry.transcript_path, encoding='utf-8') as f:
+            transcript = f.read()
+            if args.norm_transcript:
+                transcript = normalize(transcript)
 
         demo_id = splitext(basename(audio_file))[0]
         target_dir_entry = join(target_dir, demo_id)
@@ -81,6 +99,7 @@ def main(args):
             df_alignments = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                                      language='de',
                                      keras_path=keras_path, lm=lm, vocab=vocab,
+                                     force_realignment=args.force_realignment, align_endings=args.align_endings,
                                      target_dir=target_dir_entry)
             if target_dir:
                 print(f'saving alignments to {alignments_csv}')

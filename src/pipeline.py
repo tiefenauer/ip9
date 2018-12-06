@@ -12,7 +12,6 @@ from tqdm import tqdm
 from core.batch_generator import VoiceSegmentsBatchGenerator
 from core.decoder import BestPathDecoder, BeamSearchDecoder
 from corpus.alignment import Voice
-from evaluate_pipeline_en import already_processed
 from util.asr_util import infer_batches_keras, extract_best_transcript
 from util.audio_util import to_wav, read_pcm16_wave, ms_to_frames
 from util.gsa_util import needle_wunsch
@@ -21,6 +20,46 @@ from util.rnn_util import load_keras_model, load_ds_model
 from util.string_util import normalize
 from util.vad_util import webrtc_split
 
+already_processed = """1180_ds
+1180_keras
+3979_ds
+3979_keras
+5694_ds
+5694_keras
+13751_ds
+13754_ds
+29093_ds
+29093_keras
+33396_ds
+33396_keras
+41806_ds
+41806_keras
+75946_ds
+75946_keras
+79759_ds
+79759_keras
+92135_ds
+92135_keras
+123440_ds
+123440_keras
+123852_ds
+123852_keras
+123859_ds
+123859_keras
+131720_ds
+131720_keras
+134647_ds
+134647_keras
+134686_ds
+134686_keras
+135766_ds
+135766_keras
+274381_ds
+274381_keras
+274384_ds
+274384_keras
+294825_ds
+294825_keras""".split()
 
 def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path=None, ds_path=None, ds_alpha_path=None,
              ds_trie_path=None, lm_path=None, lm=None, vocab=None, target_dir=None, force_realignment=False,

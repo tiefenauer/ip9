@@ -19,6 +19,47 @@ from util.pipeline_util import query_asr_params, calculate_stats, create_demo_fi
 from util.rnn_util import query_gpu
 from util.visualization_util import visualize_pipeline_performance
 
+already_processed = """1180_ds
+1180_keras
+3979_ds
+3979_keras
+5694_ds
+5694_keras
+13751_ds
+13754_ds
+29093_ds
+29093_keras
+33396_ds
+33396_keras
+41806_ds
+41806_keras
+75946_ds
+75946_keras
+79759_ds
+79759_keras
+92135_ds
+92135_keras
+123440_ds
+123440_keras
+123852_ds
+123852_keras
+123859_ds
+123859_keras
+131720_ds
+131720_keras
+134647_ds
+134647_keras
+134686_ds
+134686_keras
+135766_ds
+135766_keras
+274381_ds
+274381_keras
+274384_ds
+274384_keras
+294825_ds
+294825_keras""".split()
+
 parser = argparse.ArgumentParser(description="""
     Evaluate the performance of a pipeline by calculating the following values for each entry in a test set:
     - C: length of unaligned text (normalized by dividing by total length of ground truth)

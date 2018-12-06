@@ -1,7 +1,7 @@
 from functools import reduce
 from genericpath import exists
 from os import remove, makedirs
-from os.path import splitext, join
+from os.path import splitext, join, basename
 
 import langdetect
 import numpy as np
@@ -12,6 +12,7 @@ from tqdm import tqdm
 from core.batch_generator import VoiceSegmentsBatchGenerator
 from core.decoder import BestPathDecoder, BeamSearchDecoder
 from corpus.alignment import Voice
+from evaluate_pipeline_en import already_processed
 from util.asr_util import infer_batches_keras, extract_best_transcript
 from util.audio_util import to_wav, read_pcm16_wave, ms_to_frames
 from util.gsa_util import needle_wunsch
@@ -69,7 +70,7 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
     print(f"""STAGE #3 COMPLETED: Saved transcript to {alignments_csv}""")
 
     print("""PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript""")
-    if 'alignment' in df_alignments.keys() and not force_realignment:
+    if basename(target_dir) in already_processed or 'alignment' in df_alignments.keys() and not force_realignment:
         print(f'transcripts are already aligned')
     else:
         print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')

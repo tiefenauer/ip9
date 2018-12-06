@@ -8,7 +8,7 @@ Code for my master thesis at FHNW. The thesis suggests a pipeline with the follo
 
 The main idea behind this is that the GSA stage only needs very low-quality transcripts in order to work. Such transcripts can be obtained from a simple ASR system that only requires very little training data (compared to an ASR system trained for speech recognition).  
 
-This repository contains everything needed to build and run the _Forced Alignment_ pipeline. See [the project report](./doc/p9_tiefenauer.pdf) for details. 
+This repository contains everything needed to build and run the _Forced Alignment_ pipeline. See [the project report](./doc/p9_tiefenauer.pdf) for details. A shorter version can be downloaded as [a paper draft](./paper/p9_tiefenauer_paper.pdf).
 
 ## Setup
 The code was created to run on Linux (18.04 LTS). Other platforms like Windows are not supported. Some of the code might run on those platforms, but this can not be guaranteed. Some dependencies like [DeepSpeech](https://github.com/mozilla/DeepSpeech) are known to work only on Unix based systems. 

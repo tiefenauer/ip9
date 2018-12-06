@@ -145,6 +145,11 @@ def main(args):
     print(f'Done! Demos have been saved to {target_dir}')
 
 
+do_not_align = """
+85628
+13754""".split()
+
+
 def setup(args):
     if not args.source_dir and not args.corpus:
         raise ValueError('ERROR: Either --source_dir or --corpus must be set!')
@@ -161,8 +166,9 @@ def setup(args):
         target_dir = abspath(args.target_dir) if args.target_dir else source_dir
         demo_files = []
         for audio_file in chain.from_iterable(glob(e) for e in (f'{source_dir}/*.{ext}' for ext in ('mp3', 'wav'))):
-            transcript_file = splitext(audio_file)[0] + '.txt'
-            if exists(transcript_file):
+            demo_id = splitext(audio_file)[0]
+            transcript_file = demo_id + '.txt'
+            if exists(transcript_file) and demo_id not in do_not_align:
                 print(f'adding: {basename(audio_file)} / {basename(transcript_file)}')
                 demo_files.append((audio_file, transcript_file))
 

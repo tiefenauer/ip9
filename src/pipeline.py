@@ -20,46 +20,47 @@ from util.rnn_util import load_keras_model, load_ds_model
 from util.string_util import normalize
 from util.vad_util import webrtc_split
 
-already_processed = """1180_ds
-1180_keras
-3979_ds
-3979_keras
-5694_ds
-5694_keras
-13751_ds
-13754_ds
-29093_ds
-29093_keras
-33396_ds
-33396_keras
-41806_ds
-41806_keras
-75946_ds
-75946_keras
-79759_ds
-79759_keras
-92135_ds
-92135_keras
-123440_ds
-123440_keras
-123852_ds
-123852_keras
-123859_ds
-123859_keras
-131720_ds
-131720_keras
-134647_ds
-134647_keras
-134686_ds
-134686_keras
-135766_ds
-135766_keras
-274381_ds
-274381_keras
-274384_ds
-274384_keras
-294825_ds
-294825_keras""".split()
+
+# 1180_ds
+# 1180_keras
+# 3979_ds
+# 3979_keras
+# 5694_ds
+# 5694_keras
+# 13751_ds
+# 13754_ds
+# 29093_ds
+# 29093_keras
+# 33396_ds
+# 33396_keras
+# 41806_ds
+# 41806_keras
+# 75946_ds
+# 75946_keras
+# 79759_ds
+# 79759_keras
+# 92135_ds
+# 92135_keras
+# 123440_ds
+# 123440_keras
+# 123852_ds
+# 123852_keras
+# 123859_ds
+# 123859_keras
+# 131720_ds
+# 131720_keras
+# 134647_ds
+# 134647_keras
+# 134686_ds
+# 134686_keras
+# 135766_ds
+# 135766_keras
+# 274381_ds
+# 274381_keras
+# 274384_ds
+# 274384_keras
+# 294825_ds
+# 294825_keras
 
 def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path=None, ds_path=None, ds_alpha_path=None,
              ds_trie_path=None, lm_path=None, lm=None, vocab=None, target_dir=None, force_realignment=False,
@@ -109,7 +110,7 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
     print(f"""STAGE #3 COMPLETED: Saved transcript to {alignments_csv}""")
 
     print("""PIPELINE STAGE #4 (GSA): aligning partial transcripts with full transcript""")
-    if basename(target_dir) in already_processed or 'alignment' in df_alignments.keys() and not force_realignment:
+    if 'alignment' in df_alignments.keys() and not force_realignment:
         print(f'transcripts are already aligned')
     else:
         print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')

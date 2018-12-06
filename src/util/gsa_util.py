@@ -5,6 +5,8 @@ import itertools
 
 import numpy as np
 
+from util.string_util import alphabet_with_umlauts
+
 
 def needle_wunsch(str_1, str_2, boundaries, match_score=10, mismatch_score=-5, gap_score=-5, align_endings=True):
     """
@@ -88,8 +90,12 @@ def needle_wunsch(str_1, str_2, boundaries, match_score=10, mismatch_score=-5, g
 
             i_end = None
             i_start = None if align_endings else i_start
-            boundaries.remove((j_start, j_end))
-            j_start, j_end = boundaries[-1] if boundaries else (None, None)
+            j_start, j_end = boundaries.pop() if boundaries else (None, None)
+
+    if boundaries:
+        i_start = 0
+        i_end = alignments[0]['start']
+        alignments.insert(0, {'start': 0, 'end': i_end, 'text': str_1[i_start:i_end]})
 
     while j > 0:
         source_str = '-' + source_str
@@ -119,9 +125,9 @@ def snap_right(ix, text):
 
 def snap_to_closest_word_boundary(ix, text):
     left, right = 0, 0
-    while ix - left > 0 and text[ix - left - 1] not in [' ', '\n']:
+    while ix - left > 0 and text[ix - left - 1] in alphabet_with_umlauts:
         left += 1
-    while ix + right < len(text) and text[ix + right] not in [' ', '\n']:
+    while ix + right < len(text) and text[ix + right] in alphabet_with_umlauts:
         right += 1
 
     return max(ix - left, 0) if left <= right else min(ix + right, len(text))

@@ -167,9 +167,10 @@ def setup(args):
         target_dir = abspath(args.target_dir) if args.target_dir else source_dir
         demo_files = []
         for audio_file in chain.from_iterable(glob(e) for e in (f'{source_dir}/*.{ext}' for ext in ('mp3', 'wav'))):
-            demo_id = splitext(basename(audio_file))[0]
+            # demo_id = splitext(basename(audio_file))[0]
             transcript_file = splitext(audio_file)[0] + '.txt'
-            if exists(transcript_file) and demo_id not in do_not_align:
+            # if exists(transcript_file) and demo_id not in do_not_align:
+            if exists(transcript_file):
                 print(f'adding: {basename(audio_file)} / {basename(transcript_file)}')
                 demo_files.append((audio_file, transcript_file))
 

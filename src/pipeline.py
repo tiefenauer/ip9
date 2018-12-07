@@ -115,6 +115,9 @@ def pipeline(voiced_segments, sample_rate, transcript, language=None, keras_path
     else:
         print(f'aligning transcript with {len(df_alignments)} transcribed voice segments')
         alignments = gsa(transcript, df_alignments['transcript'].tolist(), align_endings=align_endings)
+        print(f'got {len(alignments)} alignments')
+        while len(alignments) < len(df_alignments):
+            alignments.insert(0, {'start': 0, 'end': 0, 'text': ''})
 
         df_alignments['alignment'] = [a['text'] for a in alignments]
         df_alignments['text_start'] = [a['start'] for a in alignments]

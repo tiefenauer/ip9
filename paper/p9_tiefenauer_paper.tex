@@ -7,7 +7,7 @@
 
 % Tables
 \usepackage{array}
-\usepackage{booktabs}
+\usepackage{multirow,booktabs}
 \usepackage{colortbl}
 
 \title{Speech-To-Text Engine for Forced Alignment}
@@ -147,17 +147,17 @@ The quality of the alignments was measured by calculating the precision ($P$) of
 
 \begin{table*}[h!]
 	\centering
-	\begin{tabular}{@{}rrrrcrrrcrrr@{}}
+	\begin{tabular}{@{}rrrrcrrrcrrrcrrr@{}}
 		\toprule
-		& \multicolumn{2}{c}{$P$} & \phantom{abc} & \multicolumn{2}{c}{$R$} & \phantom{abc} & \multicolumn{2}{c}{$F$} \\
-		\cmidrule{2-3} \cmidrule{5-6} \cmidrule{8-9} 
-		& mean & median && mean & median && mean & median\\ 
+		& \multicolumn{2}{c}{$P$} & \phantom{abc} & \multicolumn{2}{c}{$R$} & \phantom{abc} & \multicolumn{2}{c}{$F$} & \phantom{abc} & \multicolumn{2}{c}{Similarity}\\
+		\cmidrule{2-3} \cmidrule{5-6} \cmidrule{8-9} \cmidrule{11-12}
+		& mean & median && mean & median && mean & median && mean & median\\ 
 		\midrule
-		\textbf{Reference pipeline} & 0.865 & 0.879 && 0.999 & 1.0 && 0.926 & 0.935 \\
+		\textbf{Reference pipeline} & 0.865 & 0.879 && 0.999 & 1.0 && 0.926 & 0.935 && \multirow{2}{*}{0.887} & \multirow{2}{*}{0.909} \\
 		\textbf{Simplified pipeline} & 0.435 & 0.443 && 0.999 & 1.0 && 0.602 & 0.614 \\
 		\bottomrule
 	\end{tabular}
-	\caption{Average Precision ($P$), Recall ($R$) and F-Score ($F$) of alignments produced over all test samples for a pipeline using the reference model in the ASR stage compared to the results of the same pipeline using a simplified model}
+	\caption{Average Precision ($P$), Recall ($R$) and F-Score ($F$) of alignments produced over all test samples for a pipeline using the reference model in the ASR stage compared to the results of the same pipeline using a simplified model}. The last column shows the \textit{Levenshtein Similarity} between alignments produced by both pipelines. The mean/median values of around 0.9 suggest the alignments are almost identical, despite the simplified model having significantly higher LER rates.
 	\label{prf_en}
 \end{table*}
 

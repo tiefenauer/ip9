@@ -168,8 +168,7 @@ def setup(args):
         demo_files = []
         for audio_file in chain.from_iterable(glob(e) for e in (f'{source_dir}/*.{ext}' for ext in ('mp3', 'wav'))):
             demo_id = splitext(basename(audio_file))[0]
-            print(demo_id)
-            transcript_file = demo_id + '.txt'
+            transcript_file = splitext(audio_file) + '.txt'
             if exists(transcript_file) and demo_id not in do_not_align:
                 print(f'adding: {basename(audio_file)} / {basename(transcript_file)}')
                 demo_files.append((audio_file, transcript_file))

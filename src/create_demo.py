@@ -61,6 +61,7 @@ def main(args):
     voiced_segments = vad(audio_bytes, sample_rate)
     df_alignments = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                              language='en',
+                             ds_path=ds, ds_alpha_path=ds_alpha, ds_trie_path=ds_trie,
                              keras_path=keras, lm=lm, vocab=vocab,
                              force_realignment=args.force_realignment, align_endings=args.align_endings,
                              target_dir=target_dir)

@@ -34,7 +34,7 @@
             let textEnd = alignment.text_end;
             let inference = alignment.transcript;
 
-            if (alignment.text_start > prevEnd + 1) { // single spaces between are never aligned
+            if (alignment.text_start > prevEnd && transcript.substring(prevEnd, textStart) !== " ") {
                 let unalignedText = transcript.substring(prevEnd, textStart)
                     .replace(/(?:\r\n|\r|\n)/g, '<br/>')
                     .trim();

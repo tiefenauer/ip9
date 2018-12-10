@@ -16,7 +16,7 @@ from util.audio_util import frame_to_ms
 from util.lm_util import ler_norm
 
 
-def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, df_stats):
+def create_demo_files(target_dir, audio_src_path, transcript, df_alignments, df_stats):
     audio_dst_path = join(target_dir, 'audio.mp3')
     copyfile(audio_src_path, audio_dst_path)
     print(f'saved audio to {audio_dst_path}')
@@ -26,14 +26,14 @@ def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, df
         f.write(transcript)
     print(f'saved transcript to {transcript_path}')
 
-    json_data = create_alignment_json(df_transcripts)
+    json_data = create_alignment_json(df_alignments)
     alignment_json_path = join(target_dir, 'alignment.json')
     with open(alignment_json_path, 'w', encoding='utf-8') as f:
         json.dump(json_data, f, indent=2, ensure_ascii=False)
     print(f'saved alignment information to {alignment_json_path}')
 
     demo_id = basename(target_dir)
-    add_demo_to_index(target_dir, demo_id, df_stats)
+    add_demo_to_index(target_dir, demo_id, df_alignments, df_stats)
     create_demo_index(target_dir, demo_id, audio_src_path, transcript, df_stats)
 
     assets_dir = join(ASSETS_DIR, 'demo')
@@ -83,7 +83,7 @@ def create_demo_index(target_dir, demo_id, audio_src_path, transcript, df_stats)
     return demo_index_path
 
 
-def add_demo_to_index(target_dir, demo_id, df_stats):
+def add_demo_to_index(target_dir, demo_id, df_alignments, df_stats):
     index_path = join(join(target_dir, pardir), 'index.html')
     if not exists(index_path):
         copyfile(join(ASSETS_DIR, '_index_template.html'), index_path)
@@ -102,27 +102,47 @@ def add_demo_to_index(target_dir, demo_id, df_stats):
 
         precision = df_stats.loc[0, 'precision']
         td = soup.new_tag('td')
-        td.string = f'{precision:.4f}'
+        td.string = f'{precision:.3f}'
         tr.append(td)
 
         recall = df_stats.loc[0, 'recall']
         td = soup.new_tag('td')
-        td.string = f'{recall:.4f}'
+        td.string = f'{recall:.3f}'
         tr.append(td)
 
         f_score = df_stats.loc[0, 'f-score']
         td = soup.new_tag('td')
-        td.string = f'{f_score:.4f}'
+        td.string = f'{f_score:.3f}'
         tr.append(td)
 
         ler = df_stats.loc[0, 'LER']
         td = soup.new_tag('td')
-        td.string = f'{ler:.4f}'
+        td.string = f'{ler:.3f}'
         tr.append(td)
 
         similarity = df_stats.loc[0, 'similarity']
         td = soup.new_tag('td')
-        td.string = f'{similarity:.4f}'
+        td.string = f'{similarity:.3f}'
+        tr.append(td)
+
+        avg_alignment_length = int(np.mean([len(al) for al in df_alignments['alignment']]))
+        td = soup.new_tag('td')
+        td.string = f'{avg_alignment_length}'
+        tr.append(td)
+
+        n_alignments = df_stats.loc[0, '# alignments']
+        td = soup.new_tag('td')
+        td.string = f'{n_alignments}'
+        tr.append(td)
+
+        n_words = df_stats.loc[0, '# words']
+        td = soup.new_tag('td')
+        td.string = f'{n_words}'
+        tr.append(td)
+
+        n_characters = df_stats.loc[0, '# characters']
+        td = soup.new_tag('td')
+        td.string = f'{n_characters}'
         tr.append(td)
 
         table.append(tr)

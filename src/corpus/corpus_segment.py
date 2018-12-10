@@ -8,7 +8,7 @@ from util.audio_util import ms_to_frames
 
 class Segment(Audible):
     """
-    Base class for audio segments
+    Base class for audio segments (=sample)
     """
     # cache features
     _mag_specgram = None

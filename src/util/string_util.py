@@ -12,6 +12,7 @@ number = re.compile('[0-9]+')
 digit = re.compile('[0-9]')
 not_alphanumeric = re.compile('[^0-9a-zA-Z ]+')
 not_alphanumeric_with_umlauts = re.compile('[^0-9a-zA-Zäöü ]+')
+alphabet_with_umlauts = string.ascii_letters + 'äöüÄÖÜ'
 
 
 def normalize(text, language):

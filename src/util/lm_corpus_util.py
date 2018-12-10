@@ -46,7 +46,7 @@ def check_lm(lm_path, vocab_path, sentence):
         two_gram = ' '.join(words[i + 2 - length:i + 2])
         print(f'{prob} {length}: {two_gram}')
         if oov:
-            print(f'\t\"{words[i+1]}" is an OOV!')
+            print(f'\t\"{words[i + 1]}" is an OOV!')
 
     vocab = set(word for line in open(vocab_path) for word in line.strip().split())
     print(f'loaded vocab with {len(vocab)} unique words')

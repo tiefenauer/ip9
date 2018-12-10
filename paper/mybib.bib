@@ -1,0 +1,145 @@
+@inproceedings{ctc_paper,
+	title = {Connectionist temporal classification: {Labelling} unsegmented sequence data with recurrent neural networks},
+	booktitle = {In {Proceedings} of the {International} {Conference} on {Machine} {Learning}, {ICML} 2006},
+	author = {Graves, Alex and Fernández, Santiago and Gomez, Faustino},
+	year = {2006},
+	pages = {369--376}
+}
+
+@article{deepspeech,
+	author    = {Awni Y. Hannun and
+	Carl Case and
+	Jared Casper and
+	Bryan Catanzaro and
+	Greg Diamos and
+	Erich Elsen and
+	Ryan Prenger and
+	Sanjeev Satheesh and
+	Shubho Sengupta and
+	Adam Coates and
+	Andrew Y. Ng},
+	title     = {Deep Speech: Scaling up end-to-end speech recognition},
+	journal   = {CoRR},
+	volume    = {abs/1412.5567},
+	year      = {2014},
+	url       = {http://arxiv.org/abs/1412.5567},
+	archivePrefix = {arXiv},
+	eprint    = {1412.5567},
+	timestamp = {Mon, 13 Aug 2018 16:48:07 +0200},
+	biburl    = {https://dblp.org/rec/bib/journals/corr/HannunCCCDEPSSCN14},
+	bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@online{mozillajourney,
+	author = {Reuben Morais},
+	title = {A Journey to $<$10\% Word Error Rate},
+	year = 2017,
+	url = "https://hacks.mozilla.org/2017/11/a-journey-to-10-word-error-rate",
+	urldate = {2018-09-14}
+}
+
+@inproceedings{kenlm,
+	author = {Kenneth Heafield},
+	title = {{KenLM:} Faster and Smaller Language Model Queries},
+	year = {2011},
+	month = {July},
+	booktitle = {Proceedings of the {EMNLP} 2011 Sixth Workshop on Statistical Machine Translation},
+	address = {Edinburgh, Scotland, United Kingdom},
+	pages = {187--197},
+	url = {https://kheafield.com/papers/avenue/kenlm.pdf},
+}
+
+@inproceedings{kenlm_estimation,
+	author = {Kenneth Heafield and Ivan Pouzyrevsky and Jonathan H. Clark and Philipp Koehn},
+	title = {Scalable Modified {Kneser-Ney} Language Model Estimation},
+	year = {2013},
+	month = {8},
+	booktitle = {Proceedings of the 51st Annual Meeting of the Association for Computational Linguistics},
+	address = {Sofia, Bulgaria},
+	url = {http://kheafield.com/professional/edinburgh/estimate\_paper.pdf},
+}
+
+@INPROCEEDINGS{nltk,
+	author = {Edward Loper and Steven Bird},
+	title = {NLTK: The Natural Language Toolkit},
+	booktitle = {In Proceedings of the ACL Workshop on Effective Tools and Methodologies for Teaching Natural Language Processing and Computational Linguistics. Philadelphia: Association for Computational Linguistics},
+	year = {2002}
+}
+@book{slp3,
+	author = {Jurafsky, Daniel and Martin, James H.},
+	title = {Speech and Language Processing (Draft of 3rd Edition)},
+	year = {2019},
+	url = {https://web.stanford.edu/~jurafsky/slp3/}
+}
+
+@article{budget,
+	author    = {Julius Kunze and
+	Louis Kirsch and
+	Ilia Kurenkov and
+	Andreas Krug and
+	Jens Johannsmeier and
+	Sebastian Stober},
+	title     = {Transfer Learning for Speech Recognition on a Budget},
+	journal   = {CoRR},
+	volume    = {abs/1706.00290},
+	year      = {2017},
+	url       = {http://arxiv.org/abs/1706.00290},
+	archivePrefix = {arXiv},
+	eprint    = {1706.00290},
+	timestamp = {Mon, 13 Aug 2018 16:48:19 +0200},
+	biburl    = {https://dblp.org/rec/bib/journals/corr/KunzeKKKJS17},
+	bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@inproceedings{raj_lossless,
+	title = {Lossless compression of language model structure and word identifiers},
+	volume = {1},
+	doi = {10.1109/ICASSP.2003.1198799},
+	abstract = {Very large reductions in language model memory requirements have recently been reported for large vocabulary continuous speech recognition applications through the pruning and quantization of the floating-point components of the language model: the probabilities and back-off weights. In this paper that work is extended through the compression of the integer components: the word identifiers and storage structures. A novel algorithm is presented for converting ordered lists of monotonically increasing integer values (such as are commonly found in language models) into variable-bit width tree structures such that the most memory efficient configuration is obtained for each original list. By applying this new technique together with the techniques reported previously we obtain an 86\% reduction in language model size to 10Mb for no increase in word error rate on the DARPA Hub4 1998 task and a 0.5\% absolute increase on the Hub4 1997 task.},
+	booktitle = {2003 {IEEE} {International} {Conference} on {Acoustics}, {Speech}, and {Signal} {Processing}, 2003. {Proceedings}. ({ICASSP} '03).},
+	author = {Raj, B. and Whittaker, E. W. D.},
+	month = apr,
+	year = {2003},
+	keywords = {DARPA Hub4 1998 task, Degradation, Error analysis, Hub4 1997 task, Intrusion detection, Laboratories, N-gram probabilities, Natural languages, Personal communication networks, Quantization, Speech recognition, Tree data structures, Vocabulary, back-off weights, data compression, digital storage, floating-point components pruning, floating-point components quantization, grammars, integer components compression, language model memory reduction, language model size, language model structure, large vocabulary continuous speech recognition, lossless compression, memory efficient configuration, natural languages, probabilities, probability, quantisation (signal), speech coding, speech recognition, storage structures, variable-bit width tree structures, word error rate, word identifiers},
+	pages = {I--I}
+}
+
+@article{batch_size_rnn,
+	author    = {Nitish Shirish Keskar and
+	Dheevatsa Mudigere and
+	Jorge Nocedal and
+	Mikhail Smelyanskiy and
+	Ping Tak Peter Tang},
+	title     = {On Large-Batch Training for Deep Learning: Generalization Gap and
+	Sharp Minima},
+	journal   = {CoRR},
+	volume    = {abs/1609.04836},
+	year      = {2016},
+	url       = {http://arxiv.org/abs/1609.04836},
+	archivePrefix = {arXiv},
+	eprint    = {1609.04836},
+	timestamp = {Mon, 13 Aug 2018 16:46:48 +0200},
+	biburl    = {https://dblp.org/rec/bib/journals/corr/KeskarMNST16},
+	bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@article{wav2letter,
+	author    = {Ronan Collobert and
+	Christian Puhrsch and
+	Gabriel Synnaeve},
+	title     = {Wav2Letter: an End-to-End ConvNet-based Speech Recognition System},
+	journal   = {CoRR},
+	volume    = {abs/1609.03193},
+	year      = {2016},
+	url       = {http://arxiv.org/abs/1609.03193},
+	archivePrefix = {arXiv},
+	eprint    = {1609.03193},
+	timestamp = {Mon, 13 Aug 2018 16:49:12 +0200},
+	biburl    = {https://dblp.org/rec/bib/journals/corr/CollobertPS16},
+	bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+@inproceedings{relu,
+	title={Rectifier Nonlinearities Improve Neural Network Acoustic Models},
+	author={Andrew L. Maas},
+	year={2013}
+}

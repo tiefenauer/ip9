@@ -30,7 +30,7 @@ The following result files are created and will not be removed:
 "
 
 # Defaults
-order=4
+order=5
 language='de'
 data_structure=trie
 target_dir='./lm'

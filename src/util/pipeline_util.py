@@ -28,8 +28,8 @@ def create_demo_files(target_dir, audio_src_path, transcript, df_transcripts, df
 
     json_data = create_alignment_json(df_transcripts)
     alignment_json_path = join(target_dir, 'alignment.json')
-    with open(alignment_json_path, 'w') as f:
-        json.dump(json_data, f, indent=2)
+    with open(alignment_json_path, 'w', encoding='utf-8') as f:
+        json.dump(json_data, f, indent=2, ensure_ascii=False)
     print(f'saved alignment information to {alignment_json_path}')
 
     demo_id = basename(target_dir)
@@ -46,8 +46,10 @@ def create_alignment_json(df_transcripts):
     alignments = [{'id': ix,
                    'transcript': row['transcript'],
                    'text': row['alignment'],
-                   'start': row['audio_start'],
-                   'end': row['audio_end']
+                   'audio_start': row['audio_start'],
+                   'audio_end': row['audio_end'],
+                   'text_start': row['text_start'],
+                   'text_end': row['text_end']
                    } for ix, row in df_transcripts.iterrows()]
     return {'alignments': alignments}
 
@@ -57,7 +59,7 @@ def create_demo_index(target_dir, demo_id, audio_src_path, transcript, df_stats)
     soup = BeautifulSoup(open(template_path), 'html.parser')
     soup.title.string = demo_id
     soup.find(id='demo_title').string = f'Forced Alignment for {demo_id}'
-    soup.find(id='target').string = transcript.replace('\n', ' ')
+    soup.find(id='target').string = transcript
 
     def create_tr(*args):
         tr = soup.new_tag('tr')
@@ -111,6 +113,16 @@ def add_demo_to_index(target_dir, demo_id, df_stats):
         f_score = df_stats.loc[0, 'f-score']
         td = soup.new_tag('td')
         td.string = f'{f_score:.4f}'
+        tr.append(td)
+
+        ler = df_stats.loc[0, 'LER']
+        td = soup.new_tag('td')
+        td.string = f'{ler:.4f}'
+        tr.append(td)
+
+        similarity = df_stats.loc[0, 'similarity']
+        td = soup.new_tag('td')
+        td.string = f'{similarity:.4f}'
         tr.append(td)
 
         table.append(tr)

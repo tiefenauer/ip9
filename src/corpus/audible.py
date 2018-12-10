@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 class Audible(ABC):
     """
-    Base class for corpus objects containing an audio signal
+    Base class for corpus objects that contain an audio signal
     """
 
     @property

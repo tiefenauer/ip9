@@ -88,17 +88,23 @@ def collect_metrics(source_dir):
     return df_metric
 
 
-def plot_loss(df_losses):
-    fig, ax = plt.subplots(figsize=(14, 7))
+def plot_loss(df):
+    fig, axes = plt.subplots(2, 2, figsize=(10, 5), sharex=True, sharey=True)
+    ax_1, ax_10, ax_100, ax_1000 = axes[0][0], axes[0][1], axes[1][0], axes[1][1]
 
-    legend = [f'{mins} ({train_valid})' for mins in
-              ['1 min', '10 mins', '100 mins', '1000 mins'] for train_valid in ['training', 'validation']]
-    styles = [color + line for (color, line) in itertools.product(list('ygbr'), ['-', '--'])]
+    leg = ['training', 'validation']
+    data_1 = df[[('CTC_train', '1_min'), ('CTC_val', '1_min')]]
+    data_10 = df[[('CTC_train', '10_min'), ('CTC_val', '10_min')]]
+    data_100 = df[[('CTC_train', '100_min'), ('CTC_val', '100_min')]]
+    data_1000 = df[[('CTC_train', '1000_min'), ('CTC_val', '1000_min')]]
+    plot_df(data_1, ax=ax_1, styles=['y-', 'y--'], legend=leg, ylabel='loss', title='1 minute')
+    plot_df(data_10, ax=ax_10, styles=['g-', 'g--'], legend=leg, ylabel='loss', title='10 minutes')
+    plot_df(data_100, ax=ax_100, styles=['b-', 'b--'], legend=leg, ylabel='loss', title='100 minutes')
+    plot_df(data_1000, ax=ax_1000, styles=['r-', 'r--'], legend=leg, ylabel='loss', title='1000 minutes')
 
-    plot_df(df_losses, ax=ax, styles=styles, legend=legend, ylabel='loss', title='CTC-Loss')
-
-    fig.tight_layout()
-    return fig, ax
+    fig.suptitle('CTC loss')
+    # fig.tight_layout(rect=[0, 0.03, 1, 0.85])
+    return fig, axes
 
 
 def plot_metric(df_metrics, metric):
@@ -106,7 +112,7 @@ def plot_metric(df_metrics, metric):
     df_greedy = df_metrics[metric, 'greedy']
     df_beam = df_metrics[metric, 'beam']
 
-    fig, (ax_greedy, ax_beam) = plt.subplots(1, 2, figsize=(10, 6), sharey=True)
+    fig, (ax_greedy, ax_beam) = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
 
     legend = [f'{mins}{lm_use}' for mins in ['1 min', '10 mins', '100 mins', '1000 mins'] for lm_use in ['', '+LM']]
     styles = [color + line for (color, line) in itertools.product(list('ygbr'), ['-', '--'])]
@@ -145,26 +151,32 @@ def visualize_pipeline_performance(csv_keras, csv_ds, silent=False):
     The plots will be saved as PNG in the same directory as the CSV
 
     :param csv_keras: path to CSV file containing the data
+    :param csv_ds:
     :param silent: whether to show plots at the end
     """
     suptitle = 'Pipeline evaluation: Simplified Keras model vs. pre-trained DeepSpeech model'
     p_r_f_boxplot_png = join(dirname(csv_keras), f'p_r_f_boxplot.png')
     ler_similarity_png = join(dirname(csv_keras), f'similarity_scatterplot.png')
 
-    df_keras = pd.read_csv(csv_keras)
-    keras_path = df_keras['model path'].unique()[0]
-    df_ds = pd.read_csv(csv_ds)
-    ds_path = df_ds['model path'].unique()[0]
+    df = pd.read_csv(csv_keras)
+    keras_path = df['model path'].unique()[0]
+    df['model path'] = 'Keras'
 
-    df_keras['model path'] = 'Keras'
-    df_ds['model path'] = 'DeepSpeech'
-    df = pd.concat([df_keras, df_ds])
+    if csv_ds:
+        df_ds = pd.read_csv(csv_ds)
+        ds_path = df_ds['model path'].unique()[0]
+        df_ds['model path'] = 'DeepSpeech'
+        df = df.append(df_ds)
+    else:
+        df_ds = None
+        ds_path = ''
 
-    fig, (ax_p, ax_r, ax_f) = plt.subplots(1, 3, figsize=(14, 5))
+    fig, (ax_p, ax_r, ax_f) = plt.subplots(1, 3, figsize=(10, 5))
 
-    df.boxplot('precision', by='model path', ax=ax_p)
-    df.boxplot('recall', by='model path', ax=ax_r)
-    df.boxplot('f-score', by='model path', ax=ax_f)
+    meanprops = dict(marker='.', markeredgecolor='black', markerfacecolor='firebrick')
+    df.boxplot('precision', by='model path', ax=ax_p, showmeans=True, meanprops=meanprops)
+    df.boxplot('recall', by='model path', ax=ax_r, showmeans=True, meanprops=meanprops)
+    df.boxplot('f-score', by='model path', ax=ax_f, showmeans=True, meanprops=meanprops)
 
     ax_p.set_title('Precision')
     ax_r.set_title('Recall')
@@ -175,16 +187,19 @@ def visualize_pipeline_performance(csv_keras, csv_ds, silent=False):
 
     fig.suptitle(suptitle)
     fig.tight_layout(rect=[0, 0.03, 1, 0.85])
-    fig.text(.5, .9, f'DS model: {ds_path}', fontsize=10, ha='center')
+    if ds_path:
+        fig.text(.5, .9, f'DS model: {ds_path}', fontsize=10, ha='center')
     fig.text(.5, .85, f'Keras model: {keras_path}', fontsize=10, ha='center')
     fig.savefig(p_r_f_boxplot_png)
     print(f'saved Precision/Recall/F-Score (Boxplot) to {p_r_f_boxplot_png}')
 
-    fig, (ax_ler, ax_sim) = plt.subplots(1, 2, figsize=(14, 5))
-    df_keras.plot.scatter(x='transcript length', y='LER', c='b', label='Keras', ax=ax_ler)
-    df_ds.plot.scatter(x='transcript length', y='LER', c='g', label='DeepSpeech', ax=ax_ler)
+    fig, (ax_ler, ax_sim) = plt.subplots(1, 2, figsize=(10, 5))
+    df.plot.scatter(x='# words', y='LER', c='b', label='Keras', ax=ax_ler)
+    if df_ds is not None:
+        df_ds.plot.scatter(x='# words', y='LER', c='g', label='DeepSpeech', ax=ax_ler)
 
-    df_keras.plot.scatter(x='transcript length', y='similarity', c='k', label='Keras', ax=ax_sim)
+    if 'similarity' in df.keys():
+        df.plot.scatter(x='# words', y='similarity', c='k', label='Keras', ax=ax_sim)
 
     ax_ler.set_xlabel('transcript length (characters)')
     ax_ler.set_ylabel('LER')
@@ -200,3 +215,5 @@ def visualize_pipeline_performance(csv_keras, csv_ds, silent=False):
 
     if not silent:
         plt.show()
+
+    return p_r_f_boxplot_png, ler_similarity_png

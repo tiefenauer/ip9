@@ -8,6 +8,7 @@ ASSETS_DIR = join(ROOT_DIR, 'assets')
 
 LS_RAW = "/media/daniel/Data/corpus/librispeech-raw"
 LS_ROOT = "/media/daniel/IP9/corpora/librispeech"
+PC_ROOT = "/media/daniel/IP9/corpora/podclub"
 RL_RAW = "/media/daniel/Data/corpus/readylingua-raw"
 RL_ROOT = "/media/daniel/IP9/corpora/readylingua"
 CV_ROOT = "/media/daniel/IP9/corpora/cv"

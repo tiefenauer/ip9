@@ -47,7 +47,7 @@ def precompute_features(corpus, feature_type, target_file, limit=None):
             num_train, num_dev, num_test = len(train_set), len(dev_set), len(test_set)
             num_total = num_train + num_dev + num_test
             print(f'{num_total} speech segments: train/dev/test={num_train}/{num_dev}/{num_test}'
-                  f'({100*num_train/num_total:.2f}/{100*num_dev/num_total:.2f}/{100*num_test/num_total:.2f}%)')
+                  f'({100 * num_train / num_total:.2f}/{100 * num_dev / num_total:.2f}/{100 * num_test / num_total:.2f}%)')
 
             speech_segments = chain(train_segments, dev_segments, test_segments)
             progress = tqdm(enumerate(speech_segments), total=num_total, unit=' corpus entries')

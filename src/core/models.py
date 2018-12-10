@@ -80,10 +80,10 @@ def deep_speech_dropout(n_features=26, n_fc=1024, n_recurrent=1024, n_labels=29)
                         name='FC_1')(features)
     x = TimeDistributed(Dropout(0.1))(x)
     x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
-                              name='FC_2')(x)
+                        name='FC_2')(x)
     x = TimeDistributed(Dropout(0.1))(x)
     x = TimeDistributed(Dense(n_fc, activation=clipped_relu, kernel_initializer=init, bias_initializer=init),
-                              name='FC_3')(x)
+                        name='FC_3')(x)
     x = TimeDistributed(Dropout(0.1))(x)
 
     # recurrent layer: BiDirectional LSTM

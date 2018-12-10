@@ -1,8 +1,8 @@
 \documentclass[11pt]{article}
 %\usepackage{lipsum,mathptmx,etoolbox} % Or swap mathptmx with newtxtext,newtxmath
 \usepackage[utf8]{inputenc}
-\usepackage[english]{babel}
-\usepackage{csquotes} % needed for babel
+\usepackage[french,english]{babel}
+\usepackage[autostyle,french=guillemets*]{csquotes} % needed for babel
 \usepackage{fancyhdr, graphicx} % headeres, footeres, etc.. (see \fancypagestyle control sequence)
 \usepackage{listings} % source code listings
 \usepackage{hyperref} % Link citations with references at the end
@@ -14,9 +14,16 @@
 \usepackage{xcolor} % superseeds color
 \usepackage[font=it]{caption} % Captions
 \usepackage{subcaption} % captions for figures and the like
-\usepackage[scaled=0.92]{helvet}
+%\usepackage[scaled=0.92]{helvet}
 \def\code#1{\texttt{#1}} % shortcut for monospaced inline code
 \usepackage{makecell} % tables
+\renewcommand{\familydefault}{\rmdefault}
+%An initial of the very first character of the content
+%\usepackage{lettrine}
+%\newcommand{\initial}[1]{%
+%	\lettrine[lines=2,lhang=0.33,nindent=0em]{
+%		\color{gray}
+%		{\textsc{#1}}}{}}
 
 % Page layout
 \usepackage[a4paper,top=2cm]{geometry}
@@ -26,10 +33,17 @@
 \setlength{\headheight}{27pt}
 \setlength{\oddsidemargin}{-0.5cm}
 \usepackage{lastpage} % for getting last page number
-\renewcommand{\familydefault}{\sfdefault}
+%\renewcommand{\familydefault}{\sfdefault}
 \usepackage{setspace} % line space
 \usepackage{acronym} % acronym index
 %\numberwithin{equation}{section} %Metadata
+\usepackage[export]{adjustbox}
+
+% Tables
+\usepackage{array}
+\usepackage{booktabs}
+\newcommand{\ra}[1]{\renewcommand{\arraystretch}{#1}}
+\usepackage{colortbl}
 
 % Bibliography
 \usepackage[backend=biber,style=authoryear,citestyle=authoryear]{biblatex}
@@ -91,8 +105,8 @@
 \fancypagestyle{firststyle}{ %Style of the first page
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
- \lhead{
- \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
+ \lhead{\includegraphics[scale=0.8,valign=M]{./img/fhnw_logo.jpg}}
+ \rhead{\includegraphics[scale=0.3,valign=M]{./img/mse_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \lfoot{Institute for Data Science,\linebreak www.fhnw.ch }
 }
@@ -100,18 +114,18 @@
 \fancypagestyle{documentstyle}{ %Style of the rest of the document
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
-\lhead{
- \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
+ \lhead{\includegraphics[scale=0.8,valign=M]{./img/fhnw_logo.jpg}}
+ \rhead{\includegraphics[scale=0.3,valign=M]{./img/mse_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
- \lfoot{Forced Alignment with a Recurrent Neural Network}
+ \lfoot{Speech-To-Text Engine for Forced Alignment}
  \rfoot{\thepage\ / \pageref{LastPage} }
 }
 
 \fancypagestyle{tableofcontent}{ %Style of the rest of the document
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
-\lhead{
- \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
+ \lhead{\includegraphics[scale=0.8,valign=M]{./img/fhnw_logo.jpg}}
+ \rhead{\includegraphics[scale=0.3,valign=M]{./img/mse_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \cfoot{\thepage}
 }
@@ -119,21 +133,22 @@
 \fancypagestyle{abstract}{ %Style of the first page
  \fancyhf{}
  \fancyheadoffset[L]{0.6cm}
- \lhead{
- \includegraphics[scale=0.8]{./img/fhnw_logo.jpg}}
+ \lhead{\includegraphics[scale=0.8,valign=M]{./img/fhnw_logo.jpg}}
+ \rhead{\includegraphics[scale=0.3,valign=M]{./img/mse_logo.jpg}}
  \renewcommand{\headrulewidth}{0pt}
  \cfoot{}
 }
 
 \begin{document}
-\title{IP9}
-\author{Daniel Tiefenauer}
-\date{\today}
-\maketitle
+\input{./title.tex}
+%\title{IP9}
+%\author{Daniel Tiefenauer}
+%\date{\today}
+%\maketitle
 \newpage
 
 \pagestyle{abstract}
-\input{./chapters/abstract.tex}
+\input{./chapters/00_abstract.tex}
 \newpage
 
 % TOC
@@ -146,23 +161,26 @@
 \setcounter{page}{1}
 \pagenumbering{arabic}
 
-\input{./chapters/01_intro/intro.tex}
-\newpage
+\input{./chapters/01_intro.tex}
+\clearpage
 
-\input{./chapters/02_ds/ds.tex}
-\newpage
+\input{./chapters/02_deep_speech.tex}
+\clearpage
 
-\input{./chapters/03_lm/lm.tex}
-\newpage
+\input{./chapters/03_language_model.tex}
+\clearpage
 
-\input{./chapters/04_lc/lc.tex}
-\newpage
+\input{./chapters/04_learning_curve.tex}
+\clearpage
 
-\input{./chapters/05_e2e/e2e.tex}
-\newpage
+\input{./chapters/05_pipeline_evaluation.tex}
+\clearpage
 
-\input{./chapters/98_conclusion/conclusion.tex}
-\newpage
+\input{./chapters/06_other_languages.tex}
+\clearpage
+
+\input{./chapters/98_conclusion.tex}
+\clearpage
 
 \listoffigures
 \listoftables
@@ -171,8 +189,8 @@
 \printbibliography
 
 \newpage
-\input{./chapters/99_appendix/appendix.tex}
+\input{./chapters/99_appendix.tex}
 
 \newpage
-\input{./chapters/disclaimer.tex}
+\input{./chapters/00_disclaimer.tex}
 \end{document}

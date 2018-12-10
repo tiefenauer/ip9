@@ -3,9 +3,19 @@ import multiprocessing as mp
 
 from tqdm import tqdm
 
-from util.lm_corpus_util import process_line
 from util.ctc_util import get_alphabet
+from util.lm_corpus_util import process_line
 from util.string_util import remove_multi_spaces, unidecode_with_alphabet, remove_punctuation, replace_numeric
+
+parser = argparse.ArgumentParser(
+    description="""Tokenize text corpus to KenLM compatible input file (1 sentence per line)""")
+parser.add_argument('--input', type=str, help='path to input file to read from')
+parser.add_argument('--output', type=str, help='path to output file to read to')
+parser.add_argument('--num_lines', type=int, nargs='?', default=None,
+                    help='(optional) number of lines in the input file. If set a progress bar will be shown.')
+parser.add_argument('--threads', type=int, nargs='?', default=mp.cpu_count(),
+                    help='(optional) number of threads (for multiprocessing)')
+args = parser.parse_args()
 
 
 def main(input_path, output_path, num_lines=None, num_threads=1):
@@ -20,17 +30,9 @@ def main(input_path, output_path, num_lines=None, num_threads=1):
 
 def normalize_sentence(sentence, language):
     return remove_multi_spaces(
-        unidecode_with_alphabet(remove_punctuation(replace_numeric(sentence, by_single_digit=True)), get_alphabet(language)))
+        unidecode_with_alphabet(remove_punctuation(replace_numeric(sentence, by_single_digit=True)),
+                                get_alphabet(language)))
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description="""Tokenize text corpus to KenLM compatible input file (1 sentence per line)""")
-    parser.add_argument('--input', type=str, help='path to input file to read from')
-    parser.add_argument('--output', type=str, help='path to output file to read to')
-    parser.add_argument('--num_lines', type=int, nargs='?', default=None,
-                        help='(optional) number of lines in the input file. If set a progress bar will be shown.')
-    parser.add_argument('--threads', type=int, nargs='?', default=mp.cpu_count(),
-                        help='(optional) number of threads (for multiprocessing)')
-    args = parser.parse_args()
     main(args.input, args.output, args.num_lines, args.threads)

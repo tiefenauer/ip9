@@ -4,7 +4,7 @@ from hamcrest import assert_that, is_, not_
 
 from util import lm_util
 from util.ctc_util import get_alphabet
-from util.lm_util import ler, ler_norm, wer, wer_norm, load_lm_and_vocab, load_lm, load_vocab
+from util.lm_util import ler, ler_norm, wer, wer_norm, load_lm, load_vocab
 
 
 class TestLMUtil(TestCase):
@@ -52,7 +52,7 @@ class TestLMUtil(TestCase):
         lm = load_lm('/media/daniel/IP9/lm/ds_en/lm.binary')
         vocab = load_vocab('/media/daniel/IP9/lm/ds_en/lm_80k.vocab')
         text = 'i seee i sey saind the blnd manp to his deaf dauhgter'
-        text_corrected = lm_util.correction(text, 'en', lm=lm, lm_vocab=vocab.words)
+        text_corrected = lm_util.correction(text, 'en', lm=lm, vocab=vocab)
         assert_that(text_corrected, is_('i see i see said the blind man to his deaf daughter'))
 
     def test_ler(self):

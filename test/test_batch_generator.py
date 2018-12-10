@@ -14,11 +14,11 @@ class DummyBatchGenerator(BatchGenerator):
     def shuffle_entries(self):
         pass
 
-    def extract_features(self, index_array):
-        return [np.random.rand(i, 26) for i in index_array]
+    def extract_features(self, first, last):
+        return np.random.rand(i, 26)[first:last]
 
-    def extract_labels(self, index_array):
-        return [f'some label' for i in index_array]
+    def extract_labels(self, first, last):
+        return [f'some label' for i in range(first, last)]
 
 
 class TestBatchGenerator(TestCase):
@@ -27,7 +27,6 @@ class TestBatchGenerator(TestCase):
         batch_items = list(range(33))
         batch_size = 16
         generator = DummyBatchGenerator(batch_items, batch_size)
-        assert_that(generator.n, is_(33), f'n should reflect the number of batch items')
         assert_that(len(generator), is_(3), f'len() should reflect the number of batches')
         assert_that(len(generator[0][0]['the_input']), is_(batch_size), f'first batch should be full')
         assert_that(len(generator[1][0]['the_input']), is_(batch_size), f'second batch should be full')

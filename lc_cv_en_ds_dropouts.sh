@@ -12,7 +12,7 @@ echo "using GPU #${gpu} for all training runs!"
                     --valid_files /media/D1/daniel.tiefenauer/corpora/cv/cv-valid-dev-rel.csv \
                     --test_files /media/D1/daniel.tiefenauer/corpora/cv/cv-valid-test-rel.csv \
                     --lm /media/D1/daniel.tiefenauer/lm/ds_en/lm.binary \
-                    --lm_vocab /media/D1/daniel.tiefenauer/lm/ds_en/lm_40k.vocab \
+                    --lm_vocab /media/D1/daniel.tiefenauer/lm/ds_en/lm_80k.vocab \
                     --epochs 30 \
                     --valid_batches 30 \
                     --dropouts \

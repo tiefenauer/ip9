@@ -11,7 +11,7 @@ echo "using GPU #${gpu} for all training runs!"
                     --train_files /media/D1/daniel.tiefenauer/corpora/readylingua-de/readylingua-de-train.csv \
                     --valid_files /media/D1/daniel.tiefenauer/corpora/readylingua-de/readylingua-de-dev.csv \
                     --test_files /media/D1/daniel.tiefenauer/corpora/readylingua-de/readylingua-de-test.csv \
-                    --lm /media/D1/daniel.tiefenauer/lm/wiki_de/wiki_de_5_gram_pruned.klm \
+                    --lm /media/D1/daniel.tiefenauer/lm/wiki_de/wiki_de_5_gram.klm \
                     --lm_vocab /media/D1/daniel.tiefenauer/lm/wiki_de/wiki_de_80k.vocab \
                     --epochs 30 \
                     --language de \

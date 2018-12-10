@@ -30,7 +30,7 @@ The following result files are created and will not be removed:
 "
 
 # Defaults
-order=4
+order=5
 language='de'
 data_structure=trie
 target_dir='./lm'
@@ -118,7 +118,6 @@ fi
 # STEP 2: Create corpus from dump if necessary
 # Use WikExtractor (see https://github.com/attardi/wikiextractor for details)
 # #################################
-recreate_vocab=0
 if [[ ! -f "${corpus_file}" ]] ; then
     cd ./src/
     if [[ ! -d ${cleaned_dir} ]] ; then
@@ -148,14 +147,9 @@ if [[ ! -f "${corpus_file}" ]] ; then
     echo "Processed $(cat ${corpus_file} | wc -w) words"
     echo "Processed $(cat ${corpus_file} | xargs -n1 | sort | uniq -c) unique words"
 
-    # vocabulary must be recreated because corpus might have changed
-    recreate_vocab = 1
-fi
-
-if [[ ${recreate_vocab} = 1 ]] ; then
-    echo "(re-)creating vocabulary of $corpus_file. "
+    echo "(re-)creating vocabulary of $corpus_file because corpus file has changed"
     echo "This usually takes around half an hour. Get a coffee or something..."
-    ./create_lm_vocab.sh ${corpus_file} --target_dir ${target_dir}
+    ./create_corpus_vocab.sh ${corpus_file} --target_dir ${target_dir}
 fi
 
 echo "compressing $corpus_file. File size before:"

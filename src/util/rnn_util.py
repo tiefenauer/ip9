@@ -31,7 +31,7 @@ def save_model(model, target_dir):
 
 
 def load_ds_model(model_path, alphabet_path, lm_path=None, trie_path=None, n_features=26, n_context=9, beam_width=500,
-                  lm_weight=1.75, valid_word_count_weight=1.00):
+                  lm_weight=1.50, valid_word_count_weight=2.10):
     print(f'loading DeepSpeech model from {model_path}, using alphabet at {alphabet_path}, '
           f'LM at {lm_path} and trie at {trie_path}')
     ds = Model(model_path, n_features, n_context, alphabet_path, beam_width)
@@ -47,14 +47,13 @@ def load_keras_model(root_path, opt=None):
     :param opt: optimizer to use (optional if model is loaded from HDF5 file
     :return: the compiled model
     """
-    print(f'loading Keras model from {root_path}')
     get_custom_objects().update({"clipped_relu": clipped_relu})
     get_custom_objects().update({"ctc": ctc})
 
     # prefer single file over architecture + weight
     model_h5 = join(root_path, 'model.h5')
     if exists(model_h5):
-        print(f'loading model from {model_h5}')
+        print(f'loading Keras model from {model_h5}')
         K.set_learning_phase(1)
         return load_model(model_h5)
 
@@ -88,12 +87,11 @@ def create_tf_session(gpu, allow_growth=False, log_device_placement=False):
     return tf.Session(config=config)
 
 
-def query_gpu(gpu):
-    all_gpus = get_available_gpus()
-    if all_gpus and gpu is None:
-        gpu = input('Enter GPU to use (leave blank for all GPUs): ')
-        if not gpu:
-            gpu = ','.join(all_gpus)
+def query_gpu():
+    gpu = None
+    if get_available_gpus():
+        while not gpu:
+            gpu = input('Enter GPU to use (leave blank for all GPUs): ')
         print(f'GPU set to {gpu}')
     return gpu
 

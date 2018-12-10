@@ -16,6 +16,10 @@ from util.rnn_util import save_model
 
 
 class ReportCallback(callbacks.Callback):
+    """
+    Reports on the progress of training by calculating LER and WER on samples from the validation set
+    """
+
     def __init__(self, data_valid, model, language, target_dir, num_epochs, num_minutes=None, save_progress=True,
                  early_stopping=False, shuffle_data=True, force_output=False, lm_path=None, vocab_path=None):
         """
@@ -24,11 +28,11 @@ class ReportCallback(callbacks.Callback):
         :param data_valid: validation data
         :param model: compiled model
         :param target_dir: string that identifies the current run
-        :param save_progress:
-        :param early_stopping: 
-        :param shuffle_data: 
-        :param force_output:
-        :param decode_strategies: list of decoding to use ('beamsearch' or 'bestpath')
+        :param save_progress: whether to save the model if a new WER/LER benchmark was achieved
+        :param early_stopping: whether to stop the model if the WER/LER did not improve over the last 5 epochs
+        :param shuffle_data: whether to shuffle the validation data before reporting
+        :param force_output: whether to output the decoded inferences for all validation samples or only the ones
+                             with WER < 0.6
         """
         super().__init__()
         self.data_valid = data_valid
@@ -70,7 +74,7 @@ class ReportCallback(callbacks.Callback):
             print("shuffling validation data")
             self.data_valid.shuffle_entries()
 
-        print(f'validating epoch {epoch+1} (training on {self.num_minutes} minutes)')
+        print(f'validating epoch {epoch + 1} (training on {self.num_minutes} minutes)')
         df_inferences = infer_batches_keras(self.data_valid, self.decoder_greedy, self.decoder_beam, self.language,
                                             self.lm, self.lm_vocab)
 
@@ -84,7 +88,7 @@ class ReportCallback(callbacks.Callback):
         mean_metrics = calculate_metrics_mean(df_inferences)
 
         print('--------------------------------------------------------')
-        print(f'Validation results after epoch {epoch+1}: {self.target_dir}')
+        print(f'Validation results after epoch {epoch + 1}: {self.target_dir}')
         if self.lm and self.lm_vocab:
             print(f'using LM at: {self.lm_path}')
             print(f'using LM vocab at: {self.vocab_path}')
@@ -98,6 +102,10 @@ class ReportCallback(callbacks.Callback):
         K.set_learning_phase(1)
 
     def finish(self):
+        """
+        Save mean metrics for epochs to CSV file
+        :return:
+        """
         self.df_history.index.name = 'epoch'
         self.df_history.index += 1  # epochs start at 1
         csv_path = join(self.target_dir, f'{self.base_name}.csv')

@@ -35,7 +35,8 @@ def main(args):
     styles = ['g-', 'b-']
     plot_df(df_reg, ax_reg, styles, ['unregularized model', 'regularized model'], 'LER', 'Regularisation')
     plot_df(df_synth, ax_synth, styles, ['no synthesized data', 'with synthesized data'], 'LER', 'Synthetization')
-    plot_df(df_reg_synth, ax_reg_synth, styles, ['unregularized model, no synthesized data', 'regularized model, synthesized data'],
+    plot_df(df_reg_synth, ax_reg_synth, styles,
+            ['unregularized model, no synthesized data', 'regularized model, synthesized data'],
             'LER', 'Synthetisation & Regularisation')
 
     regularization_synthetisation_png = join(target_dir, 'regularization_synthetisation.png')

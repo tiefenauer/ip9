@@ -8,6 +8,7 @@ import soundfile as sf
 
 from corpus.audible import Audible
 from corpus.corpus_segment import Segment
+from util.string_util import normalize
 
 
 class CorpusEntry(Audible):
@@ -84,7 +85,7 @@ class CorpusEntry(Audible):
 
     @property
     def transcript(self):
-        return Path(self.transcript_path).read_text()
+        return normalize(Path(self.transcript_path).read_text(), self.language)
 
     def __getstate__(self):
         # prevent caches from being pickled

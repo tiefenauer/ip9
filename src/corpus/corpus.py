@@ -20,7 +20,8 @@ class Corpus(ABC):
         Create a new corpus holding a list of corpus entries
         :param corpus_id: unique ID
         :param name: unique corpus name
-        :param corpus_entries: list of CorpusEntry instances
+        :param df_path: absolute path to DataFrame holding the segmentation information (samples)
+        :param df: DataFrame holding the segmentation information (samples)
         """
         self.corpus_id = corpus_id
         self._name = name
@@ -200,6 +201,12 @@ class ReadyLinguaCorpus(Corpus):
 
     def __init__(self, df_path, df=None):
         super().__init__('rl', 'ReadyLingua', df_path, df)
+
+
+class PodClubCorpus(Corpus):
+
+    def __init__(self, df_path, df=None):
+        super().__init__('pc', 'PodClub', df_path, df)
 
 
 class LibriSpeechCorpus(Corpus):

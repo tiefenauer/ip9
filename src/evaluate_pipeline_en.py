@@ -76,12 +76,12 @@ args = parser.parse_args()
 
 def main(args):
     print(create_args_str(args))
-    demo_files, target_dir, keras, ds, ds_alpha, ds_trie, lm, vocab, normalize, gpu = setup(args)
+    demo_files, target_dir, keras_path, ds_path, ds_alpha, ds_trie, lm_path, vocab_path, normalize, gpu = setup(args)
     num_files = len(demo_files)
     print(f'Processing {num_files} audio/transcript samples. All results will be written to {target_dir}')
 
-    lm = load_lm(lm) if lm else None
-    vocab = load_vocab(vocab) if vocab else None
+    lm = load_lm(lm_path) if lm_path else None
+    vocab = load_vocab(vocab_path) if vocab_path else None
 
     stats_keras, stats_ds = [], []
     for i, (audio, transcript) in enumerate(demo_files):
@@ -97,19 +97,19 @@ def main(args):
 
         df_alignments_ds = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                                     language='en',
-                                    ds_path=ds, ds_alpha_path=ds_alpha, ds_trie_path=ds_trie,
+                                    ds_path=ds_path, ds_alpha_path=ds_alpha, ds_trie_path=ds_trie,
                                     lm_path=lm,
                                     force_realignment=args.force_realignment, align_endings=args.align_endings,
                                     target_dir=target_dir_ds)
-        df_stats_ds = calculate_stats(df_alignments_ds, ds, transcript)
+        df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
         create_demo_files(target_dir_ds, audio, transcript, df_alignments_ds, df_stats_ds)
 
         df_alignments_keras = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                                        language='en',
-                                       keras_path=keras, lm=lm, vocab=vocab,
+                                       keras_path=keras_path, lm=lm, vocab=vocab,
                                        force_realignment=args.force_realignment, align_endings=args.align_endings,
                                        target_dir=target_dir_keras)
-        df_stats_keras = calculate_stats(df_alignments_keras, keras, transcript)
+        df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)
         create_demo_files(target_dir_keras, audio, transcript, df_alignments_keras, df_stats_keras)
 
         # average similarity between Keras and DeepSpeech alignments
@@ -138,9 +138,9 @@ def main(args):
 
     visualize_pipeline_performance(csv_keras, csv_ds, silent=True)
     update_index(target_dir, lang='en', num_aligned=len(demo_files),
-                 df_keras=df_keras, keras_path=keras,
-                 ds_path=ds, df_ds=df_ds,
-                 lm_path=lm, vocab_path=vocab)
+                 df_keras=df_keras, keras_path=keras_path,
+                 df_ds=df_ds, ds_path=ds_path,
+                 lm_path=lm_path, vocab_path=vocab_path)
 
     print(f'Done! Demos have been saved to {target_dir}')
 

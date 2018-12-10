@@ -111,15 +111,15 @@ def main(args):
     #     df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)
     #
     #     # average similarity between Keras and DeepSpeech alignments
-    #     av_similarity = np.mean([levenshtein_similarity(al_keras, al_ds) for (al_keras, al_ds) in
-    #                              zip(df_alignments_keras['alignment'], df_alignments_ds['alignment'])])
-    #
-    #     df_stats_ds['similarity'] = av_similarity
+        av_similarity = np.mean([levenshtein_similarity(al_keras, al_ds) for (al_keras, al_ds) in
+                                 zip(df_alignments_keras['alignment'], df_alignments_ds['alignment'])])
+
+        df_stats_ds['similarity'] = av_similarity
     #     df_stats_keras['similarity'] = av_similarity
-    #     stats_ds.append(df_stats_ds)
+        stats_ds.append(df_stats_ds)
     #     stats_keras.append(df_stats_keras)
     #
-    #     create_demo_files(target_dir_ds, audio, transcript, df_alignments_ds, df_stats_ds)
+        create_demo_files(target_dir_ds, audio, transcript, df_alignments_ds, df_stats_ds)
     #     create_demo_files(target_dir_keras, audio, transcript, df_alignments_keras, df_stats_keras)
     #
     # df_keras = pd.concat(stats_keras)

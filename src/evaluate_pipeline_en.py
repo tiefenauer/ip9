@@ -86,7 +86,7 @@ def main(args):
     stats_keras, stats_ds = [], []
     for i, (audio, transcript) in enumerate(demo_files):
         print('-----------------------------------------------------------------')
-        print(f'{i}/{num_files}: Evaluating pipeline on {audio}')
+        print(f'{i + 1}/{num_files}: Evaluating pipeline on {audio}')
         print('-----------------------------------------------------------------')
         demo_id = splitext(basename(audio))[0]
         target_dir_ds = join(target_dir, demo_id + '_ds')

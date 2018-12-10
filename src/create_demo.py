@@ -57,7 +57,7 @@ def main(args):
     lm = load_lm(lm) if lm else None
     vocab = load_vocab(vocab) if vocab else None
 
-    audio_bytes, sample_rate, transcript, language = preprocess(audio, trans, 'en', norm_transcript=normalize)
+    audio_bytes, sample_rate, transcript, language = preprocess(audio, trans, lang, norm_transcript=normalize)
     voiced_segments = vad(audio_bytes, sample_rate)
     df_alignments = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                              language='en',

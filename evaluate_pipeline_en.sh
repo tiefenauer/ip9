@@ -11,7 +11,7 @@ echo "Force re-alignment? (Y/n)"
 read force_realignment
 for v in "N" "n"
 do
-    if [[ "$force_realignment" = v ]]; then
+    if [[ "$force_realignment" = ${v} ]]; then
         force_realignment=false
     fi
 done

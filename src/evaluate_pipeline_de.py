@@ -88,23 +88,14 @@ def main(args):
         target_dir_entry = join(target_dir, demo_id)
         if not exists(target_dir_entry):
             makedirs(target_dir_entry)
-        alignments_csv = join(target_dir_entry, 'alignments.csv')
 
-        if target_dir and exists(alignments_csv):
-            print(f'found inferences from previous run in {alignments_csv}')
-            df_alignments = pd.read_csv(alignments_csv, header=0, index_col=0).replace(np.nan, '')
-        else:
-            voiced_segments = [Voice(s.audio, s.rate, s.start_frame, s.end_frame) for s in entry]
-            df_alignments = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
-                                     language='de',
-                                     keras_path=keras_path, lm=lm, vocab=vocab,
-                                     force_realignment=args.force_realignment, align_endings=args.align_endings,
-                                     target_dir=target_dir_entry)
-            if target_dir:
-                print(f'saving alignments to {alignments_csv}')
-                df_alignments.to_csv(join(target_dir, alignments_csv))
+        voiced_segments = [Voice(s.audio, s.rate, s.start_frame, s.end_frame) for s in entry]
+        df_alignments = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
+                                 language='de',
+                                 keras_path=keras_path, lm=lm, vocab=vocab,
+                                 force_realignment=args.force_realignment, align_endings=args.align_endings,
+                                 target_dir=target_dir_entry)
 
-        df_alignments.replace(np.nan, '', regex=True, inplace=True)
         df_stats = calculate_stats(df_alignments, keras_path, transcript)
 
         # calculate average similarity between Keras-alignment and original aligments

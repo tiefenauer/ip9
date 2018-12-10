@@ -105,16 +105,15 @@ def main(args):
                 df_alignments.to_csv(join(target_dir, alignments_csv))
 
         df_alignments.replace(np.nan, '', regex=True, inplace=True)
-
         df_stats = calculate_stats(df_alignments, keras_path, transcript)
-        create_demo_files(target_dir_entry, audio_file, transcript, df_alignments, df_stats)
 
         # calculate average similarity between Keras-alignment and original aligments
-        keras_alignments = df_alignments['alignment'].values
         original_alignments = [s.transcript for s in entry.segments]
         av_similarity = np.mean(
-            [levenshtein_similarity(ka, oa) for (ka, oa) in zip(keras_alignments, original_alignments)])
+            [levenshtein_similarity(ka, oa) for (ka, oa) in zip(df_alignments['alignment'], original_alignments)])
         df_stats['similarity'] = av_similarity
+        create_demo_files(target_dir_entry, audio_file, transcript, df_alignments, df_stats)
+
         stats.append(df_stats)
 
     df_keras = pd.concat(stats)

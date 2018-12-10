@@ -102,7 +102,6 @@ def main(args):
                                     force_realignment=args.force_realignment, align_endings=args.align_endings,
                                     target_dir=target_dir_ds)
         df_stats_ds = calculate_stats(df_alignments_ds, ds_path, transcript)
-        create_demo_files(target_dir_ds, audio, transcript, df_alignments_ds, df_stats_ds)
 
         df_alignments_keras = pipeline(voiced_segments=voiced_segments, sample_rate=sample_rate, transcript=transcript,
                                        language='en',
@@ -110,28 +109,24 @@ def main(args):
                                        force_realignment=args.force_realignment, align_endings=args.align_endings,
                                        target_dir=target_dir_keras)
         df_stats_keras = calculate_stats(df_alignments_keras, keras_path, transcript)
-        create_demo_files(target_dir_keras, audio, transcript, df_alignments_keras, df_stats_keras)
 
         # average similarity between Keras and DeepSpeech alignments
-        av_similarity = df_alignments_keras.join(df_alignments_ds, lsuffix='_keras', rsuffix='_ds')[
-            ['alignment_keras', 'alignment_ds']] \
-            .replace(np.nan, '') \
-            .apply(lambda x: levenshtein_similarity(x[0], x[1]), axis=1) \
-            .mean()
+        av_similarity = np.mean([levenshtein_similarity(al_keras, al_ds) for (al_keras, al_ds) in
+                                 zip(df_alignments_keras['alignment'], df_alignments_ds['alignment'])])
 
-        for ix, row in df_stats_keras.iterrows():
-            stats_keras.append(row.tolist() + [av_similarity])
+        df_stats_ds['similarity'] = av_similarity
+        df_stats_keras['similarity'] = av_similarity
+        stats_ds.append(df_stats_ds)
+        stats_keras.append(df_stats_keras)
 
-        for ix, row in df_stats_ds.iterrows():
-            stats_ds.append(row.tolist() + [av_similarity])
+        create_demo_files(target_dir_ds, audio, transcript, df_alignments_ds, df_stats_ds)
+        create_demo_files(target_dir_keras, audio, transcript, df_alignments_keras, df_stats_keras)
 
-    columns = ['model path', '# alignments', '# words', '# characters', 'precision', 'recall', 'f-score', 'LER',
-               'similarity']
-    df_keras = pd.DataFrame(stats_keras, columns=columns)
+    df_keras = pd.concat(stats_keras)
     csv_keras = join(target_dir, 'performance_keras.csv')
     df_keras.to_csv(csv_keras)
 
-    df_ds = pd.DataFrame(stats_ds, columns=columns)
+    df_ds = pd.concat(stats_ds)
     csv_ds = join(target_dir, 'performance_ds.csv')
     df_ds.to_csv(csv_ds)
     print(f'summary saved to {csv_keras}')

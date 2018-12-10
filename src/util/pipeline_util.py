@@ -115,6 +115,16 @@ def add_demo_to_index(target_dir, demo_id, df_stats):
         td.string = f'{f_score:.4f}'
         tr.append(td)
 
+        ler = df_stats.loc[0, 'LER']
+        td = soup.new_tag('td')
+        td.string = f'{ler:.4f}'
+        tr.append(td)
+
+        similarity = df_stats.loc[0, 'similarity']
+        td = soup.new_tag('td')
+        td.string = f'{similarity:.4f}'
+        tr.append(td)
+
         table.append(tr)
 
         with open(index_path, 'w') as f:

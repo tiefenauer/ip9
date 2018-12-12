@@ -53,7 +53,6 @@ def needle_wunsch(str_1, str_2, boundaries, match_score=10, mismatch_score=-5, g
     source_str, target_str = '', ''
 
     # Traceback: start from the bottom right cell
-    n_boundaries = len(boundaries)
     i, j = m - 1, n - 1  # i/j point to the row/column in the alignment matrix
     i_start, i_end = None if align_endings else len(str_1), i  # markers for the alignment in str_1
     j_start, j_end = boundaries.pop()  # markers for the aligned text in str_2
@@ -94,7 +93,7 @@ def needle_wunsch(str_1, str_2, boundaries, match_score=10, mismatch_score=-5, g
             j_start, j_end = boundaries.pop() if boundaries else (None, None)
 
     # first boundary was not processed (can occur if j never becomes start of first boundary)
-    if len(alignments) < n_boundaries:
+    if boundaries:
         i_start = 0
         i_end = alignments[0]['start']
         alignments.insert(0, {'start': 0, 'end': i_end, 'text': str_1[i_start:i_end]})

@@ -84,7 +84,7 @@ def needle_wunsch(str_1, str_2, boundaries, match_score=10, mismatch_score=-5, g
                 i_end = i_start - 1
             i_start = i
 
-        if i_start is not None and i_end is not None and i_start < i_end:
+        if i_start is not None and i_end is not None:
             i_start = snap_left(i_start, str_1)
             i_end = snap_right(i_end, str_1)
             alignments.insert(0, {'start': i_start, 'end': i_end, 'text': str_1[i_start:i_end]})

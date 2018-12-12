@@ -110,25 +110,25 @@ def needle_wunsch(str_1, str_2, boundaries, match_score=10, mismatch_score=-5, g
     return alignments, source_str, target_str
 
 
-def snap_left(ix, text):
-    ix = snap_to_closest_word_boundary(ix, text)
-    while ix < len(text) and text[ix] in [' ', '\n']:
+def snap_left(ix, text, word_chars=alphabet_with_umlauts):
+    ix = snap_to_closest_word_boundary(ix, text, word_chars)
+    while ix < len(text) and text[ix] not in word_chars:
         ix += 1
     return ix
 
 
-def snap_right(ix, text):
-    ix = snap_to_closest_word_boundary(ix, text)
-    while ix > 0 and text[ix - 1] in [' ', '\n']:
+def snap_right(ix, text, word_chars=alphabet_with_umlauts):
+    ix = snap_to_closest_word_boundary(ix, text, word_chars)
+    while ix > 0 and text[ix - 1] not in word_chars:
         ix -= 1
     return ix
 
 
-def snap_to_closest_word_boundary(ix, text):
+def snap_to_closest_word_boundary(ix, text, word_chars=alphabet_with_umlauts):
     left, right = 0, 0
-    while ix - left > 0 and text[ix - left - 1] in alphabet_with_umlauts:
+    while ix - left > 0 and text[ix - left - 1] in word_chars:
         left += 1
-    while ix + right < len(text) and text[ix + right] in alphabet_with_umlauts:
+    while ix + right < len(text) and text[ix + right] in word_chars:
         right += 1
 
     return max(ix - left, 0) if left <= right else min(ix + right, len(text))

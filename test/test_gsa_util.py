@@ -23,6 +23,12 @@ class TestLsaUtil(TestCase):
         assert_that(snap_left(8, text), is_(7), 'foo    b|ar --> snap to closest word boundary')
         assert_that(snap_left(9, text), is_(10), 'foo    ba|r --> snap to closest word boundary')
 
+        # verify that special chars are skipped
+        text = 'foo  ***    bar'
+        for i in range(3,14):
+            left = snap_left(i, text)
+            assert_that(text[left:], is_('bar'))
+
     def test_snap_right(self):
         text = 'foo    bar'
         assert_that(snap_right(0, text), is_(0), '|foo    bar --> no change')
@@ -33,6 +39,12 @@ class TestLsaUtil(TestCase):
         assert_that(snap_right(7, text), is_(3), 'foo    |bar --> skip spaces')
         assert_that(snap_right(8, text), is_(3), 'foo    b|ar --> snap to closest word boundary + skip spaces')
         assert_that(snap_right(9, text), is_(10), 'foo    ba|r --> snap to closest word boundary')
+
+        # verify that special chars are skipped
+        text = 'foo  ***    bar'
+        for i in range(3, 14):
+            right = snap_right(i, text)
+            assert_that(text[:right], is_('foo'))
 
     def test_snap_to_closest_word_boundary(self):
         text = 'foo bar foobar'

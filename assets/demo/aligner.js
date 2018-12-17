@@ -12,15 +12,14 @@
             dataType: 'text',
             success: function (transcript) {
                 align($target, transcript, alignments, $player[0])
+                // enable popovers
+                $('[data-toggle="tooltip"]').tooltip({'placement': 'bottom', 'trigger': 'hover'})
             }
         })
 
         $player.attr('src', 'audio.mp3')
         $player.on('timeupdate seeked', alignments, highlightAlignment);
         $player[0].load();
-
-        // enable popovers
-        $('[data-toggle="tooltip"]').tooltip({'placement': 'bottom', 'trigger': 'hover'})
     };
 
     let align = function ($target, transcript, alignments, player) {
